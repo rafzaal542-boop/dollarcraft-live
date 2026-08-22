@@ -207,10 +207,8 @@ export default function App() {
 
   // Keep the admin directory synchronized with Firestore.
   useEffect(() => {
-    cleanAndLoadAuthenticatedUsers();
-
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const firestoreUsers = snapshot.docs.map((userDoc) => {
+      const users = snapshot.docs.map((userDoc) => {
         const user = userDoc.data();
         return {
           ...user,
@@ -221,21 +219,10 @@ export default function App() {
         };
       });
 
-      const storedUsers = JSON.parse(localStorage.getItem('dc_real_google_users_directory') || '[]');
-      const usersByEmail = new Map(storedUsers.map((user) => [user.email.toLowerCase(), user]));
-      firestoreUsers.forEach((user) => {
-        usersByEmail.set(user.email.toLowerCase(), {
-          ...usersByEmail.get(user.email.toLowerCase()),
-          ...user
-        });
-      });
-
-      const users = [...usersByEmail.values()];
-      localStorage.setItem('dc_real_google_users_directory', JSON.stringify(users));
       setAllUsersList(users);
     }, (error) => {
       console.error('Users listener error:', error);
-      cleanAndLoadAuthenticatedUsers();
+      showToast('Unable to load user accounts from Firestore');
     });
 
     const rawWithdrawals = localStorage.getItem('dc_master_withdrawals_list');
@@ -253,9 +240,6 @@ export default function App() {
     }
 
     const handleStorageChange = (e) => {
-      if (e.key === 'dc_real_google_users_directory' && e.newValue) {
-        setAllUsersList(JSON.parse(e.newValue));
-      }
       if (e.key === 'dc_master_withdrawals_list' && e.newValue) {
         setAllWithdrawalsList(JSON.parse(e.newValue));
       }
@@ -270,16 +254,6 @@ export default function App() {
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [currentUser]);
-
-  const cleanAndLoadAuthenticatedUsers = () => {
-    localStorage.removeItem('dc_master_users_directory');
-    const realList = localStorage.getItem('dc_real_google_users_directory');
-    if (realList) {
-      setAllUsersList(JSON.parse(realList));
-    } else {
-      setAllUsersList([]);
-    }
-  };
 
   const generateUserCredentials = (userData) => {
     if (!userData || !userData.email) return;
@@ -342,7 +316,6 @@ export default function App() {
     }
 
     localStorage.setItem('dc_real_google_users_directory', JSON.stringify(users));
-    setAllUsersList(users);
   };
 
   const loadUserFinancials = (email) => {
@@ -413,6 +386,7 @@ export default function App() {
         }).then((res) => res.json());
 
         const userData = {
+          uid: userInfo.sub,
           email: userInfo.email,
           name: userInfo.name,
           picture: userInfo.picture,
@@ -561,7 +535,6 @@ export default function App() {
     }
     
     localStorage.setItem('dc_real_google_users_directory', JSON.stringify(users));
-    setAllUsersList(users);
 
     if (currentUser && currentUser.email.toLowerCase() === cleanTarget) {
       setUserDeposit(newDep);
@@ -715,7 +688,7 @@ export default function App() {
             {/* ADMIN BUTTON */}
             {isSuperAdmin && (
               <button 
-                onClick={() => { cleanAndLoadAuthenticatedUsers(); setAdminModalOpen(true); }}
+                onClick={() => setAdminModalOpen(true)}
                 className="px-4 py-2 rounded-xl text-xs font-extrabold flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
               >
                 <Sliders size={14} className="text-[#ffb700]" />

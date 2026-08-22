@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDwPM1RU6m7dpLCeiNUOJNCueP2xt7CHJc",
@@ -18,13 +18,10 @@ export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
 
 export const ensureGoogleUserRecord = async (userData) => {
-  if (!userData?.email) return;
+  if (!userData?.email && !userData?.uid) return;
 
-  const userRef = doc(db, "users", userData.email.toLowerCase().trim());
+  const userRef = doc(db, "users", userData.uid || userData.email);
   try {
-    const existingUser = await getDoc(userRef);
-    if (existingUser.exists()) return existingUser.data();
-
     const userRecord = {
       email: userData.email,
       joinedDate: new Date().toISOString().split("T")[0],
@@ -37,7 +34,7 @@ export const ensureGoogleUserRecord = async (userData) => {
       createdAt: serverTimestamp()
     };
 
-    await setDoc(userRef, userRecord);
+    await setDoc(userRef, userRecord, { merge: true });
     return userRecord;
   } catch (error) {
     console.error("Could not save Google user to Firestore:", error);
@@ -48,6 +45,7 @@ export const ensureGoogleUserRecord = async (userData) => {
 export const signInWithGoogle = async () => {
   try {
     const res = await signInWithPopup(auth, googleProvider);
+    await ensureGoogleUserRecord(res.user);
     return res.user;
   } catch (error) {
     console.error("Auth error:", error);
