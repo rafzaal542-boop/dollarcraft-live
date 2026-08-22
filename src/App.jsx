@@ -39,7 +39,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord } from './firebase';
 
 const ADMIN_EMAIL = 'rafzaal542@gmail.com';
@@ -63,6 +63,7 @@ export default function App() {
   const [userDailyYield, setUserDailyYield] = useState(0.0000);
   const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
   const [currentUserYield, setCurrentUserYield] = useState(0.0000);
+  const [yieldStartTime, setYieldStartTime] = useState(null);
   const [userTotalProfit240, setUserTotalProfit240] = useState(0.00);
   const [liveProfit, setLiveProfit] = useState(0);
   const [withdrawnAmount, setWithdrawnAmount] = useState(0);
@@ -236,9 +237,20 @@ export default function App() {
       const user = snapshot.data();
       const deposit = Number(user.deposit ?? user.balance ?? 0);
       const plan = resolvePlanDetails(deposit);
-      const earnedYield = Number(user.earnedYield ?? plan.dailyRate);
+      const earnedYield = Number(user.earnedYield > 0 ? user.earnedYield : plan.dailyRate);
+      const persistedYieldStart = user.lastYieldCalculated?.toMillis?.() ||
+        (user.lastYieldCalculated ? new Date(user.lastYieldCalculated).getTime() : 0) ||
+        user.depositTimestamp?.toMillis?.() ||
+        (user.depositTimestamp ? new Date(user.depositTimestamp).getTime() : 0);
       setCurrentUserBalance(deposit);
       setCurrentUserYield(earnedYield);
+      setYieldStartTime(persistedYieldStart || Date.now());
+      if (persistedYieldStart) {
+        accumulatedProfitRef.current = Number(user.baseProfit || 0) + Math.max(
+          0,
+          ((Date.now() - persistedYieldStart) / 1000) * (earnedYield / 86400)
+        );
+      }
       setUserDeposit(deposit);
       setActivePlanTier(plan);
       setUserDailyYield(earnedYield);
@@ -372,16 +384,23 @@ export default function App() {
     
     const elapsedSec = (Date.now() - parseInt(savedAnchor)) / 1000;
     accumulatedProfitRef.current = Math.max(0, elapsedSec * (plan.dailyRate / 86400));
+    setYieldStartTime((previousStartTime) => previousStartTime || parseInt(savedAnchor));
   };
 
   // ULTRA-SMOOTH requestAnimationFrame DOM METER TICKER
   useEffect(() => {
-    if (!currentUser || userDeposit < 100 || userDailyYield <= 0) {
+    if (!currentUser || userDeposit <= 0 || userDailyYield <= 0) {
       if (profitDisplayRef.current) profitDisplayRef.current.innerText = '$0.000000';
       return;
     }
 
     const perSecRate = userDailyYield / 86400;
+    if (yieldStartTime) {
+      accumulatedProfitRef.current = Math.max(
+        accumulatedProfitRef.current,
+        ((Date.now() - yieldStartTime) / 1000) * perSecRate
+      );
+    }
     let lastTime = Date.now();
     let animId;
 
@@ -393,7 +412,7 @@ export default function App() {
       accumulatedProfitRef.current += delta * perSecRate;
 
       if (profitDisplayRef.current) {
-        profitDisplayRef.current.innerText = `$${accumulatedProfitRef.current.toFixed(6)}`;
+        profitDisplayRef.current.innerText = `$${accumulatedProfitRef.current.toFixed(8)}`;
       }
 
       animId = requestAnimationFrame(updateMeter);
@@ -401,7 +420,7 @@ export default function App() {
 
     animId = requestAnimationFrame(updateMeter);
     return () => cancelAnimationFrame(animId);
-  }, [currentUser, userDeposit, userDailyYield]);
+  }, [currentUser, userDeposit, userDailyYield, yieldStartTime]);
 
   // Google Login Hook
   const loginWithGoogle = useGoogleLogin({
@@ -542,7 +561,9 @@ export default function App() {
         email: cleanTarget,
         deposit: newDep,
         earnedYield: plan.dailyRate,
-        plan: plan.name
+        plan: plan.name,
+        depositTimestamp: serverTimestamp(),
+        lastYieldCalculated: serverTimestamp()
       }, { merge: true });
     } catch (error) {
       console.error('Firestore transfer failed:', error);
@@ -1079,7 +1100,7 @@ export default function App() {
               </div>
 
               <div ref={profitDisplayRef} className="text-4xl sm:text-5xl font-black text-[#ffb700] font-mono-finance tracking-tight">
-                $0.000000
+                $0.00000000
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-[#0b1b30] pt-4 text-xs gap-3">
