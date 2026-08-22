@@ -39,7 +39,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord } from './firebase';
 
 const ADMIN_EMAIL = 'rafzaal542@gmail.com';
@@ -100,6 +100,8 @@ export default function App() {
   // Admin Transfer
   const [transferTargetEmail, setTransferTargetEmail] = useState('');
   const [transferAmount, setTransferAmount] = useState('');
+  const [transferTargetId, setTransferTargetId] = useState('');
+  const [quickTransferOpen, setQuickTransferOpen] = useState(false);
 
   // Modals
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -221,6 +223,27 @@ export default function App() {
 
     return () => unsubscribeUsers();
   }, []);
+
+  // Keep the active customer's balance synchronized with their Firestore record.
+  useEffect(() => {
+    if (!db || !currentUser?.email) return undefined;
+
+    const userRef = doc(db, 'users', currentUser.uid || currentUser.email);
+    const unsubscribeUser = onSnapshot(userRef, (snapshot) => {
+      if (!snapshot.exists()) return;
+      const user = snapshot.data();
+      const deposit = Number(user.deposit ?? user.balance ?? 0);
+      const plan = resolvePlanDetails(deposit);
+      setUserDeposit(deposit);
+      setActivePlanTier(plan);
+      setUserDailyYield(Number(user.earnedYield ?? plan.dailyRate));
+      setUserTotalProfit240(plan.total240Profit);
+    }, (error) => {
+      console.error('Customer Firestore listener failed:', error);
+    });
+
+    return () => unsubscribeUser();
+  }, [currentUser]);
 
   useEffect(() => {
 
@@ -490,7 +513,7 @@ export default function App() {
   };
 
   // ADMIN TRANSFER: Direct instant deposit injection with plan calculation
-  const handleAdminInternalTransfer = (e) => {
+  const handleAdminInternalTransfer = async (e) => {
     e.preventDefault();
     const amt = parseFloat(transferAmount);
     if (!transferTargetEmail || isNaN(amt) || amt <= 0) {
@@ -499,17 +522,31 @@ export default function App() {
     }
 
     const cleanTarget = transferTargetEmail.toLowerCase().trim();
+    const matchedUser = adminUsers.find((user) => user.email?.toLowerCase() === cleanTarget);
+    const targetId = transferTargetId || matchedUser?.id || cleanTarget;
     const safeTargetKey = cleanTarget.replace(/[^a-zA-Z0-9]/g, '_');
     const depositKey = `dc_deposit_${safeTargetKey}`;
     const anchorKey = `dc_anchor_time_${safeTargetKey}`;
     
-    const currentDep = parseFloat(localStorage.getItem(depositKey) || '0.0000');
+    const currentDep = Number(matchedUser?.deposit ?? matchedUser?.balance ?? localStorage.getItem(depositKey) ?? 0);
     const newDep = currentDep + amt;
-    
+    const plan = resolvePlanDetails(newDep);
+
+    try {
+      await setDoc(doc(db, 'users', targetId), {
+        email: cleanTarget,
+        deposit: newDep,
+        earnedYield: plan.dailyRate,
+        plan: plan.name
+      }, { merge: true });
+    } catch (error) {
+      console.error('Firestore transfer failed:', error);
+      showToast('Transfer failed: unable to update Firestore');
+      return;
+    }
+
     localStorage.setItem(depositKey, newDep.toString());
     localStorage.setItem(anchorKey, Date.now().toString());
-
-    const plan = resolvePlanDetails(newDep);
 
     let users = JSON.parse(localStorage.getItem('dc_real_google_users_directory') || '[]');
     const targetIdx = users.findIndex(u => u.email.toLowerCase() === cleanTarget);
@@ -544,7 +581,16 @@ export default function App() {
 
     setTransferAmount('');
     setTransferTargetEmail('');
-    showToast(`$${amt.toFixed(2)} USD transferred successfully to ${cleanTarget}!`);
+    setTransferTargetId('');
+    setQuickTransferOpen(false);
+    showToast(`Successfully transferred $${amt.toFixed(2)} to ${cleanTarget}`);
+  };
+
+  const openQuickTransfer = (user) => {
+    setTransferTargetId(user.id);
+    setTransferTargetEmail(user.email);
+    setTransferAmount('');
+    setQuickTransferOpen(true);
   };
 
   // ADMIN: Reset User Profit Function
@@ -1645,12 +1691,20 @@ export default function App() {
                             <td className="p-3.5 font-black text-white font-mono-finance">${u.deposit !== undefined ? u.deposit : 0}</td>
                             <td className="p-3.5 font-black text-[#00ff88] font-mono-finance">${u.earnedYield !== undefined ? u.earnedYield : 0}/day</td>
                             <td className="p-3.5 text-center">
-                              <button 
-                                onClick={() => handleResetUserProfit(u.email)}
-                                className="bg-red-500/10 hover:bg-red-500/25 border border-red-500/40 text-red-400 font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-wider text-[10px] flex items-center gap-1 mx-auto transition-all"
-                              >
-                                <RotateCcw size={11} /> Reset
-                              </button>
+                              <div className="flex items-center justify-center gap-2">
+                                <button 
+                                  onClick={() => handleResetUserProfit(u.email)}
+                                  className="bg-red-500/10 hover:bg-red-500/25 border border-red-500/40 text-red-400 font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-wider text-[10px] flex items-center gap-1 transition-all"
+                                >
+                                  <RotateCcw size={11} /> Reset
+                                </button>
+                                <button
+                                  onClick={() => openQuickTransfer(u)}
+                                  className="bg-cyan-500/10 hover:bg-cyan-400/25 border border-cyan-400/50 text-cyan-300 font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-wider text-[10px] flex items-center gap-1 transition-all"
+                                >
+                                  <ArrowUpRight size={11} /> Transfer
+                                </button>
+                              </div>
                             </td>
                             <td className="p-3.5 text-center">
                               <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-black text-[9px] uppercase">
@@ -1891,6 +1945,37 @@ export default function App() {
               </div>
             )}
 
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: QUICK ADMIN TRANSFER ================= */}
+      {quickTransferOpen && isSuperAdmin && (
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#071322] border border-cyan-400/40 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-black text-white uppercase tracking-tight">Quick Transfer</h3>
+                <p className="text-xs text-gray-400 mt-1">Send funds directly to this account.</p>
+              </div>
+              <button type="button" onClick={() => setQuickTransferOpen(false)} title="Close transfer modal" className="w-8 h-8 rounded-xl bg-[#0f1d2e] border border-[#1d3554] text-gray-400 hover:text-white flex items-center justify-center">
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleAdminInternalTransfer} className="space-y-4">
+              <div>
+                <label className="text-[10px] text-gray-400 font-extrabold uppercase block mb-1.5">User Email</label>
+                <input type="email" value={transferTargetEmail} readOnly className="w-full bg-[#03060a] border border-[#14263d] rounded-xl px-3.5 py-3 text-xs text-gray-300 font-mono-finance" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 font-extrabold uppercase block mb-1.5">Amount (USD)</label>
+                <input type="number" min="0.01" step="any" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" className="w-full bg-[#03060a] border border-cyan-400/40 rounded-xl px-3.5 py-3 text-base text-white font-mono-finance focus:outline-none focus:border-cyan-300" required autoFocus />
+              </div>
+              <button type="submit" className="w-full bg-cyan-400 hover:bg-cyan-300 text-black font-black py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-400/25 flex items-center justify-center gap-2">
+                <ArrowUpRight size={15} />
+                <span>Send Funds</span>
+              </button>
+            </form>
           </div>
         </div>
       )}
