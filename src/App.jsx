@@ -779,8 +779,8 @@ export default function App() {
               </div>
             </div>
             <div>
-              <span className="font-extrabold tracking-wider text-lg block leading-none text-white">DOLLAR CRAFT</span>
-              <span className="text-[9px] text-[#00f0ff] font-bold tracking-[0.2em] uppercase mt-1 block">Global Investment Platform</span>
+              <span className="text-base font-extrabold tracking-wider whitespace-nowrap block leading-none text-white">DOLLAR CRAFT</span>
+              <span className="text-[10px] text-slate-400 font-bold tracking-[0.15em] uppercase mt-1 block whitespace-nowrap">Global Investment Platform</span>
             </div>
           </div>
 
@@ -883,7 +883,7 @@ export default function App() {
                 <button 
                   onClick={() => setLogoutModalOpen(true)}
                   title="Logout"
-                  className="w-9 h-9 rounded-xl bg-[#140c14] border border-red-500/30 text-red-400 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/60 transition-all cursor-pointer"
+                  className="w-8 h-8 p-1.5 rounded-full bg-[#140c14] border border-red-500/30 text-red-400 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/60 transition-all cursor-pointer"
                 >
                   <LogOut size={15} />
                 </button>
@@ -913,7 +913,7 @@ export default function App() {
 
             <button 
               onClick={() => showToast('No unread alerts')}
-              className="w-9 h-9 rounded-xl bg-[#071322] border border-[#10243e] text-gray-400 hover:text-white flex items-center justify-center transition-all"
+              className="w-8 h-8 p-1.5 rounded-full bg-[#071322] border border-[#10243e] text-gray-400 hover:text-white flex items-center justify-center transition-all"
             >
               <Bell size={15} />
             </button>
@@ -955,13 +955,13 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="max-w-[1240px] mx-auto px-3 md:px-6 lg:px-8 py-8 flex-1 w-full max-w-full overflow-x-hidden space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-8 flex-1 w-full max-w-full overflow-x-hidden space-y-6">
         
         {/* ================= VIEW 1: HOME ================= */}
         {activeTab === 'home' && (
           <div className="space-y-6">
             
-            <div className="bg-gradient-to-b from-[#071426] via-[#050f1d] to-[#040810] border border-[#10243e] rounded-[28px] p-8 sm:p-12 shadow-2xl relative overflow-hidden">
+            <div className="bg-gradient-to-b from-[#071426] via-[#050f1d] to-[#040810] border border-[#10243e] rounded-[28px] p-4 md:p-6 shadow-2xl relative overflow-hidden">
               <div className="flex flex-wrap items-center gap-3 mb-6 max-w-full">
                 <div className="bg-[#06192d] border border-[#00d0ff]/40 text-[#00d0ff] text-[11px] font-extrabold px-3.5 py-1.5 rounded-full flex items-center gap-2">
                   <Globe size={13} className="text-[#00d0ff]" />
@@ -973,7 +973,7 @@ export default function App() {
                 </div>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight uppercase text-white max-w-4xl">
+              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight uppercase text-white max-w-4xl">
                 DOLLAR CRAFT – HIGH PRECISION MICRO-YIELD INVESTMENT PLATFORM
               </h1>
 
@@ -1161,7 +1161,7 @@ export default function App() {
             </div>
 
             {/* Total Balance Card */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-6 shadow-xl">
+            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-4 md:p-6 shadow-xl">
               <div className="flex items-center gap-2 text-[#00d0ff] text-xs font-bold uppercase tracking-widest mb-2">
                 <Wallet size={15} />
                 <span>TOTAL BALANCE</span>
@@ -1172,7 +1172,7 @@ export default function App() {
             </div>
 
             {/* Total Deposit Card */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-6 shadow-xl">
+            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-4 md:p-6 shadow-xl">
               <div className="flex items-center gap-2 text-[#00ff88] text-xs font-bold uppercase tracking-widest mb-2">
                 <DollarSign size={15} />
                 <span>TOTAL DEPOSIT</span>
@@ -1192,7 +1192,7 @@ export default function App() {
             </div>
 
             {/* Earned Profit Card */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-6 shadow-xl space-y-4">
+            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-4 md:p-6 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-[#ffb700] text-xs font-bold uppercase tracking-widest">
                   <TrendingUp size={15} />
