@@ -211,11 +211,16 @@ export default function App() {
       const users = snapshot.docs.map((userDoc) => {
         const user = userDoc.data();
         return {
-          ...user,
+          id: userDoc.id,
           email: user.email || userDoc.id,
-          principal: user.deposit ?? user.principal ?? 0,
-          earnedYield: user.earnedYield ?? 0,
-          status: user.status || 'active'
+          name: user.name || '',
+          picture: user.picture || '',
+          joinedDate: user.joinedDate || '2026-08-22',
+          authType: user.authType || 'Google Auth',
+          plan: user.plan || 'STANDARD PLAN (25% MONTHLY)',
+          principal: `$${user.deposit || 0}`,
+          earnedYield: `$${user.earnedYield || 0}`,
+          status: (user.status || 'ACTIVE').toUpperCase()
         };
       });
 
@@ -1655,11 +1660,11 @@ export default function App() {
                             <td className="p-3.5 text-gray-400 font-mono-finance">{u.joinedDate}</td>
                             <td className="p-3.5 text-[#00e5ff] font-mono-finance text-[11px] flex items-center gap-1">
                               <Key size={11} className="text-[#ffb700]" />
-                              <span>Google Auth</span>
+                              <span>{u.authType}</span>
                             </td>
-                            <td className="p-3.5 text-[#ffb700] font-black text-[10px]">{u.tier}</td>
-                            <td className="p-3.5 font-black text-white font-mono-finance">${parseFloat(u.principal).toFixed(2)}</td>
-                            <td className="p-3.5 font-black text-[#00ff88] font-mono-finance">${parseFloat(u.earnedYield).toFixed(4)}/day</td>
+                            <td className="p-3.5 text-[#ffb700] font-black text-[10px]">{u.plan}</td>
+                            <td className="p-3.5 font-black text-white font-mono-finance">{u.principal}</td>
+                            <td className="p-3.5 font-black text-[#00ff88] font-mono-finance">{u.earnedYield}/day</td>
                             <td className="p-3.5 text-center">
                               <button 
                                 onClick={() => handleResetUserProfit(u.email)}
