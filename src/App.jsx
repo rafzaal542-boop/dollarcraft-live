@@ -39,7 +39,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord, submitWithdrawalRequest } from './firebase';
 
 const ADMIN_EMAIL = 'rafzaal542@gmail.com';
@@ -295,6 +295,29 @@ export default function App() {
     return () => unsubscribeUser();
   }, [currentUser]);
 
+  // Keep the customer's withdrawal records synchronized with Admin status changes.
+  useEffect(() => {
+    if (!db || !currentUser?.email) return undefined;
+
+    const withdrawalsQuery = query(
+      collection(db, 'withdrawals'),
+      where('userEmail', '==', currentUser.email)
+    );
+    const unsubscribeWithdrawals = onSnapshot(withdrawalsQuery, (snapshot) => {
+      const records = snapshot.docs
+        .map((withdrawalDoc) => ({
+          id: withdrawalDoc.id,
+          ...withdrawalDoc.data()
+        }))
+        .sort((left, right) => Number(right.createdAt || right.timestamp || 0) - Number(left.createdAt || left.timestamp || 0));
+      setWithdrawHistory(records);
+    }, (error) => {
+      console.error('Customer withdrawals listener failed:', error);
+    });
+
+    return () => unsubscribeWithdrawals();
+  }, [currentUser]);
+
   useEffect(() => {
 
     const savedUser = localStorage.getItem('dc_auth_active_user');
@@ -398,10 +421,6 @@ export default function App() {
     const withdrawnKey = `dc_withdrawn_${safeKey}`;
     const savedWithdrawn = parseFloat(localStorage.getItem(withdrawnKey) || '0');
     setWithdrawnAmount(savedWithdrawn);
-
-    const historyKey = `dc_history_${safeKey}`;
-    const savedHistory = JSON.parse(localStorage.getItem(historyKey) || '[]');
-    setWithdrawHistory(savedHistory);
 
     const anchorKey = `dc_anchor_time_${safeKey}`;
     let savedAnchor = localStorage.getItem(anchorKey);
@@ -508,7 +527,6 @@ export default function App() {
 
     const safeKey = currentUser.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
     const withdrawnKey = `dc_withdrawn_${safeKey}`;
-    const historyKey = `dc_history_${safeKey}`;
 
     const newWithdrawnTotal = withdrawnAmount + amount;
     setWithdrawnAmount(newWithdrawnTotal);
@@ -543,29 +561,11 @@ export default function App() {
       }
     }
 
-    const nowStr = new Date().toLocaleString();
-    const txId = 'TX-' + Math.random().toString(36).substr(2, 8).toUpperCase();
-
-    const newTx = {
-      id: txId,
-      amount: amount.toFixed(2),
-      gateway: payoutMethod.toUpperCase(),
-      accountTitle: accountTitle,
-      accountNumber: accountNumber,
-      date: nowStr,
-      status: 'PENDING APPROVAL',
-      userEmail: currentUser.email
-    };
-
-    const updatedHistory = [newTx, ...withdrawHistory];
-    setWithdrawHistory(updatedHistory);
-    localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
-
     setWithdrawInput('');
     setAccountTitle('');
     setAccountNumber('');
     setWithdrawModalOpen(false);
-    showToast(`Withdrawal of $${amount.toFixed(2)} USD submitted!`);
+    showToast('Withdrawal request submitted successfully!');
   };
 
   const updateWithdrawalStatus = async (withdrawal, nextStatus) => {
@@ -2424,13 +2424,17 @@ export default function App() {
                       <div className="text-[9px] text-gray-500 font-mono-finance mt-0.5">{tx.date} • {tx.id}</div>
                     </div>
                     <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-extrabold uppercase ${
-                      tx.status === 'APPROVED' 
+                      String(tx.status).toLowerCase() === 'approved'
                         ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
-                        : tx.status === 'REJECTED'
+                        : String(tx.status).toLowerCase() === 'rejected'
                         ? 'bg-red-500/10 text-red-400 border border-red-500/30'
                         : 'bg-amber-500/10 text-[#ffb700] border border-amber-500/30'
                     }`}>
-                      {tx.status}
+                      {String(tx.status).toLowerCase() === 'approved'
+                        ? 'APPROVED'
+                        : String(tx.status).toLowerCase() === 'rejected'
+                          ? 'REJECTED'
+                          : 'PENDING APPROVAL'}
                     </span>
                   </div>
                 ))
