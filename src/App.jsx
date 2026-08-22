@@ -93,7 +93,7 @@ export default function App() {
   // Admin Central States
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState('transfer');
-  const [allUsersList, setAllUsersList] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
   const [allWithdrawalsList, setAllWithdrawalsList] = useState([]);
   const [withdrawFilter, setWithdrawFilter] = useState('All');
 
@@ -211,26 +211,18 @@ export default function App() {
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const userList = [];
       snapshot.forEach((userDoc) => {
-        const user = userDoc.data();
-        userList.push({
-          id: userDoc.id,
-          email: user.email || userDoc.id,
-          name: user.name || '',
-          picture: user.picture || '',
-          joinedDate: user.joinedDate || '2026-08-22',
-          authType: user.authType || 'Google Auth',
-          plan: user.plan || 'STANDARD PLAN (25% MONTHLY)',
-          principal: `$${user.deposit || 0}`,
-          earnedYield: `$${user.earnedYield || 0}`,
-          status: (user.status || 'ACTIVE').toUpperCase()
-        });
+        userList.push({ id: userDoc.id, ...userDoc.data() });
       });
-
-      setAllUsersList(userList);
+      setAdminUsers(userList);
     }, (error) => {
-      console.error('Users listener error:', error);
+      console.error('Firestore listener failed:', error);
       showToast('Unable to load user accounts from Firestore');
     });
+
+    return () => unsubscribeUsers();
+  }, []);
+
+  useEffect(() => {
 
     const rawWithdrawals = localStorage.getItem('dc_master_withdrawals_list');
     if (rawWithdrawals) {
@@ -257,7 +249,6 @@ export default function App() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => {
-      unsubscribeUsers();
       window.removeEventListener('storage', handleStorageChange);
     };
   }, [currentUser]);
@@ -1569,7 +1560,7 @@ export default function App() {
                 }`}
               >
                 <Users size={14} />
-                <span>User Accounts ({allUsersList.length})</span>
+                <span>User Accounts ({adminUsers.length})</span>
               </button>
 
               <button 
@@ -1607,7 +1598,7 @@ export default function App() {
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
                   <div className="text-xs font-bold text-gray-400 bg-[#050a12] border border-[#14263d] px-4 py-2 rounded-xl">
-                    Total Authenticated Google Accounts: <strong className="text-white">{allUsersList.length}</strong>
+                    Total Authenticated Google Accounts: <strong className="text-white">{adminUsers.length}</strong>
                   </div>
                 </div>
 
@@ -1626,15 +1617,15 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#102136]">
-                      {allUsersList.length === 0 ? (
+                      {adminUsers.length === 0 ? (
                         <tr>
                           <td colSpan="8" className="p-8 text-center text-gray-500 font-bold">
                             No Google-authenticated accounts found yet.
                           </td>
                         </tr>
                       ) : (
-                        allUsersList.map((u, i) => (
-                          <tr key={i} className="hover:bg-[#0c1828] transition-colors">
+                        adminUsers.map((u, i) => (
+                          <tr key={u.id || i} className="hover:bg-[#0c1828] transition-colors">
                             <td className="p-3.5 font-bold text-white font-mono-finance flex items-center gap-2">
                               {u.picture ? (
                                 <img src={u.picture} alt="" className="w-6 h-6 rounded-lg object-cover" />
@@ -1645,14 +1636,14 @@ export default function App() {
                               )}
                               <span>{u.email}</span>
                             </td>
-                            <td className="p-3.5 text-gray-400 font-mono-finance">{u.joinedDate}</td>
+                            <td className="p-3.5 text-gray-400 font-mono-finance">{u.joinedDate || '2026-08-22'}</td>
                             <td className="p-3.5 text-[#00e5ff] font-mono-finance text-[11px] flex items-center gap-1">
                               <Key size={11} className="text-[#ffb700]" />
-                              <span>{u.authType}</span>
+                              <span>{u.authType || 'Google Auth'}</span>
                             </td>
-                            <td className="p-3.5 text-[#ffb700] font-black text-[10px]">{u.plan}</td>
-                            <td className="p-3.5 font-black text-white font-mono-finance">{u.principal}</td>
-                            <td className="p-3.5 font-black text-[#00ff88] font-mono-finance">{u.earnedYield}/day</td>
+                            <td className="p-3.5 text-[#ffb700] font-black text-[10px]">{u.plan || 'STANDARD PLAN (25% MONTHLY)'}</td>
+                            <td className="p-3.5 font-black text-white font-mono-finance">${u.deposit !== undefined ? u.deposit : 0}</td>
+                            <td className="p-3.5 font-black text-[#00ff88] font-mono-finance">${u.earnedYield !== undefined ? u.earnedYield : 0}/day</td>
                             <td className="p-3.5 text-center">
                               <button 
                                 onClick={() => handleResetUserProfit(u.email)}
@@ -1663,7 +1654,7 @@ export default function App() {
                             </td>
                             <td className="p-3.5 text-center">
                               <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-black text-[9px] uppercase">
-                                {u.status}
+                                {(u.status || 'ACTIVE').toUpperCase()}
                               </span>
                             </td>
                           </tr>
