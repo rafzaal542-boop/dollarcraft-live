@@ -63,6 +63,7 @@ export default function App() {
   const [userDailyYield, setUserDailyYield] = useState(0.0000);
   const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
   const [currentUserYield, setCurrentUserYield] = useState(0.0000);
+  const [currentTickingProfit, setCurrentTickingProfit] = useState(0.0000);
   const [yieldStartTime, setYieldStartTime] = useState(null);
   const [liveYieldRate, setLiveYieldRate] = useState(0);
   const [liveDailyTarget, setLiveDailyTarget] = useState(0);
@@ -241,7 +242,7 @@ export default function App() {
       const plan = resolvePlanDetails(deposit);
       const liveDailyRate = deposit * (plan.monthlyPct / 100) / 30;
       const liveRatePerSecond = liveDailyRate / 86400;
-      const baseProfit = Number(user.baseProfit || 0);
+      const initialYield = Number(user.earnedYield || user.baseProfit || 0);
       const persistedYieldStart = user.lastYieldCalculated?.toMillis?.() ||
         (user.lastYieldCalculated ? new Date(user.lastYieldCalculated).getTime() : 0) ||
         user.depositTimestamp?.toMillis?.() ||
@@ -251,7 +252,7 @@ export default function App() {
         user.createdAt?.toMillis?.() ||
         (user.createdAt ? new Date(user.createdAt).getTime() : 0);
       setCurrentUserBalance(deposit);
-      setCurrentUserYield(baseProfit);
+      setCurrentUserYield(initialYield);
       setLiveDailyTarget(liveDailyRate);
       setLiveYieldRate(liveRatePerSecond);
       setYieldStartTime(persistedYieldStart || Date.now());
@@ -261,6 +262,7 @@ export default function App() {
           ((Date.now() - persistedYieldStart) / 1000) * liveRatePerSecond
         );
       }
+      setCurrentTickingProfit(initialYield + accumulatedProfitRef.current);
       setUserDeposit(deposit);
       setActivePlanTier(plan);
       setUserDailyYield(liveDailyRate);
@@ -404,6 +406,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser || currentUserBalance <= 0 || liveYieldRate <= 0) {
       if (profitDisplayRef.current) profitDisplayRef.current.innerText = '$0.000000';
+      setCurrentTickingProfit(0);
       return;
     }
 
@@ -423,9 +426,11 @@ export default function App() {
       lastTime = now;
 
       accumulatedProfitRef.current += delta * perSecRate;
+      const nextProfit = currentUserYield + accumulatedProfitRef.current;
+      setCurrentTickingProfit(nextProfit);
 
       if (profitDisplayRef.current) {
-        profitDisplayRef.current.innerText = `$${(accumulatedProfitRef.current + currentUserYield).toFixed(6)}`;
+        profitDisplayRef.current.innerText = `$${nextProfit.toFixed(6)}`;
       }
 
       animId = requestAnimationFrame(updateMeter);
@@ -573,6 +578,7 @@ export default function App() {
       await setDoc(doc(db, 'users', targetId), {
         email: cleanTarget,
         deposit: newDep,
+        principal: newDep,
         earnedYield: plan.dailyRate,
         plan: plan.name,
         depositTimestamp: serverTimestamp(),
@@ -669,7 +675,7 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const totalBalance = (currentUserBalance + accumulatedProfitRef.current).toFixed(4);
+  const totalBalance = (currentUserBalance + currentTickingProfit).toFixed(4);
   const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const filteredWithdrawals = allWithdrawalsList.filter(w => {
@@ -1110,7 +1116,7 @@ export default function App() {
               </div>
 
               <div ref={profitDisplayRef} className="text-4xl sm:text-5xl font-black text-[#ffb700] font-mono-finance tracking-tight">
-                $0.00000000
+                ${currentTickingProfit.toFixed(6)}
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-[#0b1b30] pt-4 text-xs gap-3">
