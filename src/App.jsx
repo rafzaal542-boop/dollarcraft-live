@@ -414,7 +414,7 @@ export default function App() {
     const intervalMs = 50;
     const incrementPerTick = ratePerSecond * (intervalMs / 1000);
     const startTime = Number(yieldStartTime || Date.now());
-    const initialEarned = Math.max(0, ((Date.now() - startTime) / 1000) * ratePerSecond);
+    const initialEarned = Math.max(0, currentUserYield + ((Date.now() - startTime) / 1000) * ratePerSecond);
 
     setLiveEarned(initialEarned);
     const timer = setInterval(() => {
@@ -470,14 +470,14 @@ export default function App() {
   };
 
   // Withdraw Submit
-  const handleWithdrawSubmit = (e) => {
+  const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     const amount = parseFloat(withdrawInput);
     if (isNaN(amount) || amount < 50) {
       showToast('Minimum withdrawal amount is $50.00 USD');
       return;
     }
-    if (amount > accumulatedProfitRef.current) {
+    if (amount > liveEarned) {
       showToast('Insufficient profit balance!');
       return;
     }
@@ -495,8 +495,23 @@ export default function App() {
     setWithdrawnAmount(newWithdrawnTotal);
     localStorage.setItem(withdrawnKey, newWithdrawnTotal.toString());
 
-    accumulatedProfitRef.current = Math.max(0, accumulatedProfitRef.current - amount);
+    const remainingProfit = Math.max(0, liveEarned - amount);
+    accumulatedProfitRef.current = remainingProfit;
+    setLiveEarned(remainingProfit);
     localStorage.setItem(anchorKey, Date.now().toString());
+
+    if (db && currentUser?.email) {
+      try {
+        await setDoc(doc(db, 'users', currentUser.uid || currentUser.email), {
+          accumulatedYieldBase: remainingProfit,
+          depositTimestamp: Date.now()
+        }, { merge: true });
+      } catch (error) {
+        console.error('Could not persist withdrawal profit update:', error);
+        showToast('Withdrawal failed: unable to update Firestore');
+        return;
+      }
+    }
 
     const nowStr = new Date().toLocaleString();
     const txId = 'TX-' + Math.random().toString(36).substr(2, 8).toUpperCase();
@@ -2248,13 +2263,13 @@ export default function App() {
               <div><h3 className="font-extrabold text-base text-white">Withdrawal Request</h3><div className="flex items-center gap-1.5 text-[9px] text-[#00ff88] font-bold"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]"></span><span>Instant Daily Profit Settlement</span></div></div>
             </div>
             <div className="bg-[#030810] border border-[#00ff88]/30 rounded-xl p-3.5 flex items-center justify-between">
-              <div><span className="text-[9px] text-[#00ff88] font-extrabold uppercase tracking-widest block">AVAILABLE PROFIT BALANCE</span><div className="text-xl font-black text-[#00ff88] font-mono-finance">${accumulatedProfitRef.current.toFixed(6)}</div></div>
-              <button type="button" onClick={() => setWithdrawInput(accumulatedProfitRef.current.toFixed(4))} className="bg-[#00ff88] hover:bg-[#33ff9e] text-black text-[11px] font-extrabold px-3 py-1.5 rounded-lg uppercase">MAX</button>
+              <div><span className="text-[9px] text-[#00ff88] font-extrabold uppercase tracking-widest block">AVAILABLE PROFIT BALANCE</span><div className="text-xl font-black text-[#00ff88] font-mono-finance">${liveEarned.toFixed(6)}</div></div>
+              <button type="button" onClick={() => setWithdrawInput(liveEarned.toFixed(2))} className="bg-[#00ff88] hover:bg-[#33ff9e] text-black text-[11px] font-extrabold px-3 py-1.5 rounded-lg uppercase">MAX</button>
             </div>
             <form onSubmit={handleWithdrawSubmit} className="space-y-3.5">
               <div>
                 <div className="flex justify-between items-center mb-1"><label className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">WITHDRAWAL AMOUNT (USD)</label><span className="text-[9px] text-[#ffb700] font-extrabold uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">MIN $50.00 USD</span></div>
-                <div className="relative"><span className="absolute left-3.5 top-3 text-base font-mono-finance text-[#00ff88] font-black">$</span><input type="number" step="any" min="50" max={accumulatedProfitRef.current} value={withdrawInput} onChange={(e) => setWithdrawInput(e.target.value)} placeholder="0.00" className="w-full bg-[#030810] border border-[#0f233d] rounded-xl pl-8 pr-4 py-3 text-white font-mono-finance text-lg font-black focus:outline-none focus:border-[#00e5ff]" required /></div>
+                <div className="relative"><span className="absolute left-3.5 top-3 text-base font-mono-finance text-[#00ff88] font-black">$</span><input type="number" step="any" min="50" max={liveEarned} value={withdrawInput} onChange={(e) => setWithdrawInput(e.target.value)} placeholder="0.00" className="w-full bg-[#030810] border border-[#0f233d] rounded-xl pl-8 pr-4 py-3 text-white font-mono-finance text-lg font-black focus:outline-none focus:border-[#00e5ff]" required /></div>
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1.5"><span className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">PAYOUT BANK AND OTHER</span><span className="text-[9px] text-[#00e5ff] font-bold uppercase tracking-wider">SELECT GATEWAY</span></div>
