@@ -64,6 +64,8 @@ export default function App() {
   const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
   const [currentUserYield, setCurrentUserYield] = useState(0.0000);
   const [yieldStartTime, setYieldStartTime] = useState(null);
+  const [liveYieldRate, setLiveYieldRate] = useState(0);
+  const [liveDailyTarget, setLiveDailyTarget] = useState(0);
   const [userTotalProfit240, setUserTotalProfit240] = useState(0.00);
   const [liveProfit, setLiveProfit] = useState(0);
   const [withdrawnAmount, setWithdrawnAmount] = useState(0);
@@ -237,23 +239,31 @@ export default function App() {
       const user = snapshot.data();
       const deposit = Number(user.deposit ?? user.balance ?? 0);
       const plan = resolvePlanDetails(deposit);
-      const earnedYield = Number(user.earnedYield > 0 ? user.earnedYield : plan.dailyRate);
+      const liveDailyRate = deposit * (plan.monthlyPct / 100) / 30;
+      const liveRatePerSecond = liveDailyRate / 86400;
+      const baseProfit = Number(user.baseProfit || 0);
       const persistedYieldStart = user.lastYieldCalculated?.toMillis?.() ||
         (user.lastYieldCalculated ? new Date(user.lastYieldCalculated).getTime() : 0) ||
         user.depositTimestamp?.toMillis?.() ||
-        (user.depositTimestamp ? new Date(user.depositTimestamp).getTime() : 0);
+        (user.depositTimestamp ? new Date(user.depositTimestamp).getTime() : 0) ||
+        user.joinedTimestamp?.toMillis?.() ||
+        (user.joinedTimestamp ? new Date(user.joinedTimestamp).getTime() : 0) ||
+        user.createdAt?.toMillis?.() ||
+        (user.createdAt ? new Date(user.createdAt).getTime() : 0);
       setCurrentUserBalance(deposit);
-      setCurrentUserYield(earnedYield);
+      setCurrentUserYield(baseProfit);
+      setLiveDailyTarget(liveDailyRate);
+      setLiveYieldRate(liveRatePerSecond);
       setYieldStartTime(persistedYieldStart || Date.now());
       if (persistedYieldStart) {
-        accumulatedProfitRef.current = Number(user.baseProfit || 0) + Math.max(
+        accumulatedProfitRef.current = Math.max(
           0,
-          ((Date.now() - persistedYieldStart) / 1000) * (earnedYield / 86400)
+          ((Date.now() - persistedYieldStart) / 1000) * liveRatePerSecond
         );
       }
       setUserDeposit(deposit);
       setActivePlanTier(plan);
-      setUserDailyYield(earnedYield);
+      setUserDailyYield(liveDailyRate);
       setUserTotalProfit240(plan.total240Profit);
     }, (error) => {
       console.error('Customer Firestore listener failed:', error);
@@ -363,8 +373,11 @@ export default function App() {
     setUserDeposit(savedDeposit);
     
     const plan = resolvePlanDetails(savedDeposit);
+    const dailyTarget = savedDeposit * (plan.monthlyPct / 100) / 30;
     setActivePlanTier(plan);
-    setUserDailyYield(plan.dailyRate);
+    setUserDailyYield(dailyTarget);
+    setLiveDailyTarget(dailyTarget);
+    setLiveYieldRate(dailyTarget / 86400);
     setUserTotalProfit240(plan.total240Profit);
 
     const withdrawnKey = `dc_withdrawn_${safeKey}`;
@@ -383,18 +396,18 @@ export default function App() {
     }
     
     const elapsedSec = (Date.now() - parseInt(savedAnchor)) / 1000;
-    accumulatedProfitRef.current = Math.max(0, elapsedSec * (plan.dailyRate / 86400));
+    accumulatedProfitRef.current = Math.max(0, elapsedSec * (dailyTarget / 86400));
     setYieldStartTime((previousStartTime) => previousStartTime || parseInt(savedAnchor));
   };
 
   // ULTRA-SMOOTH requestAnimationFrame DOM METER TICKER
   useEffect(() => {
-    if (!currentUser || userDeposit <= 0 || userDailyYield <= 0) {
+    if (!currentUser || currentUserBalance <= 0 || liveYieldRate <= 0) {
       if (profitDisplayRef.current) profitDisplayRef.current.innerText = '$0.000000';
       return;
     }
 
-    const perSecRate = userDailyYield / 86400;
+    const perSecRate = liveYieldRate;
     if (yieldStartTime) {
       accumulatedProfitRef.current = Math.max(
         accumulatedProfitRef.current,
@@ -412,7 +425,7 @@ export default function App() {
       accumulatedProfitRef.current += delta * perSecRate;
 
       if (profitDisplayRef.current) {
-        profitDisplayRef.current.innerText = `$${accumulatedProfitRef.current.toFixed(8)}`;
+        profitDisplayRef.current.innerText = `$${(accumulatedProfitRef.current + currentUserYield).toFixed(6)}`;
       }
 
       animId = requestAnimationFrame(updateMeter);
@@ -420,7 +433,7 @@ export default function App() {
 
     animId = requestAnimationFrame(updateMeter);
     return () => cancelAnimationFrame(animId);
-  }, [currentUser, userDeposit, userDailyYield, yieldStartTime]);
+  }, [currentUser, currentUserBalance, currentUserYield, liveYieldRate, yieldStartTime]);
 
   // Google Login Hook
   const loginWithGoogle = useGoogleLogin({
@@ -675,9 +688,6 @@ export default function App() {
   };
 
   const currentReservesParts = formatReservesParts(globalReserves);
-
-  const speedPerSec = (userDailyYield / 86400).toFixed(6);
-  const speedPerMs = ((userDailyYield / 86400) / 1000).toFixed(9);
 
   return (
     <div className="min-h-screen bg-[#040810] text-white flex flex-col selection:bg-[#00f0ff] selection:text-black">
@@ -1107,14 +1117,14 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400 text-xs font-medium">24-Hour Target:</span>
                   <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[11px] font-black px-2.5 py-0.5 rounded-md font-mono-finance">
-                    +{userDailyYield.toFixed(4)} USD / 24h
+                    +{liveDailyTarget.toFixed(4)} USD / 24h
                   </span>
                 </div>
 
                 <div className="text-gray-400 text-[11px] font-mono-finance flex items-center gap-1">
                   <span>Speed:</span>
-                  <span className="text-[#ffb700] font-black">+${speedPerSec}/s</span>
-                  <span className="text-gray-500 text-[9px]">(+${speedPerMs}/ms)</span>
+                  <span className="text-[#ffb700] font-black">+${liveYieldRate.toFixed(6)}/s</span>
+                  <span className="text-gray-500 text-[9px]">(+${(liveYieldRate / 1000).toFixed(9)}/ms)</span>
                 </div>
               </div>
             </div>
