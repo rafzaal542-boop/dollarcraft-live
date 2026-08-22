@@ -21,23 +21,28 @@ export const ensureGoogleUserRecord = async (userData) => {
   if (!userData?.email) return;
 
   const userRef = doc(db, "users", userData.email.toLowerCase().trim());
-  const existingUser = await getDoc(userRef);
-  if (existingUser.exists()) return existingUser.data();
+  try {
+    const existingUser = await getDoc(userRef);
+    if (existingUser.exists()) return existingUser.data();
 
-  const userRecord = {
-    email: userData.email,
-    joinedDate: new Date().toISOString().split("T")[0],
-    authType: "Google Auth",
-    status: "active",
-    deposit: 0,
-    earnedYield: 0,
-    name: userData.name || userData.email.split("@")[0],
-    picture: userData.picture || "",
-    createdAt: serverTimestamp()
-  };
+    const userRecord = {
+      email: userData.email,
+      joinedDate: new Date().toISOString().split("T")[0],
+      authType: "Google Auth",
+      status: "active",
+      deposit: 0,
+      earnedYield: 0,
+      name: userData.name || userData.email.split("@")[0],
+      picture: userData.picture || "",
+      createdAt: serverTimestamp()
+    };
 
-  await setDoc(userRef, userRecord);
-  return userRecord;
+    await setDoc(userRef, userRecord);
+    return userRecord;
+  } catch (error) {
+    console.error("Could not save Google user to Firestore:", error);
+    return null;
+  }
 };
 
 export const signInWithGoogle = async () => {

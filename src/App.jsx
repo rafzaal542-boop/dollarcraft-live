@@ -207,8 +207,10 @@ export default function App() {
 
   // Keep the admin directory synchronized with Firestore.
   useEffect(() => {
+    cleanAndLoadAuthenticatedUsers();
+
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const users = snapshot.docs.map((userDoc) => {
+      const firestoreUsers = snapshot.docs.map((userDoc) => {
         const user = userDoc.data();
         return {
           ...user,
@@ -218,6 +220,18 @@ export default function App() {
           status: user.status || 'active'
         };
       });
+
+      const storedUsers = JSON.parse(localStorage.getItem('dc_real_google_users_directory') || '[]');
+      const usersByEmail = new Map(storedUsers.map((user) => [user.email.toLowerCase(), user]));
+      firestoreUsers.forEach((user) => {
+        usersByEmail.set(user.email.toLowerCase(), {
+          ...usersByEmail.get(user.email.toLowerCase()),
+          ...user
+        });
+      });
+
+      const users = [...usersByEmail.values()];
+      localStorage.setItem('dc_real_google_users_directory', JSON.stringify(users));
       setAllUsersList(users);
     }, (error) => {
       console.error('Users listener error:', error);
@@ -314,10 +328,11 @@ export default function App() {
       picture: userData.picture || '',
       joinedDate: existingIndex >= 0 ? users[existingIndex].joinedDate : new Date().toISOString().split('T')[0],
       authType: 'Google Auth',
+      deposit: userDep,
       tier: plan.name,
       principal: userDep,
       earnedYield: plan.dailyRate,
-      status: 'ACTIVE'
+      status: 'active'
     };
 
     if (existingIndex >= 0) {
@@ -405,8 +420,8 @@ export default function App() {
 
         localStorage.setItem('dc_auth_active_user', JSON.stringify(userData));
         setCurrentUser(userData);
-        await ensureGoogleUserRecord(userData);
         saveAuthenticatedGoogleUser(userData);
+        await ensureGoogleUserRecord(userData);
         generateUserCredentials(userData);
         loadUserFinancials(userData.email);
         setActiveTab('dashboard');
@@ -541,7 +556,7 @@ export default function App() {
         tier: plan.name,
         principal: newDep,
         earnedYield: plan.dailyRate,
-        status: 'ACTIVE'
+        status: 'active'
       });
     }
     
