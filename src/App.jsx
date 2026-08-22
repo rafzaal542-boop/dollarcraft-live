@@ -438,31 +438,31 @@ export default function App() {
   // Universal live yield stream with persistent withdrawal deductions.
   useEffect(() => {
     const depositVal = Number(currentUserBalance || 0);
-    if (depositVal <= 0) {
+    const monthlyPercentage = Number(activePlanTier.monthlyPct || 0);
+    if (depositVal <= 0 || monthlyPercentage <= 0) {
       setLiveEarned(0);
       setYieldCapReached(false);
       return undefined;
     }
 
-    const monthlyRate = 25;
-    const ratePerSecond = (depositVal * (monthlyRate / 100)) / (30 * 86400);
-    const intervalMs = 100;
-    const depositTime = Number(yieldStartTime || Date.now());
-    const calculateAvailableProfit = () => {
-      const elapsedSeconds = Math.max(0, (Date.now() - depositTime) / 1000);
-      const totalAccrued = elapsedSeconds * ratePerSecond;
-      return Math.max(0, totalAccrued - withdrawnYield);
+    const dailyCap = (depositVal * monthlyPercentage / 100) / 30;
+    const ratePerSec = dailyCap / 86400;
+    const startTime = Number(yieldStartTime || Date.now());
+    const withdrawn = Number(withdrawnYield || 0);
+
+    const updateLiveEarned = () => {
+      const elapsedSec = Math.max(0, (Date.now() - startTime) / 1000);
+      const totalAccrued = elapsedSec * ratePerSec;
+      const cappedAccrued = Math.min(totalAccrued, dailyCap);
+      setLiveEarned(Math.max(0, cappedAccrued - withdrawn));
+      setYieldCapReached(totalAccrued >= dailyCap);
     };
 
-    setLiveEarned(calculateAvailableProfit());
-    setYieldCapReached(false);
+    updateLiveEarned();
+    const interval = setInterval(updateLiveEarned, 50);
 
-    const timer = setInterval(() => {
-      setLiveEarned(calculateAvailableProfit());
-    }, intervalMs);
-
-    return () => clearInterval(timer);
-  }, [currentUserBalance, withdrawnYield, yieldStartTime]);
+    return () => clearInterval(interval);
+  }, [currentUserBalance, activePlanTier.monthlyPct, withdrawnYield, yieldStartTime]);
 
   // Google Login Hook
   const loginWithGoogle = useGoogleLogin({
@@ -1205,7 +1205,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div ref={profitDisplayRef} className="text-4xl sm:text-5xl font-black text-[#ffb700] font-mono-finance tracking-tight">
+              <div ref={profitDisplayRef} className="text-4xl sm:text-5xl font-black text-[#ffb700] font-mono-finance tabular-nums tracking-tight">
                 ${liveEarned.toFixed(6)}
               </div>
 
@@ -2352,7 +2352,7 @@ export default function App() {
               <div><h3 className="font-extrabold text-base text-white">Withdrawal Request</h3><div className="flex items-center gap-1.5 text-[9px] text-[#00ff88] font-bold"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]"></span><span>Instant Daily Profit Settlement</span></div></div>
             </div>
             <div className="bg-[#030810] border border-[#00ff88]/30 rounded-xl p-3.5 flex items-center justify-between">
-              <div><span className="text-[9px] text-[#00ff88] font-extrabold uppercase tracking-widest block">AVAILABLE PROFIT BALANCE</span><div className="text-xl font-black text-[#00ff88] font-mono-finance">${liveEarned.toFixed(6)}</div></div>
+              <div><span className="text-[9px] text-[#00ff88] font-extrabold uppercase tracking-widest block">AVAILABLE PROFIT BALANCE</span><div className="text-xl font-black text-[#00ff88] font-mono-finance tabular-nums">${liveEarned.toFixed(6)}</div></div>
               <button type="button" onClick={() => setWithdrawInput(liveEarned.toFixed(2))} className="bg-[#00ff88] hover:bg-[#33ff9e] text-black text-[11px] font-extrabold px-3 py-1.5 rounded-lg uppercase">MAX</button>
             </div>
             <form onSubmit={handleWithdrawSubmit} className="space-y-3.5">
