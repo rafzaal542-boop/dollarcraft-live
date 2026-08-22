@@ -64,6 +64,7 @@ export default function App() {
   const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
   const [currentUserYield, setCurrentUserYield] = useState(0.0000);
   const [liveEarned, setLiveEarned] = useState(0);
+  const [withdrawnYield, setWithdrawnYield] = useState(0);
   const [yieldCapReached, setYieldCapReached] = useState(false);
   const [yieldStartTime, setYieldStartTime] = useState(null);
   const [liveYieldRate, setLiveYieldRate] = useState(0);
@@ -243,7 +244,7 @@ export default function App() {
       const plan = resolvePlanDetails(deposit);
       const liveDailyRate = deposit * (plan.monthlyPct / 100) / 30;
       const liveRatePerSecond = liveDailyRate / 86400;
-      const initialYield = Number(user.accumulatedYieldBase || user.baseProfit || 0);
+      const withdrawnTotal = Number(user.withdrawnYield || 0);
       const persistedYieldStart = user.depositTimestamp?.toMillis?.() ||
         (user.depositTimestamp ? new Date(user.depositTimestamp).getTime() : 0) ||
         user.lastYieldCalculated?.toMillis?.() ||
@@ -253,16 +254,12 @@ export default function App() {
         user.createdAt?.toMillis?.() ||
         (user.createdAt ? new Date(user.createdAt).getTime() : 0);
       setCurrentUserBalance(deposit);
-      setCurrentUserYield(initialYield);
+      setWithdrawnYield(withdrawnTotal);
+      setCurrentUserYield(0);
       setLiveDailyTarget(liveDailyRate);
       setLiveYieldRate(liveRatePerSecond);
       setYieldStartTime(persistedYieldStart || Date.now());
-      if (persistedYieldStart) {
-        accumulatedProfitRef.current = Math.max(
-          0,
-          ((Date.now() - persistedYieldStart) / 1000) * liveRatePerSecond
-        );
-      }
+      accumulatedProfitRef.current = 0;
       setUserDeposit(deposit);
       setActivePlanTier(plan);
       setUserDailyYield(liveDailyRate);
@@ -402,7 +399,7 @@ export default function App() {
     setYieldStartTime((previousStartTime) => previousStartTime || parseInt(savedAnchor));
   };
 
-  // Universal live yield stream for every user with a positive deposit.
+  // Universal live yield stream with persistent withdrawal deductions.
   useEffect(() => {
     const depositVal = Number(currentUserBalance || 0);
     if (depositVal <= 0) {
@@ -413,32 +410,23 @@ export default function App() {
 
     const monthlyRate = 25;
     const ratePerSecond = (depositVal * (monthlyRate / 100)) / (30 * 86400);
-    const dailyCap = (depositVal * (monthlyRate / 100)) / 30;
-    const intervalMs = 50;
-    const incrementPerTick = ratePerSecond * (intervalMs / 1000);
+    const intervalMs = 100;
     const depositTime = Number(yieldStartTime || Date.now());
-    const elapsedSinceDeposit = Math.max(0, Date.now() - depositTime);
-    const activeWindowStart = depositTime + Math.floor(elapsedSinceDeposit / 86400000) * 86400000;
-    const elapsedInWindow = Math.max(0, (Date.now() - activeWindowStart) / 1000);
-    const initialEarned = Math.min(elapsedInWindow * ratePerSecond, dailyCap);
+    const calculateAvailableProfit = () => {
+      const elapsedSeconds = Math.max(0, (Date.now() - depositTime) / 1000);
+      const totalAccrued = elapsedSeconds * ratePerSecond;
+      return Math.max(0, totalAccrued - withdrawnYield);
+    };
 
-    setLiveEarned(initialEarned);
-    setYieldCapReached(initialEarned >= dailyCap);
-    if (initialEarned >= dailyCap) return undefined;
+    setLiveEarned(calculateAvailableProfit());
+    setYieldCapReached(false);
 
     const timer = setInterval(() => {
-      setLiveEarned((previousEarned) => {
-        const boundedYield = Math.min(previousEarned + incrementPerTick, dailyCap);
-        if (boundedYield >= dailyCap) {
-          setYieldCapReached(true);
-          clearInterval(timer);
-        }
-        return boundedYield;
-      });
+      setLiveEarned(calculateAvailableProfit());
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [currentUserBalance, activePlanTier.monthlyPct, yieldStartTime]);
+  }, [currentUserBalance, withdrawnYield, yieldStartTime]);
 
   // Google Login Hook
   const loginWithGoogle = useGoogleLogin({
@@ -505,22 +493,22 @@ export default function App() {
     const safeKey = currentUser.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
     const withdrawnKey = `dc_withdrawn_${safeKey}`;
     const historyKey = `dc_history_${safeKey}`;
-    const anchorKey = `dc_anchor_time_${safeKey}`;
 
     const newWithdrawnTotal = withdrawnAmount + amount;
     setWithdrawnAmount(newWithdrawnTotal);
+    const newWithdrawnYield = withdrawnYield + amount;
+    setWithdrawnYield(newWithdrawnYield);
     localStorage.setItem(withdrawnKey, newWithdrawnTotal.toString());
 
     const remainingProfit = Math.max(0, liveEarned - amount);
     accumulatedProfitRef.current = remainingProfit;
     setLiveEarned(remainingProfit);
-    localStorage.setItem(anchorKey, Date.now().toString());
 
     if (db && currentUser?.email) {
       try {
         await setDoc(doc(db, 'users', currentUser.uid || currentUser.email), {
-          accumulatedYieldBase: remainingProfit,
-          depositTimestamp: Date.now()
+          withdrawnYield: newWithdrawnYield,
+          accumulatedYieldBase: 0
         }, { merge: true });
       } catch (error) {
         console.error('Could not persist withdrawal profit update:', error);

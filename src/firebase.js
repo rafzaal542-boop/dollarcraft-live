@@ -35,6 +35,7 @@ export const ensureGoogleUserRecord = async (userData) => {
     if (!existingUser.exists()) {
       userRecord.deposit = 0;
       userRecord.earnedYield = 0;
+      userRecord.withdrawnYield = 0;
     }
     if (!existingUser.exists() || !existingUser.data().depositTimestamp) {
       userRecord.depositTimestamp = Date.now();
