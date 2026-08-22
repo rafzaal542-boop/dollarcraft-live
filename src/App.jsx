@@ -61,6 +61,8 @@ export default function App() {
   // Financial State
   const [userDeposit, setUserDeposit] = useState(0.0000);
   const [userDailyYield, setUserDailyYield] = useState(0.0000);
+  const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
+  const [currentUserYield, setCurrentUserYield] = useState(0.0000);
   const [userTotalProfit240, setUserTotalProfit240] = useState(0.00);
   const [liveProfit, setLiveProfit] = useState(0);
   const [withdrawnAmount, setWithdrawnAmount] = useState(0);
@@ -234,9 +236,12 @@ export default function App() {
       const user = snapshot.data();
       const deposit = Number(user.deposit ?? user.balance ?? 0);
       const plan = resolvePlanDetails(deposit);
+      const earnedYield = Number(user.earnedYield ?? plan.dailyRate);
+      setCurrentUserBalance(deposit);
+      setCurrentUserYield(earnedYield);
       setUserDeposit(deposit);
       setActivePlanTier(plan);
-      setUserDailyYield(Number(user.earnedYield ?? plan.dailyRate));
+      setUserDailyYield(earnedYield);
       setUserTotalProfit240(plan.total240Profit);
     }, (error) => {
       console.error('Customer Firestore listener failed:', error);
@@ -630,7 +635,7 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const totalBalance = (userDeposit + accumulatedProfitRef.current).toFixed(4);
+  const totalBalance = (currentUserBalance + accumulatedProfitRef.current).toFixed(4);
   const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const filteredWithdrawals = allWithdrawalsList.filter(w => {
@@ -1048,7 +1053,7 @@ export default function App() {
                 <span>TOTAL DEPOSIT</span>
               </div>
               <div className="text-4xl sm:text-5xl font-black text-[#00ff88] font-mono-finance tracking-tight">
-                ${userDeposit.toFixed(4)}
+                ${currentUserBalance.toFixed(4)}
               </div>
               <div className="mt-5 pt-4 border-t border-[#0b1b30] flex items-center justify-between text-xs">
                 <div className="text-gray-400 font-medium flex items-center gap-1.5">
