@@ -2087,7 +2087,7 @@ export default function App() {
       {/* ================= MODAL: PLANS (Activates Deposit Modal) ================= */}
       {plansModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-5xl rounded-[28px] p-7 sm:p-9 shadow-2xl space-y-6 relative max-h-[95vh] overflow-y-auto">
+          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative max-h-[95vh] overflow-y-auto backdrop-blur-xl">
             <button 
               onClick={() => setPlansModalOpen(false)}
               className="absolute top-6 right-6 text-gray-400 hover:text-white bg-[#0a182a] hover:bg-[#0f243f] w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border border-[#132c4e]"
@@ -2106,7 +2106,7 @@ export default function App() {
                 <p className="text-xs text-gray-400 font-medium mt-0.5">Select an official investment plan to start streaming high-frequency micro-yield returns</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
               
               {/* DC1 Standard Plan */}
               <div className="bg-[#040e18] border-2 border-[#00c8b3] rounded-3xl p-6 flex flex-col justify-between shadow-[0_0_25px_rgba(0,200,179,0.12)]">
@@ -2183,7 +2183,7 @@ export default function App() {
       {/* ================= MODAL: DEPOSIT PORTAL (BANK ONLY) ================= */}
       {depositModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-lg rounded-[28px] p-7 sm:p-9 shadow-2xl space-y-5 relative max-h-[95vh] overflow-y-auto">
+          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative max-h-[95vh] overflow-y-auto backdrop-blur-xl">
             <button 
               onClick={() => setDepositModalOpen(false)}
               className="absolute top-6 right-6 text-gray-400 hover:text-white bg-[#0a182a] hover:bg-[#0f243f] w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border border-[#132c4e]"
@@ -2317,7 +2317,7 @@ export default function App() {
       {/* ================= MODAL: CONTACT ================= */}
       {contactModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5 relative">
+          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative backdrop-blur-xl">
             <button onClick={() => setContactModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]"><Mail size={18} /></div>
@@ -2343,7 +2343,7 @@ export default function App() {
       {/* ================= MODAL: ABOUT ================= */}
       {aboutModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-2xl rounded-3xl p-7 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto backdrop-blur-xl">
             <button onClick={() => setAboutModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]"><Landmark size={20} /></div>
@@ -2352,7 +2352,7 @@ export default function App() {
             <div className="bg-[#030810] border border-[#0f233d] rounded-xl p-4 space-y-1.5"><span className="text-[10px] font-extrabold text-[#00e5ff] uppercase tracking-wider flex items-center gap-1"><ShieldCheck size={13} /> INSTITUTIONAL DIGITAL ASSET INFRASTRUCTURE</span><p className="text-xs text-gray-300 leading-relaxed font-normal">Dollar Craft is a premier institutional digital asset yield protocol and global investment provider. Built on sub-second precision calculation engines (26-decimal BigNumber) and multi-jurisdictional custody infrastructure, Dollar Craft serves individual and corporate clients across <strong>7 global financial hubs</strong>.</p></div>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-xs"><span className="font-extrabold text-[#00e5ff] uppercase tracking-wider flex items-center gap-1 text-[11px]"><Globe size={13} /> REGISTERED & OPERATING JURISDICTIONS</span><span className="text-[9px] text-[#00ff88] font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">7 Active Hubs</span></div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {GLOBAL_HUBS.map((hub) => (
                   <div key={hub.country} className="bg-[#030810] border border-[#0f233d] p-3 rounded-xl text-center space-y-1 flex flex-col items-center justify-center">
                     <img src={`https://flagcdn.com/w80/${hub.code}.png`} alt={hub.country} className="w-8 h-5 object-cover rounded shadow border border-[#10243e]" /><div className="font-bold text-xs text-white">{hub.country}</div><span className="text-[8px] text-[#00ff88] font-mono-finance block">REGULATED</span><span className="text-[8px] text-gray-500 font-mono-finance block truncate w-full">{hub.reg}</span>
