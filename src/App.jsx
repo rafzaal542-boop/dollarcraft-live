@@ -39,7 +39,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { addDoc, collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord } from './firebase';
 
 const ADMIN_EMAIL = 'rafzaal542@gmail.com';
@@ -102,7 +102,7 @@ export default function App() {
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState('transfer');
   const [adminUsers, setAdminUsers] = useState([]);
-  const [allWithdrawalsList, setAllWithdrawalsList] = useState([]);
+  const [adminWithdrawals, setAdminWithdrawals] = useState([]);
   const [withdrawFilter, setWithdrawFilter] = useState('All');
 
   // Admin Transfer
@@ -232,6 +232,30 @@ export default function App() {
     return () => unsubscribeUsers();
   }, []);
 
+  // Keep Admin withdrawals synchronized with Firestore.
+  useEffect(() => {
+    if (!db) return undefined;
+
+    const unsubscribeWithdrawals = onSnapshot(collection(db, 'withdrawals'), (snapshot) => {
+      const withdrawals = snapshot.docs
+        .map((withdrawalDoc) => {
+          const withdrawal = withdrawalDoc.data();
+          return {
+            id: withdrawalDoc.id,
+            ...withdrawal,
+            status: String(withdrawal.status || 'pending').toLowerCase()
+          };
+        })
+        .sort((left, right) => Number(right.timestamp || 0) - Number(left.timestamp || 0));
+      setAdminWithdrawals(withdrawals);
+    }, (error) => {
+      console.error('Firestore withdrawals listener failed:', error);
+      showToast('Unable to load withdrawal requests from Firestore');
+    });
+
+    return () => unsubscribeWithdrawals();
+  }, []);
+
   // Keep the active customer's balance synchronized with their Firestore record.
   useEffect(() => {
     if (!db || !currentUser?.email) return undefined;
@@ -273,11 +297,6 @@ export default function App() {
 
   useEffect(() => {
 
-    const rawWithdrawals = localStorage.getItem('dc_master_withdrawals_list');
-    if (rawWithdrawals) {
-      setAllWithdrawalsList(JSON.parse(rawWithdrawals));
-    }
-
     const savedUser = localStorage.getItem('dc_auth_active_user');
     if (savedUser) {
       const parsed = JSON.parse(savedUser);
@@ -288,9 +307,6 @@ export default function App() {
     }
 
     const handleStorageChange = (e) => {
-      if (e.key === 'dc_master_withdrawals_list' && e.newValue) {
-        setAllWithdrawalsList(JSON.parse(e.newValue));
-      }
       if (currentUser && e.key === `dc_deposit_${currentUser.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`) {
         loadUserFinancials(currentUser.email);
       }
@@ -510,6 +526,17 @@ export default function App() {
           withdrawnYield: newWithdrawnYield,
           accumulatedYieldBase: 0
         }, { merge: true });
+        await addDoc(collection(db, 'withdrawals'), {
+          userEmail: currentUser.email,
+          userName: currentUser.displayName || currentUser.name || 'User',
+          amount,
+          gateway: payoutMethod === 'easypaisa' ? 'EasyPaisa' : payoutMethod === 'jazzcash' ? 'JazzCash' : 'Bank',
+          accountTitle,
+          ibanOrNumber: accountNumber,
+          status: 'pending',
+          timestamp: Date.now(),
+          date: new Date().toISOString().split('T')[0]
+        });
       } catch (error) {
         console.error('Could not persist withdrawal profit update:', error);
         showToast('Withdrawal failed: unable to update Firestore');
@@ -535,11 +562,6 @@ export default function App() {
     setWithdrawHistory(updatedHistory);
     localStorage.setItem(historyKey, JSON.stringify(updatedHistory));
 
-    const masterList = JSON.parse(localStorage.getItem('dc_master_withdrawals_list') || '[]');
-    const updatedMaster = [newTx, ...masterList];
-    localStorage.setItem('dc_master_withdrawals_list', JSON.stringify(updatedMaster));
-    setAllWithdrawalsList(updatedMaster);
-
     setWithdrawInput('');
     setAccountTitle('');
     setAccountNumber('');
@@ -547,14 +569,24 @@ export default function App() {
     showToast(`Withdrawal of $${amount.toFixed(2)} USD submitted!`);
   };
 
-  const updateWithdrawalStatus = (txId, newStatus) => {
-    const updatedMaster = allWithdrawalsList.map(tx => {
-      if (tx.id === txId) return { ...tx, status: newStatus };
-      return tx;
-    });
-    setAllWithdrawalsList(updatedMaster);
-    localStorage.setItem('dc_master_withdrawals_list', JSON.stringify(updatedMaster));
-    showToast(`Request ${txId} marked as ${newStatus}`);
+  const updateWithdrawalStatus = async (withdrawal, nextStatus) => {
+    if (!db || !withdrawal?.id) return;
+
+    try {
+      await updateDoc(doc(db, 'withdrawals', withdrawal.id), { status: nextStatus });
+      if (nextStatus === 'rejected') {
+        const user = adminUsers.find((account) => account.email?.toLowerCase() === withdrawal.userEmail?.toLowerCase());
+        if (user?.id) {
+          await updateDoc(doc(db, 'users', user.id), {
+            withdrawnYield: Math.max(0, Number(user.withdrawnYield || 0) - Number(withdrawal.amount || 0))
+          });
+        }
+      }
+      showToast(`Request ${withdrawal.id} marked as ${nextStatus}`);
+    } catch (error) {
+      console.error('Firestore withdrawal update failed:', error);
+      showToast('Unable to update withdrawal request');
+    }
   };
 
   // ADMIN TRANSFER: Direct instant deposit injection with plan calculation
@@ -697,14 +729,17 @@ export default function App() {
       : '';
   const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
-  const filteredWithdrawals = allWithdrawalsList.filter(w => {
-    if (withdrawFilter === 'Pending') return w.status === 'PENDING APPROVAL';
-    if (withdrawFilter === 'Approved') return w.status === 'APPROVED';
-    if (withdrawFilter === 'Rejected') return w.status === 'REJECTED';
+  const filteredWithdrawals = adminWithdrawals.filter(w => {
+    if (withdrawFilter === 'Pending') return w.status === 'pending';
+    if (withdrawFilter === 'Approved') return w.status === 'approved';
+    if (withdrawFilter === 'Rejected') return w.status === 'rejected';
     return true;
   });
 
-  const pendingWithdrawCount = allWithdrawalsList.filter(w => w.status === 'PENDING APPROVAL').length;
+  const pendingWithdrawCount = adminWithdrawals.filter(w => w.status === 'pending').length;
+  const approvedWithdrawCount = adminWithdrawals.filter(w => w.status === 'approved').length;
+  const rejectedWithdrawCount = adminWithdrawals.filter(w => w.status === 'rejected').length;
+  const withdrawalTotalAmount = adminWithdrawals.reduce((total, withdrawal) => total + Number(withdrawal.amount || 0), 0);
 
   const formatReservesParts = (val) => {
     const whole = Math.floor(val).toLocaleString('en-US');
@@ -1685,7 +1720,7 @@ export default function App() {
                 }`}
               >
                 <DollarSign size={14} />
-                <span>Withdrawals & History ({allWithdrawalsList.length})</span>
+                <span>Withdrawals & History ({adminWithdrawals.length})</span>
                 {pendingWithdrawCount > 0 && (
                   <span className="bg-red-500 text-white font-black text-[9px] px-1.5 py-0.2 rounded-full">
                     {pendingWithdrawCount}
@@ -1805,7 +1840,7 @@ export default function App() {
                       <CheckCircle size={14} className="text-[#00ff88]" />
                     </div>
                     <div className="text-xl font-black text-[#00ff88] mt-1 font-mono-finance">
-                      {allWithdrawalsList.filter(w => w.status === 'APPROVED').length} Paid Out
+                      {approvedWithdrawCount} Paid Out
                     </div>
                   </div>
 
@@ -1815,7 +1850,7 @@ export default function App() {
                       <XCircle size={14} className="text-red-400" />
                     </div>
                     <div className="text-xl font-black text-red-400 mt-1 font-mono-finance">
-                      {allWithdrawalsList.filter(w => w.status === 'REJECTED').length} Rejected
+                      {rejectedWithdrawCount} Rejected
                     </div>
                   </div>
 
@@ -1824,7 +1859,7 @@ export default function App() {
                       <span>Total Volume</span>
                       <DollarSign size={14} className="text-[#00e5ff]" />
                     </div>
-                    <div className="text-xl font-black text-white mt-1 font-mono-finance">{allWithdrawalsList.length} Total</div>
+                    <div className="text-xl font-black text-white mt-1 font-mono-finance">${withdrawalTotalAmount.toFixed(2)} Total</div>
                   </div>
                 </div>
 
@@ -1858,31 +1893,31 @@ export default function App() {
                         <div className="space-y-1.5">
                           <div className="flex items-center gap-3">
                             <span className="text-lg font-black text-white font-mono-finance">
-                              ${tx.amount} USD
+                              ${Number(tx.amount || 0).toFixed(2)} USD
                             </span>
                             <span className="bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 text-[9px] font-extrabold px-2.5 py-0.5 rounded-md uppercase">
                               {tx.gateway}
                             </span>
                             <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase ${
-                              tx.status === 'PENDING APPROVAL'
+                              tx.status === 'pending'
                                 ? 'bg-amber-500/10 text-[#ffb700] border border-amber-500/30 animate-pulse'
-                                : tx.status === 'APPROVED'
+                                : tx.status === 'approved'
                                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                                 : 'bg-red-500/10 text-red-400 border border-red-500/30'
                             }`}>
-                              {tx.status}
+                              {tx.status.toUpperCase()}
                             </span>
                           </div>
 
                           <div className="text-xs text-gray-300 font-medium flex flex-wrap items-center gap-x-4 gap-y-1">
                             <span>User: <strong className="text-white font-mono-finance">{tx.userEmail}</strong></span>
-                            <span>Requested: <strong className="text-gray-400 font-mono-finance">{tx.date}</strong></span>
+                            <span>Requested: <strong className="text-gray-400 font-mono-finance">{tx.timestamp ? new Date(tx.timestamp).toLocaleString() : tx.date}</strong></span>
                           </div>
 
                           <div className="text-xs bg-[#03060a] border border-[#0f1d2e] p-2.5 rounded-xl font-mono-finance text-gray-300 flex items-center justify-between">
-                            <span>Destination: <strong className="text-[#00ff88]">{tx.accountTitle}</strong> | Account / IBAN: <strong className="text-white">{tx.accountNumber}</strong></span>
+                            <span>Destination: <strong className="text-[#00ff88]">{tx.accountTitle}</strong> | Account / IBAN: <strong className="text-white">{tx.ibanOrNumber || tx.accountNumber}</strong></span>
                             <button 
-                              onClick={() => copyToClipboard(`${tx.accountTitle} - ${tx.accountNumber}`, 'Bank Account Details')}
+                              onClick={() => copyToClipboard(`${tx.accountTitle} - ${tx.ibanOrNumber || tx.accountNumber}`, 'Bank Account Details')}
                               className="text-[#00e5ff] hover:underline text-[10px] font-bold uppercase ml-2"
                             >
                               Copy
@@ -1890,10 +1925,10 @@ export default function App() {
                           </div>
                         </div>
 
-                        {tx.status === 'PENDING APPROVAL' && (
+                        {tx.status === 'pending' && (
                           <div className="flex items-center gap-2">
                             <button 
-                              onClick={() => updateWithdrawalStatus(tx.id, 'REJECTED')}
+                              onClick={() => updateWithdrawalStatus(tx, 'rejected')}
                               className="bg-[#180a0a] hover:bg-red-950/40 border border-red-500/40 text-red-400 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all"
                             >
                               <XCircle size={14} />
@@ -1901,7 +1936,7 @@ export default function App() {
                             </button>
 
                             <button 
-                              onClick={() => updateWithdrawalStatus(tx.id, 'APPROVED')}
+                              onClick={() => updateWithdrawalStatus(tx, 'approved')}
                               className="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/25"
                             >
                               <CheckCircle size={14} />
