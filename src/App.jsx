@@ -263,21 +263,37 @@ export default function App() {
     const userRef = doc(db, 'users', currentUser.uid || currentUser.email);
     const unsubscribeUser = onSnapshot(userRef, (snapshot) => {
       if (!snapshot.exists()) return;
-      const user = snapshot.data();
-      const deposit = Number(user.deposit || user.principal || user.balance || 0);
+      const userData = snapshot.data();
+      const deposit = parseFloat(userData?.deposit || userData?.totalDeposit || userData?.principal || userData?.balance || 0) || 0;
       const plan = resolvePlanDetails(deposit);
-      const monthlyPercentage = Number(user.monthlyPercentage) || plan.monthlyPct || 25;
+      const monthlyPercentage = parseFloat(userData?.monthlyPercentage || 25) || 25;
       const liveDailyRate = deposit * (monthlyPercentage / 100) / 30;
       const liveRatePerSecond = liveDailyRate / 86400;
-      const withdrawnTotal = Number(user.withdrawnYield || 0);
-      const persistedYieldStart = user.depositTimestamp?.toMillis?.() ||
-        (user.depositTimestamp ? new Date(user.depositTimestamp).getTime() : 0) ||
-        user.lastYieldCalculated?.toMillis?.() ||
-        (user.lastYieldCalculated ? new Date(user.lastYieldCalculated).getTime() : 0) ||
-        user.joinedTimestamp?.toMillis?.() ||
-        (user.joinedTimestamp ? new Date(user.joinedTimestamp).getTime() : 0) ||
-        user.createdAt?.toMillis?.() ||
-        (user.createdAt ? new Date(user.createdAt).getTime() : 0);
+      const withdrawnTotal = parseFloat(userData?.withdrawnYield || 0) || 0;
+      let persistedYieldStart = Date.now();
+      if (userData?.depositTimestamp) {
+        persistedYieldStart = typeof userData.depositTimestamp === 'number'
+          ? userData.depositTimestamp
+          : typeof userData.depositTimestamp.toMillis === 'function'
+            ? userData.depositTimestamp.toMillis()
+            : Date.now();
+      } else if (userData?.createdAt) {
+        persistedYieldStart = typeof userData.createdAt === 'number'
+          ? userData.createdAt
+          : typeof userData.createdAt.toMillis === 'function'
+            ? userData.createdAt.toMillis()
+            : Date.now();
+      } else {
+        persistedYieldStart = Date.now() - 3600000;
+      }
+      if (!Number.isFinite(persistedYieldStart) || persistedYieldStart <= 0) {
+        persistedYieldStart = Date.now() - 3600000;
+      }
+      if (deposit > 0 && !userData?.depositTimestamp) {
+        updateDoc(userRef, { depositTimestamp: Date.now() }).catch((error) => {
+          console.error('Could not repair deposit timestamp:', error);
+        });
+      }
       setCurrentUserBalance(deposit);
       setWithdrawnYield(withdrawnTotal);
       setCurrentUserYield(0);
@@ -437,23 +453,22 @@ export default function App() {
 
   // Universal live yield stream with persistent withdrawal deductions.
   useEffect(() => {
-    const depositVal = Number(currentUserBalance || 0);
-    const monthlyPercentage = Number(activePlanTier.monthlyPct || 0);
-    if (depositVal <= 0 || monthlyPercentage <= 0) {
+    const depositVal = parseFloat(currentUserBalance || 0) || 0;
+    const monthlyRate = parseFloat(activePlanTier.monthlyPct || 25) || 25;
+    const withdrawn = parseFloat(withdrawnYield || 0) || 0;
+    if (depositVal <= 0) {
       setLiveEarned(0);
       return undefined;
     }
 
-    const ratePerSec = (depositVal * monthlyPercentage / 100) / (30 * 86400);
-    const maxContractYield = depositVal * 2;
-    const startTime = Number(yieldStartTime || Date.now());
-    const withdrawn = Number(withdrawnYield || 0);
+    const ratePerSec = (depositVal * (monthlyRate / 100)) / (30 * 86400);
+    const startTime = Number(yieldStartTime || Date.now() - 3600000);
 
     const updateLiveEarned = () => {
-      const elapsedSec = Math.max(0, (Date.now() - startTime) / 1000);
-      const grossYield = Math.min(elapsedSec * ratePerSec, maxContractYield);
-      const netAvailableYield = Math.max(0, grossYield - withdrawn);
-      setLiveEarned(netAvailableYield);
+      const elapsedSec = Math.max(1, (Date.now() - startTime) / 1000);
+      const grossYield = Math.min(elapsedSec * ratePerSec, depositVal * 2);
+      const netYield = Math.max(0, grossYield - withdrawn);
+      setLiveEarned(Number.isNaN(netYield) ? 0.000001 : netYield);
     };
 
     updateLiveEarned();
