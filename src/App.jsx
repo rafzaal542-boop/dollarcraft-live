@@ -63,7 +63,7 @@ export default function App() {
   const [userDailyYield, setUserDailyYield] = useState(0.0000);
   const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
   const [currentUserYield, setCurrentUserYield] = useState(0.0000);
-  const [currentTickingProfit, setCurrentTickingProfit] = useState(0.0000);
+  const [liveEarned, setLiveEarned] = useState(0);
   const [yieldStartTime, setYieldStartTime] = useState(null);
   const [liveYieldRate, setLiveYieldRate] = useState(0);
   const [liveDailyTarget, setLiveDailyTarget] = useState(0);
@@ -238,7 +238,7 @@ export default function App() {
     const unsubscribeUser = onSnapshot(userRef, (snapshot) => {
       if (!snapshot.exists()) return;
       const user = snapshot.data();
-      const deposit = Number(user.deposit ?? user.balance ?? 0);
+      const deposit = Number(user.deposit || user.principal || user.balance || 0);
       const plan = resolvePlanDetails(deposit);
       const liveDailyRate = deposit * (plan.monthlyPct / 100) / 30;
       const liveRatePerSecond = liveDailyRate / 86400;
@@ -262,7 +262,6 @@ export default function App() {
           ((Date.now() - persistedYieldStart) / 1000) * liveRatePerSecond
         );
       }
-      setCurrentTickingProfit(initialYield + accumulatedProfitRef.current);
       setUserDeposit(deposit);
       setActivePlanTier(plan);
       setUserDailyYield(liveDailyRate);
@@ -402,43 +401,26 @@ export default function App() {
     setYieldStartTime((previousStartTime) => previousStartTime || parseInt(savedAnchor));
   };
 
-  // ULTRA-SMOOTH requestAnimationFrame DOM METER TICKER
+  // Universal live yield stream for every user with a positive deposit.
   useEffect(() => {
-    if (!currentUser || currentUserBalance <= 0 || liveYieldRate <= 0) {
-      if (profitDisplayRef.current) profitDisplayRef.current.innerText = '$0.000000';
-      setCurrentTickingProfit(0);
-      return;
+    const depositVal = Number(currentUserBalance || 0);
+    if (depositVal <= 0) {
+      setLiveEarned(0);
+      return undefined;
     }
 
-    const perSecRate = liveYieldRate;
-    if (yieldStartTime) {
-      accumulatedProfitRef.current = Math.max(
-        accumulatedProfitRef.current,
-        ((Date.now() - yieldStartTime) / 1000) * perSecRate
-      );
-    }
-    let lastTime = Date.now();
-    let animId;
+    const monthlyRate = Number(activePlanTier.monthlyPct || 25);
+    const ratePerSecond = (depositVal * (monthlyRate / 100)) / (30 * 86400);
+    const intervalMs = 50;
+    const incrementPerTick = ratePerSecond * (intervalMs / 1000);
 
-    const updateMeter = () => {
-      const now = Date.now();
-      const delta = (now - lastTime) / 1000;
-      lastTime = now;
+    setLiveEarned(0);
+    const timer = setInterval(() => {
+      setLiveEarned((previousEarned) => previousEarned + incrementPerTick);
+    }, intervalMs);
 
-      accumulatedProfitRef.current += delta * perSecRate;
-      const nextProfit = currentUserYield + accumulatedProfitRef.current;
-      setCurrentTickingProfit(nextProfit);
-
-      if (profitDisplayRef.current) {
-        profitDisplayRef.current.innerText = `$${nextProfit.toFixed(6)}`;
-      }
-
-      animId = requestAnimationFrame(updateMeter);
-    };
-
-    animId = requestAnimationFrame(updateMeter);
-    return () => cancelAnimationFrame(animId);
-  }, [currentUser, currentUserBalance, currentUserYield, liveYieldRate, yieldStartTime]);
+    return () => clearInterval(timer);
+  }, [currentUserBalance, activePlanTier.monthlyPct]);
 
   // Google Login Hook
   const loginWithGoogle = useGoogleLogin({
@@ -675,7 +657,7 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const totalBalance = (currentUserBalance + currentTickingProfit).toFixed(4);
+  const totalBalance = (currentUserBalance + liveEarned).toFixed(4);
   const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const filteredWithdrawals = allWithdrawalsList.filter(w => {
@@ -1116,7 +1098,7 @@ export default function App() {
               </div>
 
               <div ref={profitDisplayRef} className="text-4xl sm:text-5xl font-black text-[#ffb700] font-mono-finance tracking-tight">
-                ${currentTickingProfit.toFixed(6)}
+                ${liveEarned.toFixed(6)}
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-[#0b1b30] pt-4 text-xs gap-3">
