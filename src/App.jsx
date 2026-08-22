@@ -36,7 +36,8 @@ import {
   Calendar,
   Shield,
   Plus,
-  RotateCcw
+  RotateCcw,
+  Menu
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
@@ -57,6 +58,7 @@ const GLOBAL_HUBS = [
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Financial State
   const [userDeposit, setUserDeposit] = useState(0.0000);
@@ -749,7 +751,7 @@ export default function App() {
   const currentReservesParts = formatReservesParts(globalReserves);
 
   return (
-    <div className="min-h-screen bg-[#040810] text-white flex flex-col selection:bg-[#00f0ff] selection:text-black">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#040810] text-white flex flex-col selection:bg-[#00f0ff] selection:text-black">
       
       {/* Toast Notification */}
       {toastMessage && (
@@ -761,7 +763,7 @@ export default function App() {
 
       {/* Top Navbar */}
       <header className="border-b border-[#0d1c30] bg-[#060c18]/95 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-[1360px] mx-auto px-4 lg:px-8 h-20 flex items-center justify-between">
+        <div className="max-w-[1360px] mx-auto w-full px-3 md:px-6 lg:px-8 min-h-20 py-3 flex flex-wrap items-center justify-between gap-3">
           
           {/* Brand Logo */}
           <div className="flex items-center gap-3.5 cursor-pointer" onClick={() => setActiveTab('home')}>
@@ -783,7 +785,7 @@ export default function App() {
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="hidden xl:flex items-center bg-[#071322] border border-[#10243e] rounded-2xl p-1.5 gap-1.5">
+          <nav className="hidden md:flex flex-wrap items-center justify-center bg-[#071322] border border-[#10243e] rounded-2xl p-1.5 gap-1.5 max-w-full">
             <button 
               onClick={() => setActiveTab('home')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -862,7 +864,7 @@ export default function App() {
           </nav>
 
           {/* Right User Bar */}
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex flex-wrap items-center justify-end gap-3 min-w-0 max-w-full">
             {currentUser ? (
               <>
                 <div className="flex items-center bg-[#071322] border border-[#10243e] rounded-2xl px-3 py-1.5 gap-2.5">
@@ -873,7 +875,7 @@ export default function App() {
                       {currentUser.email ? currentUser.email[0].toUpperCase() : 'U'}
                     </div>
                   )}
-                  <span className="text-xs font-bold text-gray-200 font-mono-finance tracking-tight">
+                  <span className="max-w-[180px] truncate text-xs font-bold text-gray-200 font-mono-finance tracking-tight">
                     {currentUser.email}
                   </span>
                 </div>
@@ -916,18 +918,51 @@ export default function App() {
               <Bell size={15} />
             </button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            className="md:hidden w-10 h-10 rounded-xl bg-[#071322] border border-[#10243e] text-[#00e5ff] flex items-center justify-center"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+
+          {mobileMenuOpen && (
+            <div className="md:hidden basis-full w-full bg-[#071322] border border-[#10243e] rounded-2xl p-3 space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Home</button>
+                <button onClick={() => { if (!currentUser) loginWithGoogle(); else setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Customer Dashboard</button>
+                <button onClick={() => { setPlansModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#eab308]/30 bg-[#eab308]/5 px-3 py-2.5 text-left text-xs font-bold text-[#eab308]">Plans</button>
+                {isSuperAdmin && <button onClick={() => { setAdminModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-left text-xs font-bold text-[#ffb700]">Admin</button>}
+                <button onClick={() => { setAboutModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">About Us</button>
+                <button onClick={() => { setActiveTab('ib'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#eab308]/30 bg-[#eab308]/5 px-3 py-2.5 text-left text-xs font-bold text-[#eab308]">IB Program</button>
+                <button onClick={() => { setContactModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Contact</button>
+              </div>
+              {currentUser ? (
+                <div className="flex flex-wrap items-center gap-2 border-t border-[#10243e] pt-3">
+                  <span className="min-w-0 max-w-[140px] truncate text-xs text-gray-200 font-mono-finance">{currentUser.email}</span>
+                  <button onClick={() => { setWithdrawModalOpen(true); setMobileMenuOpen(false); }} className="flex-1 min-w-[120px] bg-[#07172c] border border-[#00e5ff]/50 text-[#00e5ff] font-extrabold text-xs px-3 py-2.5 rounded-xl">Withdraw</button>
+                  <button onClick={() => { setLogoutModalOpen(true); setMobileMenuOpen(false); }} className="w-10 h-10 rounded-xl bg-[#140c14] border border-red-500/30 text-red-400 flex items-center justify-center" aria-label="Logout"><LogOut size={15} /></button>
+                </div>
+              ) : (
+                <button onClick={() => { loginWithGoogle(); setMobileMenuOpen(false); }} className="w-full bg-white text-black font-extrabold text-xs px-4 py-2.5 rounded-xl">Continue with Google</button>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
       {/* Main Container */}
-      <main className="max-w-[1240px] mx-auto px-4 lg:px-8 py-8 flex-1 w-full space-y-6">
+      <main className="max-w-[1240px] mx-auto px-3 md:px-6 lg:px-8 py-8 flex-1 w-full max-w-full overflow-x-hidden space-y-6">
         
         {/* ================= VIEW 1: HOME ================= */}
         {activeTab === 'home' && (
           <div className="space-y-6">
             
             <div className="bg-gradient-to-b from-[#071426] via-[#050f1d] to-[#040810] border border-[#10243e] rounded-[28px] p-8 sm:p-12 shadow-2xl relative overflow-hidden">
-              <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="flex flex-wrap items-center gap-3 mb-6 max-w-full">
                 <div className="bg-[#06192d] border border-[#00d0ff]/40 text-[#00d0ff] text-[11px] font-extrabold px-3.5 py-1.5 rounded-full flex items-center gap-2">
                   <Globe size={13} className="text-[#00d0ff]" />
                   <span>OFFICIAL SMART INVESTMENT PROTOCOL</span>
@@ -938,7 +973,7 @@ export default function App() {
                 </div>
               </div>
 
-              <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight uppercase text-white max-w-4xl">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-tight uppercase text-white max-w-4xl">
                 DOLLAR CRAFT – HIGH PRECISION MICRO-YIELD INVESTMENT PLATFORM
               </h1>
 
@@ -946,7 +981,7 @@ export default function App() {
                 Dollar Craft is an institutional-grade digital asset micro-yield protocol and financial management ecosystem. Operating legally across <strong className="text-white font-extrabold">7 regulated global hubs</strong>, we deliver sub-second 26-decimal precision compounding, audited multi-signature custody, and automated daily capital growth.
               </p>
 
-              <div className="flex flex-wrap gap-4 mt-8">
+              <div className="flex flex-wrap gap-4 mt-8 max-w-full">
                 {currentUser ? (
                   <button 
                     onClick={() => setActiveTab('dashboard')}
