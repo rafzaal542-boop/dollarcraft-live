@@ -39,6 +39,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db, ensureGoogleUserRecord } from './firebase';
 
 const ADMIN_EMAIL = 'rafzaal542@gmail.com';
 
@@ -203,9 +205,24 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Sync Registry & Auto-Detect Real Authenticated Google Users
+  // Keep the admin directory synchronized with Firestore.
   useEffect(() => {
-    cleanAndLoadAuthenticatedUsers();
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const users = snapshot.docs.map((userDoc) => {
+        const user = userDoc.data();
+        return {
+          ...user,
+          email: user.email || userDoc.id,
+          principal: user.deposit ?? user.principal ?? 0,
+          earnedYield: user.earnedYield ?? 0,
+          status: user.status || 'active'
+        };
+      });
+      setAllUsersList(users);
+    }, (error) => {
+      console.error('Users listener error:', error);
+      cleanAndLoadAuthenticatedUsers();
+    });
 
     const rawWithdrawals = localStorage.getItem('dc_master_withdrawals_list');
     if (rawWithdrawals) {
@@ -234,7 +251,10 @@ export default function App() {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      unsubscribeUsers();
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, [currentUser]);
 
   const cleanAndLoadAuthenticatedUsers = () => {
@@ -385,6 +405,7 @@ export default function App() {
 
         localStorage.setItem('dc_auth_active_user', JSON.stringify(userData));
         setCurrentUser(userData);
+        await ensureGoogleUserRecord(userData);
         saveAuthenticatedGoogleUser(userData);
         generateUserCredentials(userData);
         loadUserFinancials(userData.email);
