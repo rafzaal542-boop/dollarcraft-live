@@ -42,6 +42,7 @@ import {
 import { useGoogleLogin } from '@react-oauth/google';
 import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord, submitWithdrawalRequest } from './firebase';
+import { VALID_IB_CODES } from './data/ibCodes';
 
 const GLOBAL_HUBS = [
   { country: 'USA', code: 'us', reg: 'MSB #310002148291' },
@@ -699,14 +700,15 @@ export default function App() {
 
   const handleGenerateIbLink = (e) => {
     e.preventDefault();
-    if (!ibCodeInput) {
-      showToast('Please enter mandatory secret access code');
+    const code = ibCodeInput.trim();
+    if (!VALID_IB_CODES.has(code)) {
+      setGeneratedIbLink('');
+      showToast('❌ Invalid IB Access Code. Please enter an authorized security code to generate your referral link.');
       return;
     }
-    const partner = currentUser ? currentUser.email.split('@')[0] : 'client';
-    const link = `https://dollarcraft3.com/ref?code=${ibCodeInput.toUpperCase()}&partner=${partner}`;
+    const link = `https://dollarcraft3.com/?ref=${currentUser?.uid || 'partner'}&code=${code}`;
     setGeneratedIbLink(link);
-    showToast('Official IB Link Generated!');
+    showToast('✅ Authorized IB Link generated successfully!');
   };
 
   const showToast = (msg) => {
