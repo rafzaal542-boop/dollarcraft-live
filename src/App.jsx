@@ -762,8 +762,8 @@ export default function App() {
       )}
 
       {/* Top Navbar */}
-      <header className="border-b border-[#0d1c30] bg-[#060c18]/95 backdrop-blur-xl sticky top-0 z-40">
-        <div className="w-full max-w-7xl mx-auto px-3 md:px-4 lg:px-8 py-2.5 min-h-20 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 md:gap-4">
+      <header className="w-full overflow-visible border-b border-[#0d1c30] bg-[#060c18]/95 backdrop-blur-xl sticky top-0 z-40">
+        <div className="w-full max-w-7xl mx-auto overflow-visible px-4 md:px-8 py-3 min-h-20 flex flex-wrap md:flex-nowrap items-center justify-between gap-3">
           
           {/* Brand Logo */}
           <div className="flex flex-shrink-0 whitespace-nowrap items-center gap-3.5 cursor-pointer" onClick={() => setActiveTab('home')}>
@@ -785,10 +785,10 @@ export default function App() {
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="hidden md:flex flex-shrink-0 items-center gap-1.5 lg:gap-2 bg-[#071322] border border-[#10243e] rounded-2xl p-1 max-w-full">
+          <nav className="hidden md:flex flex-shrink-0 items-center gap-1.5 lg:gap-2 overflow-visible bg-[#071322] border border-[#10243e] rounded-2xl p-1">
             <button 
               onClick={() => setActiveTab('home')}
-              className={`px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap transition-all ${
                 activeTab === 'home' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
@@ -804,7 +804,7 @@ export default function App() {
                   setActiveTab('dashboard');
                 }
               }}
-              className={`px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
                 activeTab === 'dashboard' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
@@ -816,7 +816,7 @@ export default function App() {
             
             <button 
               onClick={() => setPlansModalOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap text-[#eab308] border border-[#eab308]/30 bg-[#eab308]/5 hover:bg-[#eab308]/15 transition-all"
+              className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap text-[#eab308] border border-[#eab308]/30 bg-[#eab308]/5 hover:bg-[#eab308]/15 transition-all"
             >
               <TrendingUp size={14} className="text-[#eab308]" />
               Plans
@@ -826,7 +826,7 @@ export default function App() {
             {isAdmin && (
               <button 
                 onClick={() => setAdminModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
+                className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
               >
                 <Sliders size={14} className="text-[#ffb700]" />
                 <span>Admin</span>
@@ -840,13 +840,13 @@ export default function App() {
 
             <button 
               onClick={() => setAboutModalOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
+              className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
             >
               About Us
             </button>
             <button 
               onClick={() => setActiveTab('ib')}
-              className={`px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
                 activeTab === 'ib' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-[#eab308] hover:text-[#fde047] hover:bg-[#0c1e34]'
@@ -857,14 +857,14 @@ export default function App() {
             </button>
             <button 
               onClick={() => setContactModalOpen(true)}
-              className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
+              className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
             >
               Contact
             </button>
           </nav>
 
           {/* Right User Bar */}
-          <div className="hidden md:flex flex-shrink-0 items-center gap-2 lg:gap-3 min-w-0">
+          <div className="hidden md:flex flex-shrink-0 items-center gap-2.5 ml-auto min-w-0 overflow-visible">
             {currentUser ? (
               <>
                 <div className="flex flex-shrink-0 items-center bg-[#071322] border border-[#10243e] rounded-2xl px-2.5 py-1.5 gap-2">
@@ -899,7 +899,7 @@ export default function App() {
             ) : (
               <button 
                 onClick={() => loginWithGoogle()}
-                className="bg-white hover:bg-gray-100 text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-white/10"
+                className="flex-shrink-0 bg-white hover:bg-gray-100 text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-white/10 whitespace-nowrap"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
