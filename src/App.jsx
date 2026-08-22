@@ -409,7 +409,7 @@ export default function App() {
       return undefined;
     }
 
-    const monthlyRate = Number(activePlanTier.monthlyPct || 25);
+    const monthlyRate = 25;
     const ratePerSecond = (depositVal * (monthlyRate / 100)) / (30 * 86400);
     const intervalMs = 50;
     const incrementPerTick = ratePerSecond * (intervalMs / 1000);
@@ -657,7 +657,12 @@ export default function App() {
     setTimeout(() => setToastMessage(''), 4000);
   };
 
-  const totalBalance = (currentUserBalance + liveEarned).toFixed(4);
+  const currentDeposit = Number(currentUserBalance || userDeposit || 0);
+  const monthlyRate = 25;
+  const dailyTarget = (currentDeposit * (monthlyRate / 100)) / 30;
+  const perSecondSpeed = dailyTarget / 86400;
+  const total240dProfit = dailyTarget * 240;
+  const totalBalance = (currentDeposit + liveEarned).toFixed(4);
   const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const filteredWithdrawals = allWithdrawalsList.filter(w => {
@@ -1072,7 +1077,7 @@ export default function App() {
                 <span>TOTAL DEPOSIT</span>
               </div>
               <div className="text-4xl sm:text-5xl font-black text-[#00ff88] font-mono-finance tracking-tight">
-                ${currentUserBalance.toFixed(4)}
+                ${currentDeposit.toFixed(4)}
               </div>
               <div className="mt-5 pt-4 border-t border-[#0b1b30] flex items-center justify-between text-xs">
                 <div className="text-gray-400 font-medium flex items-center gap-1.5">
@@ -1080,7 +1085,7 @@ export default function App() {
                   <span>Contract Duration (240 Days):</span>
                 </div>
                 <span className="font-bold text-[#00ff88] font-mono-finance text-xs">
-                  {userDeposit >= 100 ? `+$${userTotalProfit240.toFixed(2)} Total 240d Profit` : '$0.00 Total 240d Profit'}
+                  +${total240dProfit.toFixed(2)} Total 240d Profit
                 </span>
               </div>
             </div>
@@ -1105,14 +1110,14 @@ export default function App() {
                 <div className="flex items-center gap-2">
                   <span className="text-gray-400 text-xs font-medium">24-Hour Target:</span>
                   <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[11px] font-black px-2.5 py-0.5 rounded-md font-mono-finance">
-                    +{liveDailyTarget.toFixed(4)} USD / 24h
+                    +${dailyTarget.toFixed(4)} USD / 24h
                   </span>
                 </div>
 
                 <div className="text-gray-400 text-[11px] font-mono-finance flex items-center gap-1">
                   <span>Speed:</span>
-                  <span className="text-[#ffb700] font-black">+${liveYieldRate.toFixed(6)}/s</span>
-                  <span className="text-gray-500 text-[9px]">(+${(liveYieldRate / 1000).toFixed(9)}/ms)</span>
+                  <span className="text-[#ffb700] font-black">+${perSecondSpeed.toFixed(6)}/s</span>
+                  <span className="text-gray-500 text-[9px]">(+${(perSecondSpeed / 1000).toFixed(9)}/ms)</span>
                 </div>
               </div>
             </div>
