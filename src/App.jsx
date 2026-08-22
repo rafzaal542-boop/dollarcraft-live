@@ -763,10 +763,10 @@ export default function App() {
 
       {/* Top Navbar */}
       <header className="border-b border-[#0d1c30] bg-[#060c18]/95 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-[1360px] mx-auto w-full px-3 md:px-4 lg:px-8 min-h-20 py-3 flex flex-wrap md:flex-nowrap items-center justify-between gap-3 md:gap-4">
+        <div className="w-full max-w-7xl mx-auto px-3 md:px-4 lg:px-8 py-2.5 min-h-20 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 md:gap-4">
           
           {/* Brand Logo */}
-          <div className="flex shrink-0 items-center gap-3.5 cursor-pointer" onClick={() => setActiveTab('home')}>
+          <div className="flex flex-shrink-0 whitespace-nowrap items-center gap-3.5 cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="w-10 h-10 rounded-2xl bg-[#081526] border border-[#00f0ff]/40 flex items-center justify-center p-1.5 shadow-lg shadow-cyan-500/20 overflow-hidden">
               <img 
                 src="/logo.png" 
@@ -785,10 +785,10 @@ export default function App() {
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="hidden md:flex flex-nowrap items-center justify-center bg-[#071322] border border-[#10243e] rounded-2xl p-1 gap-0.5 flex-1 min-w-0 max-w-full">
+          <nav className="hidden md:flex flex-shrink-0 items-center gap-1.5 lg:gap-2 bg-[#071322] border border-[#10243e] rounded-2xl p-1 max-w-full">
             <button 
               onClick={() => setActiveTab('home')}
-              className={`px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-bold whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap transition-all ${
                 activeTab === 'home' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
@@ -804,7 +804,7 @@ export default function App() {
                   setActiveTab('dashboard');
                 }
               }}
-              className={`px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-bold flex items-center gap-1 lg:gap-2 whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
                 activeTab === 'dashboard' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
@@ -816,7 +816,7 @@ export default function App() {
             
             <button 
               onClick={() => setPlansModalOpen(true)}
-              className="px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-bold flex items-center gap-1 lg:gap-2 whitespace-nowrap text-[#eab308] border border-[#eab308]/30 bg-[#eab308]/5 hover:bg-[#eab308]/15 transition-all"
+              className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap text-[#eab308] border border-[#eab308]/30 bg-[#eab308]/5 hover:bg-[#eab308]/15 transition-all"
             >
               <TrendingUp size={14} className="text-[#eab308]" />
               Plans
@@ -826,7 +826,7 @@ export default function App() {
             {isAdmin && (
               <button 
                 onClick={() => setAdminModalOpen(true)}
-                className="px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-extrabold flex items-center gap-1 lg:gap-2 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
+                className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
               >
                 <Sliders size={14} className="text-[#ffb700]" />
                 <span>Admin</span>
@@ -840,13 +840,13 @@ export default function App() {
 
             <button 
               onClick={() => setAboutModalOpen(true)}
-              className="px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-bold whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
+              className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
             >
               About Us
             </button>
             <button 
               onClick={() => setActiveTab('ib')}
-              className={`px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-bold flex items-center gap-1 lg:gap-2 whitespace-nowrap transition-all ${
+              className={`px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
                 activeTab === 'ib' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-[#eab308] hover:text-[#fde047] hover:bg-[#0c1e34]'
@@ -857,17 +857,17 @@ export default function App() {
             </button>
             <button 
               onClick={() => setContactModalOpen(true)}
-              className="px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-bold whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
+              className="px-2.5 py-1.5 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
             >
               Contact
             </button>
           </nav>
 
           {/* Right User Bar */}
-          <div className="hidden md:flex flex-nowrap shrink-0 items-center justify-end gap-2 lg:gap-3 min-w-0 max-w-[185px] lg:max-w-[270px]">
+          <div className="hidden md:flex flex-shrink-0 items-center gap-2 lg:gap-3 min-w-0">
             {currentUser ? (
               <>
-                <div className="flex min-w-0 items-center bg-[#071322] border border-[#10243e] rounded-2xl px-2 lg:px-3 py-1.5 gap-1.5 lg:gap-2.5">
+                <div className="flex flex-shrink-0 items-center bg-[#071322] border border-[#10243e] rounded-2xl px-2.5 py-1.5 gap-2">
                   {currentUser.picture ? (
                     <img src={currentUser.picture} alt="User" className="w-7 h-7 rounded-xl object-cover" />
                   ) : (
@@ -875,7 +875,7 @@ export default function App() {
                       {currentUser.email ? currentUser.email[0].toUpperCase() : 'U'}
                     </div>
                   )}
-                  <span className="max-w-[90px] lg:max-w-[150px] truncate text-[10px] lg:text-xs font-bold text-gray-200 font-mono-finance tracking-tight">
+                  <span className="max-w-[150px] lg:max-w-[200px] truncate text-xs font-medium text-gray-200 font-mono-finance tracking-tight">
                     {currentUser.email}
                   </span>
                 </div>
@@ -890,7 +890,7 @@ export default function App() {
 
                 <button 
                   onClick={() => setWithdrawModalOpen(true)}
-                  className="shrink-0 bg-[#07172c] border border-[#00e5ff]/50 hover:border-[#00e5ff] hover:bg-[#00e5ff]/10 text-[#00e5ff] font-extrabold text-[10px] lg:text-xs px-2 lg:px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5"
+                  className="flex-shrink-0 bg-[#07172c] border border-[#00e5ff]/50 hover:border-[#00e5ff] hover:bg-[#00e5ff]/10 text-[#00e5ff] font-extrabold text-xs lg:text-sm px-3 py-1.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap"
                 >
                   <ArrowUpRight size={15} />
                   Withdraw
