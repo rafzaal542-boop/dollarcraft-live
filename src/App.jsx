@@ -482,7 +482,7 @@ export default function App() {
       return;
     }
     if (amount > liveEarned) {
-      showToast('Insufficient profit balance!');
+      showToast('Insufficient available profit balance.');
       return;
     }
     if (!accountTitle || !accountNumber) {
@@ -687,6 +687,12 @@ export default function App() {
   const perSecondSpeed = dailyTarget / 86400;
   const total240dProfit = dailyTarget * 240;
   const totalBalance = (currentDeposit + liveEarned).toFixed(4);
+  const withdrawalAmount = Number(withdrawInput);
+  const withdrawalValidation = withdrawInput && withdrawalAmount < 50
+    ? 'MINIMUM'
+    : withdrawInput && withdrawalAmount > liveEarned
+      ? 'INSUFFICIENT'
+      : '';
   const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 
   const filteredWithdrawals = allWithdrawalsList.filter(w => {
@@ -2280,6 +2286,13 @@ export default function App() {
               <div>
                 <div className="flex justify-between items-center mb-1"><label className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">WITHDRAWAL AMOUNT (USD)</label><span className="text-[9px] text-[#ffb700] font-extrabold uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">MIN $50.00 USD</span></div>
                 <div className="relative"><span className="absolute left-3.5 top-3 text-base font-mono-finance text-[#00ff88] font-black">$</span><input type="number" step="any" min="50" max={liveEarned} value={withdrawInput} onChange={(e) => setWithdrawInput(e.target.value)} placeholder="0.00" className="w-full bg-[#030810] border border-[#0f233d] rounded-xl pl-8 pr-4 py-3 text-white font-mono-finance text-lg font-black focus:outline-none focus:border-[#00e5ff]" required /></div>
+                {withdrawalValidation && (
+                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold px-3 py-2 rounded-lg my-2">
+                    {withdrawalValidation === 'MINIMUM'
+                      ? '⚠️ Minimum withdrawal limit is $50.00 USD. You cannot withdraw amounts below this threshold.'
+                      : 'Insufficient available profit balance.'}
+                  </div>
+                )}
               </div>
               <div>
                 <div className="flex justify-between items-center mb-1.5"><span className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">PAYOUT BANK AND OTHER</span><span className="text-[9px] text-[#00e5ff] font-bold uppercase tracking-wider">SELECT GATEWAY</span></div>
@@ -2295,7 +2308,7 @@ export default function App() {
               </div>
               <div className="flex gap-2.5 pt-2">
                 <button type="button" onClick={() => setWithdrawModalOpen(false)} className="w-1/3 bg-[#08182d] hover:bg-[#0c223e] text-gray-300 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider">CANCEL</button>
-                <button type="submit" className="w-2/3 bg-[#00e5ff] hover:bg-[#33edff] text-black font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/25">SUBMIT REQUEST</button>
+                <button type="submit" disabled={Boolean(withdrawalValidation)} className="w-2/3 bg-[#00e5ff] hover:bg-[#33edff] disabled:opacity-40 disabled:cursor-not-allowed text-black font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-cyan-500/25">SUBMIT REQUEST</button>
               </div>
             </form>
           </div>
