@@ -66,7 +66,6 @@ export default function App() {
   const [currentUserYield, setCurrentUserYield] = useState(0.0000);
   const [liveEarned, setLiveEarned] = useState(0);
   const [withdrawnYield, setWithdrawnYield] = useState(0);
-  const [yieldCapReached, setYieldCapReached] = useState(false);
   const [yieldStartTime, setYieldStartTime] = useState(null);
   const [liveYieldRate, setLiveYieldRate] = useState(0);
   const [liveDailyTarget, setLiveDailyTarget] = useState(0);
@@ -137,7 +136,7 @@ export default function App() {
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // DOM Ref for Total Earned Profit Meter (Zero Freeze)
+  // DOM Ref for Total Earned Profit Meter
   const profitDisplayRef = useRef(null);
   const accumulatedProfitRef = useRef(0);
 
@@ -267,7 +266,8 @@ export default function App() {
       const user = snapshot.data();
       const deposit = Number(user.deposit || user.principal || user.balance || 0);
       const plan = resolvePlanDetails(deposit);
-      const liveDailyRate = deposit * (plan.monthlyPct / 100) / 30;
+      const monthlyPercentage = Number(user.monthlyPercentage) || plan.monthlyPct || 25;
+      const liveDailyRate = deposit * (monthlyPercentage / 100) / 30;
       const liveRatePerSecond = liveDailyRate / 86400;
       const withdrawnTotal = Number(user.withdrawnYield || 0);
       const persistedYieldStart = user.depositTimestamp?.toMillis?.() ||
@@ -286,7 +286,7 @@ export default function App() {
       setYieldStartTime(persistedYieldStart || Date.now());
       accumulatedProfitRef.current = 0;
       setUserDeposit(deposit);
-      setActivePlanTier(plan);
+      setActivePlanTier({ ...plan, monthlyPct: monthlyPercentage });
       setUserDailyYield(liveDailyRate);
       setUserTotalProfit240(plan.total240Profit);
     }, (error) => {
@@ -441,21 +441,19 @@ export default function App() {
     const monthlyPercentage = Number(activePlanTier.monthlyPct || 0);
     if (depositVal <= 0 || monthlyPercentage <= 0) {
       setLiveEarned(0);
-      setYieldCapReached(false);
       return undefined;
     }
 
-    const dailyCap = (depositVal * monthlyPercentage / 100) / 30;
-    const ratePerSec = dailyCap / 86400;
+    const ratePerSec = (depositVal * monthlyPercentage / 100) / (30 * 86400);
+    const maxContractYield = depositVal * 2;
     const startTime = Number(yieldStartTime || Date.now());
     const withdrawn = Number(withdrawnYield || 0);
 
     const updateLiveEarned = () => {
       const elapsedSec = Math.max(0, (Date.now() - startTime) / 1000);
-      const totalAccrued = elapsedSec * ratePerSec;
-      const cappedAccrued = Math.min(totalAccrued, dailyCap);
-      setLiveEarned(Math.max(0, cappedAccrued - withdrawn));
-      setYieldCapReached(totalAccrued >= dailyCap);
+      const grossYield = Math.min(elapsedSec * ratePerSec, maxContractYield);
+      const netAvailableYield = Math.max(0, grossYield - withdrawn);
+      setLiveEarned(netAvailableYield);
     };
 
     updateLiveEarned();
@@ -617,11 +615,11 @@ export default function App() {
         deposit: newDep,
         principal: newDep,
         earnedYield: plan.dailyRate,
-        plan: plan.name
+        monthlyPercentage: plan.monthlyPct,
+        plan: plan.name,
+        depositTimestamp: existingDepositTimestamp || Date.now(),
+        withdrawnYield: Number(matchedUser?.withdrawnYield || 0)
       };
-      if (!existingDepositTimestamp) {
-        transferRecord.depositTimestamp = Date.now();
-      }
       await setDoc(doc(db, 'users', targetId), transferRecord, { merge: true });
     } catch (error) {
       console.error('Firestore transfer failed:', error);
@@ -717,7 +715,7 @@ export default function App() {
   };
 
   const currentDeposit = Number(currentUserBalance || userDeposit || 0);
-  const monthlyRate = 25;
+  const monthlyRate = Number(activePlanTier.monthlyPct) || 25;
   const dailyTarget = (currentDeposit * (monthlyRate / 100)) / 30;
   const perSecondSpeed = dailyTarget / 86400;
   const total240dProfit = dailyTarget * 240;
@@ -1219,14 +1217,10 @@ export default function App() {
 
                 <div className="text-gray-400 text-[11px] font-mono-finance flex items-center gap-1">
                   <span>Speed:</span>
-                  {yieldCapReached ? (
-                    <span className="text-[#00ff88] font-black">24H CAP REACHED (+$0.00/s)</span>
-                  ) : (
-                    <>
-                      <span className="text-[#ffb700] font-black">+${perSecondSpeed.toFixed(6)}/s</span>
-                      <span className="text-gray-500 text-[9px]">(+${(perSecondSpeed / 1000).toFixed(9)}/ms)</span>
-                    </>
-                  )}
+                  <>
+                    <span className="text-[#ffb700] font-black">+${perSecondSpeed.toFixed(6)}/s</span>
+                    <span className="text-gray-500 text-[9px]">(+${(perSecondSpeed / 1000).toFixed(9)}/ms)</span>
+                  </>
                 </div>
               </div>
             </div>

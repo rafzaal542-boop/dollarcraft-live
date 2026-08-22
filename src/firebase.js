@@ -37,8 +37,12 @@ export const ensureGoogleUserRecord = async (userData) => {
       userRecord.earnedYield = 0;
       userRecord.withdrawnYield = 0;
     }
-    if (!existingUser.exists() || !existingUser.data().depositTimestamp) {
+    const existingData = existingUser.data() || {};
+    if (!existingUser.exists() || !existingData.depositTimestamp) {
       userRecord.depositTimestamp = Date.now();
+    }
+    if (!existingUser.exists() || existingData.withdrawnYield === undefined) {
+      userRecord.withdrawnYield = 0;
     }
 
     await setDoc(userRef, userRecord, { merge: true });
