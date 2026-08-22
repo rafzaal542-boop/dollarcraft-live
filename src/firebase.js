@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, getFirestore, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDwPM1RU6m7dpLCeiNUOJNCueP2xt7CHJc",
@@ -63,3 +63,14 @@ export const signInWithGoogle = async () => {
 export const logOutUser = async () => {
   await signOut(auth);
 };
+
+export async function submitWithdrawalRequest(data) {
+  if (!db) return null;
+
+  return addDoc(collection(db, "withdrawals"), {
+    ...data,
+    status: "pending",
+    createdAt: Date.now(),
+    dateStr: new Date().toLocaleDateString()
+  });
+}

@@ -39,8 +39,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { addDoc, collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
-import { db, ensureGoogleUserRecord } from './firebase';
+import { collection, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { db, ensureGoogleUserRecord, submitWithdrawalRequest } from './firebase';
 
 const ADMIN_EMAIL = 'rafzaal542@gmail.com';
 
@@ -246,7 +246,7 @@ export default function App() {
             status: String(withdrawal.status || 'pending').toLowerCase()
           };
         })
-        .sort((left, right) => Number(right.timestamp || 0) - Number(left.timestamp || 0));
+        .sort((left, right) => Number(right.createdAt || right.timestamp || 0) - Number(left.createdAt || left.timestamp || 0));
       setAdminWithdrawals(withdrawals);
     }, (error) => {
       console.error('Firestore withdrawals listener failed:', error);
@@ -526,14 +526,13 @@ export default function App() {
           withdrawnYield: newWithdrawnYield,
           accumulatedYieldBase: 0
         }, { merge: true });
-        await addDoc(collection(db, 'withdrawals'), {
+        await submitWithdrawalRequest({
           userEmail: currentUser.email,
           userName: currentUser.displayName || currentUser.name || 'User',
           amount,
           gateway: payoutMethod === 'easypaisa' ? 'EasyPaisa' : payoutMethod === 'jazzcash' ? 'JazzCash' : 'Bank',
           accountTitle,
           ibanOrNumber: accountNumber,
-          status: 'pending',
           timestamp: Date.now(),
           date: new Date().toISOString().split('T')[0]
         });
