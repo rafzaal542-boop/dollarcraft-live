@@ -762,12 +762,12 @@ export default function App() {
       )}
 
       {/* Top Navbar */}
-      <header className="w-full overflow-visible border-b border-[#0d1c30] bg-[#060c18]/95 backdrop-blur-xl sticky top-0 z-40">
-        <div className="w-full max-w-7xl mx-auto overflow-visible px-4 md:px-8 py-3 min-h-20 flex flex-wrap md:flex-nowrap items-center justify-between gap-3">
+      <header className="w-full overflow-visible px-3 xl:px-6 py-2.5 sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+        <div className="w-full overflow-visible flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5 xl:gap-4 min-h-16">
           
           {/* Brand Logo */}
           <div className="flex flex-shrink-0 whitespace-nowrap items-center gap-3.5 cursor-pointer" onClick={() => setActiveTab('home')}>
-            <div className="w-10 h-10 rounded-2xl bg-[#081526] border border-[#00f0ff]/40 flex items-center justify-center p-1.5 shadow-lg shadow-cyan-500/20 overflow-hidden">
+            <div className="w-8 h-8 rounded-xl bg-[#081526] border border-[#00f0ff]/40 flex items-center justify-center p-1 shadow-lg shadow-cyan-500/20 overflow-hidden">
               <img 
                 src="/logo.png" 
                 alt="Logo" 
@@ -775,20 +775,20 @@ export default function App() {
                 className="w-full h-full object-contain"
               />
               <div className="w-full h-full hidden items-center justify-center">
-                <DollarSign className="text-[#00f0ff] stroke-[2.5]" size={20} />
+                <DollarSign className="text-[#00f0ff] stroke-[2.5]" size={16} />
               </div>
             </div>
             <div>
               <span className="text-base font-extrabold tracking-wider whitespace-nowrap block leading-none text-white">DOLLAR CRAFT</span>
-              <span className="text-[10px] text-slate-400 font-bold tracking-[0.15em] uppercase mt-1 block whitespace-nowrap">Global Investment Platform</span>
+              <span className="hidden lg:block text-[9px] text-cyan-400 font-semibold tracking-wider uppercase mt-1 whitespace-nowrap">Global Investment Platform</span>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="hidden md:flex flex-shrink-0 items-center gap-1.5 lg:gap-2 overflow-visible bg-[#071322] border border-[#10243e] rounded-2xl p-1">
+          <nav className="hidden md:flex items-center gap-1.5 xl:gap-2 flex-shrink overflow-visible bg-[#071322] border border-[#10243e] rounded-2xl p-1">
             <button 
               onClick={() => setActiveTab('home')}
-              className={`px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all ${
                 activeTab === 'home' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
@@ -804,7 +804,7 @@ export default function App() {
                   setActiveTab('dashboard');
                 }
               }}
-              className={`px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
+              className={`px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap transition-all ${
                 activeTab === 'dashboard' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
@@ -816,7 +816,7 @@ export default function App() {
             
             <button 
               onClick={() => setPlansModalOpen(true)}
-              className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap text-[#eab308] border border-[#eab308]/30 bg-[#eab308]/5 hover:bg-[#eab308]/15 transition-all"
+              className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap text-[#eab308] border border-[#eab308]/30 bg-[#eab308]/5 hover:bg-[#eab308]/15 transition-all"
             >
               <TrendingUp size={14} className="text-[#eab308]" />
               Plans
@@ -826,7 +826,7 @@ export default function App() {
             {isAdmin && (
               <button 
                 onClick={() => setAdminModalOpen(true)}
-                className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
+                className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
               >
                 <Sliders size={14} className="text-[#ffb700]" />
                 <span>Admin</span>
@@ -840,13 +840,13 @@ export default function App() {
 
             <button 
               onClick={() => setAboutModalOpen(true)}
-              className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
+              className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
             >
               About Us
             </button>
             <button 
               onClick={() => setActiveTab('ib')}
-              className={`px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium flex items-center gap-1.5 whitespace-nowrap transition-all ${
+              className={`px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap transition-all ${
                 activeTab === 'ib' 
                   ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
                   : 'text-[#eab308] hover:text-[#fde047] hover:bg-[#0c1e34]'
@@ -857,17 +857,17 @@ export default function App() {
             </button>
             <button 
               onClick={() => setContactModalOpen(true)}
-              className="px-2.5 py-1 rounded-xl text-xs lg:text-sm font-medium whitespace-nowrap text-gray-400 hover:text-white hover:bg-[#0c1e34] transition-all"
+              className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
             >
               Contact
             </button>
           </nav>
 
           {/* Right User Bar */}
-          <div className="hidden md:flex flex-shrink-0 items-center gap-2.5 ml-auto min-w-0 overflow-visible">
+          <div className="hidden md:flex items-center gap-1.5 xl:gap-2 flex-shrink-0 ml-auto overflow-visible">
             {currentUser ? (
               <>
-                <div className="flex flex-shrink-0 items-center bg-[#071322] border border-[#10243e] rounded-2xl px-2.5 py-1.5 gap-2">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-700/60 rounded-lg text-[11px] text-slate-300 max-w-[110px] xl:max-w-[150px] truncate">
                   {currentUser.picture ? (
                     <img src={currentUser.picture} alt="User" className="w-7 h-7 rounded-xl object-cover" />
                   ) : (
@@ -875,7 +875,7 @@ export default function App() {
                       {currentUser.email ? currentUser.email[0].toUpperCase() : 'U'}
                     </div>
                   )}
-                  <span className="max-w-[150px] lg:max-w-[200px] truncate text-xs font-medium text-gray-200 font-mono-finance tracking-tight">
+                  <span className="truncate">
                     {currentUser.email}
                   </span>
                 </div>
@@ -883,16 +883,16 @@ export default function App() {
                 <button 
                   onClick={() => setLogoutModalOpen(true)}
                   title="Logout"
-                  className="w-8 h-8 p-1.5 rounded-full bg-[#140c14] border border-red-500/30 text-red-400 flex items-center justify-center hover:bg-red-500/20 hover:border-red-500/60 transition-all cursor-pointer"
+                  className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 flex-shrink-0 transition-all cursor-pointer"
                 >
-                  <LogOut size={15} />
+                  <LogOut className="w-4 h-4" />
                 </button>
 
                 <button 
                   onClick={() => setWithdrawModalOpen(true)}
-                  className="flex-shrink-0 bg-[#07172c] border border-[#00e5ff]/50 hover:border-[#00e5ff] hover:bg-[#00e5ff]/10 text-[#00e5ff] font-extrabold text-xs lg:text-sm px-3 py-1.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap"
+                  className="px-2.5 xl:px-3.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[11px] xl:text-xs font-bold whitespace-nowrap shadow-sm shadow-cyan-500/20 flex items-center gap-1 flex-shrink-0"
                 >
-                  <ArrowUpRight size={15} />
+                  <ArrowUpRight className="w-4 h-4" />
                   Withdraw
                 </button>
               </>
@@ -913,9 +913,9 @@ export default function App() {
 
             <button 
               onClick={() => showToast('No unread alerts')}
-              className="w-8 h-8 p-1.5 rounded-full bg-[#071322] border border-[#10243e] text-gray-400 hover:text-white flex items-center justify-center transition-all"
+              className="p-1.5 rounded-lg border border-slate-700/60 text-slate-300 hover:bg-slate-800/60 flex-shrink-0 transition-all"
             >
-              <Bell size={15} />
+              <Bell className="w-4 h-4" />
             </button>
           </div>
 
