@@ -39,7 +39,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { collection, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord } from './firebase';
 
 const ADMIN_EMAIL = 'rafzaal542@gmail.com';
@@ -242,11 +242,11 @@ export default function App() {
       const plan = resolvePlanDetails(deposit);
       const liveDailyRate = deposit * (plan.monthlyPct / 100) / 30;
       const liveRatePerSecond = liveDailyRate / 86400;
-      const initialYield = Number(user.earnedYield || user.baseProfit || 0);
-      const persistedYieldStart = user.lastYieldCalculated?.toMillis?.() ||
-        (user.lastYieldCalculated ? new Date(user.lastYieldCalculated).getTime() : 0) ||
-        user.depositTimestamp?.toMillis?.() ||
+      const initialYield = Number(user.accumulatedYieldBase || user.baseProfit || 0);
+      const persistedYieldStart = user.depositTimestamp?.toMillis?.() ||
         (user.depositTimestamp ? new Date(user.depositTimestamp).getTime() : 0) ||
+        user.lastYieldCalculated?.toMillis?.() ||
+        (user.lastYieldCalculated ? new Date(user.lastYieldCalculated).getTime() : 0) ||
         user.joinedTimestamp?.toMillis?.() ||
         (user.joinedTimestamp ? new Date(user.joinedTimestamp).getTime() : 0) ||
         user.createdAt?.toMillis?.() ||
@@ -413,14 +413,16 @@ export default function App() {
     const ratePerSecond = (depositVal * (monthlyRate / 100)) / (30 * 86400);
     const intervalMs = 50;
     const incrementPerTick = ratePerSecond * (intervalMs / 1000);
+    const startTime = Number(yieldStartTime || Date.now());
+    const initialEarned = Math.max(0, ((Date.now() - startTime) / 1000) * ratePerSecond);
 
-    setLiveEarned(0);
+    setLiveEarned(initialEarned);
     const timer = setInterval(() => {
       setLiveEarned((previousEarned) => previousEarned + incrementPerTick);
     }, intervalMs);
 
     return () => clearInterval(timer);
-  }, [currentUserBalance, activePlanTier.monthlyPct]);
+  }, [currentUserBalance, activePlanTier.monthlyPct, yieldStartTime]);
 
   // Google Login Hook
   const loginWithGoogle = useGoogleLogin({
@@ -555,17 +557,20 @@ export default function App() {
     const currentDep = Number(matchedUser?.deposit ?? matchedUser?.balance ?? localStorage.getItem(depositKey) ?? 0);
     const newDep = currentDep + amt;
     const plan = resolvePlanDetails(newDep);
+    const existingDepositTimestamp = matchedUser?.depositTimestamp;
 
     try {
-      await setDoc(doc(db, 'users', targetId), {
+      const transferRecord = {
         email: cleanTarget,
         deposit: newDep,
         principal: newDep,
         earnedYield: plan.dailyRate,
-        plan: plan.name,
-        depositTimestamp: serverTimestamp(),
-        lastYieldCalculated: serverTimestamp()
-      }, { merge: true });
+        plan: plan.name
+      };
+      if (!existingDepositTimestamp) {
+        transferRecord.depositTimestamp = Date.now();
+      }
+      await setDoc(doc(db, 'users', targetId), transferRecord, { merge: true });
     } catch (error) {
       console.error('Firestore transfer failed:', error);
       showToast('Transfer failed: unable to update Firestore');

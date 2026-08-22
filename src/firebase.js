@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
-import { getFirestore, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDwPM1RU6m7dpLCeiNUOJNCueP2xt7CHJc",
@@ -22,17 +22,23 @@ export const ensureGoogleUserRecord = async (userData) => {
 
   const userRef = doc(db, "users", userData.uid || userData.email);
   try {
+    const existingUser = await getDoc(userRef);
     const userRecord = {
       email: userData.email,
       joinedDate: new Date().toISOString().split("T")[0],
       authType: "Google Auth",
       status: "active",
-      deposit: 0,
-      earnedYield: 0,
       name: userData.name || userData.email.split("@")[0],
       picture: userData.picture || "",
       createdAt: serverTimestamp()
     };
+    if (!existingUser.exists()) {
+      userRecord.deposit = 0;
+      userRecord.earnedYield = 0;
+    }
+    if (!existingUser.exists() || !existingUser.data().depositTimestamp) {
+      userRecord.depositTimestamp = Date.now();
+    }
 
     await setDoc(userRef, userRecord, { merge: true });
     return userRecord;
