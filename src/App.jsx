@@ -43,8 +43,6 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord, submitWithdrawalRequest } from './firebase';
 
-const ADMIN_EMAIL = 'rafzaal542@gmail.com';
-
 const GLOBAL_HUBS = [
   { country: 'USA', code: 'us', reg: 'MSB #310002148291' },
   { country: 'Canada', code: 'ca', reg: 'FINTRAC #M20184712' },
@@ -571,7 +569,7 @@ export default function App() {
   };
 
   const updateWithdrawalStatus = async (withdrawal, nextStatus) => {
-    if (!db || !withdrawal?.id) return;
+    if (!isAdmin || !db || !withdrawal?.id) return;
 
     try {
       await updateDoc(doc(db, 'withdrawals', withdrawal.id), { status: nextStatus });
@@ -593,6 +591,7 @@ export default function App() {
   // ADMIN TRANSFER: Direct instant deposit injection with plan calculation
   const handleAdminInternalTransfer = async (e) => {
     e.preventDefault();
+    if (!isAdmin) return;
     const amt = parseFloat(transferAmount);
     if (!transferTargetEmail || isNaN(amt) || amt <= 0) {
       showToast('Please enter valid target email and transfer amount');
@@ -679,6 +678,7 @@ export default function App() {
 
   // ADMIN: Reset User Profit Function
   const handleResetUserProfit = (targetEmail) => {
+    if (!isAdmin) return;
     const cleanTarget = targetEmail.toLowerCase().trim();
     const safeTargetKey = cleanTarget.replace(/[^a-zA-Z0-9]/g, '_');
     const anchorKey = `dc_anchor_time_${safeTargetKey}`;
@@ -728,7 +728,7 @@ export default function App() {
     : withdrawInput && amountNum > availableProfit
       ? 'INSUFFICIENT'
       : '';
-  const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+  const isAdmin = currentUser?.email?.toLowerCase() === 'dollarcraft3@gmail.com';
 
   const filteredWithdrawals = adminWithdrawals.filter(w => {
     if (withdrawFilter === 'Pending') return w.status === 'pending';
@@ -823,7 +823,7 @@ export default function App() {
             </button>
 
             {/* ADMIN BUTTON */}
-            {isSuperAdmin && (
+            {isAdmin && (
               <button 
                 onClick={() => setAdminModalOpen(true)}
                 className="px-2 lg:px-3 py-2 rounded-xl text-[10px] lg:text-xs font-extrabold flex items-center gap-1 lg:gap-2 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
@@ -935,7 +935,7 @@ export default function App() {
                 <button onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Home</button>
                 <button onClick={() => { if (!currentUser) loginWithGoogle(); else setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Customer Dashboard</button>
                 <button onClick={() => { setPlansModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#eab308]/30 bg-[#eab308]/5 px-3 py-2.5 text-left text-xs font-bold text-[#eab308]">Plans</button>
-                {isSuperAdmin && <button onClick={() => { setAdminModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-left text-xs font-bold text-[#ffb700]">Admin</button>}
+                {isAdmin && <button onClick={() => { setAdminModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-left text-xs font-bold text-[#ffb700]">Admin</button>}
                 <button onClick={() => { setAboutModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">About Us</button>
                 <button onClick={() => { setActiveTab('ib'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#eab308]/30 bg-[#eab308]/5 px-3 py-2.5 text-left text-xs font-bold text-[#eab308]">IB Program</button>
                 <button onClick={() => { setContactModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Contact</button>
@@ -1698,7 +1698,7 @@ export default function App() {
       </div>
 
       {/* ================= MODAL: ADMIN ================= */}
-      {adminModalOpen && isSuperAdmin && (
+      {adminModalOpen && isAdmin && (
         <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
           <div className="bg-[#080d14] border border-[#162942] w-full max-w-6xl rounded-[28px] p-6 sm:p-8 shadow-2xl space-y-6 relative max-h-[95vh] overflow-y-auto">
             
@@ -2086,7 +2086,7 @@ export default function App() {
       )}
 
       {/* ================= MODAL: QUICK ADMIN TRANSFER ================= */}
-      {quickTransferOpen && isSuperAdmin && (
+      {quickTransferOpen && isAdmin && (
         <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#071322] border border-cyan-400/40 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
             <div className="flex items-center justify-between">
