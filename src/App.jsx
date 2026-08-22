@@ -1688,9 +1688,9 @@ export default function App() {
       {/* Floating Messenger Action Button */}
       <div className="fixed bottom-6 right-6 z-50">
         <a 
-          href="https://m.me/" 
+          href="https://m.me/dollarcraft3"
           target="_blank" 
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="w-13 h-13 rounded-full bg-gradient-to-tr from-[#0066ff] to-[#00e5ff] flex items-center justify-center text-white shadow-2xl shadow-cyan-500/40 hover:scale-110 active:scale-95 transition-all p-3"
         >
           <MessageCircle size={26} />
@@ -2317,9 +2317,9 @@ export default function App() {
                 <span>Please share your payment deposit slip directly to Messenger for instant verification.</span>
               </div>
               <a 
-                href="https://m.me/" 
+                href="https://m.me/dollarcraft3"
                 target="_blank" 
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-black text-[10px] px-3 py-2 rounded-xl uppercase tracking-wider whitespace-nowrap ml-2 shadow-md"
               >
                 Send Slip
@@ -2401,7 +2401,7 @@ export default function App() {
             </div>
             <div className="space-y-2.5">
               <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">24/7 LIVE SUPPORT</span><span className="text-xs font-bold text-white">24/7 Email Support Desk</span></div><a href="mailto:dollarcraft3@gmail.com" className="bg-gradient-to-r from-[#00d0ff] to-emerald-400 text-black font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md"><span>EMAIL SUPPORT 24/7</span><ExternalLink size={12} /></a></div>
-              <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">LIVE MESSENGER SUPPORT</span><span className="text-xs font-bold text-[#00e5ff]">Facebook Messenger</span></div><a href="https://m.me/" target="_blank" rel="noreferrer" className="bg-gradient-to-r from-blue-600 to-[#0099ff] text-white font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md"><span>OPEN MESSENGER</span><ExternalLink size={12} /></a></div>
+              <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">LIVE MESSENGER SUPPORT</span><span className="text-xs font-bold text-[#00e5ff]">Facebook Messenger</span></div><a href="https://m.me/dollarcraft3" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-600 to-[#0099ff] text-white font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md"><span>OPEN MESSENGER</span><ExternalLink size={12} /></a></div>
             </div>
             <div className="pt-2 border-t border-[#0b1b30] text-left text-xs text-gray-400 space-y-0.5">
               <div className="flex items-center gap-1 text-[#ffb700] font-extrabold text-[10px] uppercase tracking-wider"><Building size={12} /><span>REGISTERED HQ</span></div>
