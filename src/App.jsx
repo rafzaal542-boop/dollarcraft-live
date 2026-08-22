@@ -526,6 +526,15 @@ export default function App() {
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
     const amount = parseFloat(withdrawInput);
+    const gateway = payoutMethod === 'easypaisa'
+      ? 'EasyPaisa'
+      : payoutMethod === 'jazzcash'
+        ? 'JazzCash'
+        : payoutMethod === 'bank'
+          ? 'Bank'
+          : '';
+    const trimmedAccountTitle = accountTitle.trim();
+    const trimmedAccountNumber = accountNumber.trim();
     if (isNaN(amount) || amount < 50) {
       showToast('Minimum withdrawal amount is $50.00 USD');
       return;
@@ -534,7 +543,7 @@ export default function App() {
       showToast('Insufficient available profit balance.');
       return;
     }
-    if (!accountTitle || !accountNumber) {
+    if (!gateway || !trimmedAccountTitle || !trimmedAccountNumber) {
       showToast('Please complete all account details');
       return;
     }
@@ -560,11 +569,13 @@ export default function App() {
         }, { merge: true });
         await submitWithdrawalRequest({
           userEmail: currentUser.email,
+          userId: currentUser.uid || currentUser.email,
           userName: currentUser.displayName || currentUser.name || 'User',
           amount,
-          gateway: payoutMethod === 'easypaisa' ? 'EasyPaisa' : payoutMethod === 'jazzcash' ? 'JazzCash' : 'Bank',
-          accountTitle,
-          ibanOrNumber: accountNumber,
+          gateway,
+          accountTitle: trimmedAccountTitle,
+          accountNumber: trimmedAccountNumber,
+          ibanOrNumber: trimmedAccountNumber,
           timestamp: Date.now(),
           date: new Date().toISOString().split('T')[0]
         });
@@ -575,11 +586,28 @@ export default function App() {
       }
     }
 
+    const withdrawalSlip = [
+      '📄 *DOLLAR CRAFT WITHDRAWAL SLIP*',
+      `👤 Account: ${currentUser?.email || ''}`,
+      `💵 Amount: $${amount.toFixed(2)} USD`,
+      `🏦 Method: ${gateway}`,
+      `💳 Title / Bank: ${trimmedAccountTitle}`,
+      `🔢 Account / No: ${trimmedAccountNumber}`,
+      `🕒 Date: ${new Date().toLocaleString()}`,
+      '🆔 Status: Pending Verification'
+    ].join('\n');
+    try {
+      await navigator.clipboard.writeText(withdrawalSlip);
+    } catch (error) {
+      console.error('Could not copy withdrawal slip:', error);
+    }
+    window.open('https://m.me/dollarcraft3', '_blank', 'noopener,noreferrer');
     setWithdrawInput('');
+    setPayoutMethod('bank');
     setAccountTitle('');
     setAccountNumber('');
     setWithdrawModalOpen(false);
-    showToast('Withdrawal request submitted successfully!');
+    showToast('✅ Withdrawal request submitted! Your slip details have been copied. Messenger is opening so you can send your receipt directly to Dollar Craft support.');
   };
 
   const updateWithdrawalStatus = async (withdrawal, nextStatus) => {
