@@ -95,7 +95,6 @@ export default function App() {
   const [adminActiveTab, setAdminActiveTab] = useState('transfer');
   const [allUsersList, setAllUsersList] = useState([]);
   const [allWithdrawalsList, setAllWithdrawalsList] = useState([]);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
   const [withdrawFilter, setWithdrawFilter] = useState('All');
 
   // Admin Transfer
@@ -207,10 +206,13 @@ export default function App() {
 
   // Keep the admin directory synchronized with Firestore.
   useEffect(() => {
+    if (!db) return undefined;
+
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const users = snapshot.docs.map((userDoc) => {
+      const userList = [];
+      snapshot.forEach((userDoc) => {
         const user = userDoc.data();
-        return {
+        userList.push({
           id: userDoc.id,
           email: user.email || userDoc.id,
           name: user.name || '',
@@ -221,10 +223,10 @@ export default function App() {
           principal: `$${user.deposit || 0}`,
           earnedYield: `$${user.earnedYield || 0}`,
           status: (user.status || 'ACTIVE').toUpperCase()
-        };
+        });
       });
 
-      setAllUsersList(users);
+      setAllUsersList(userList);
     }, (error) => {
       console.error('Users listener error:', error);
       showToast('Unable to load user accounts from Firestore');
@@ -593,10 +595,6 @@ export default function App() {
 
   const totalBalance = (userDeposit + accumulatedProfitRef.current).toFixed(4);
   const isSuperAdmin = currentUser?.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
-
-  const filteredUsers = allUsersList.filter(u => 
-    u.email.toLowerCase().includes(userSearchTerm.toLowerCase())
-  );
 
   const filteredWithdrawals = allWithdrawalsList.filter(w => {
     if (withdrawFilter === 'Pending') return w.status === 'PENDING APPROVAL';
@@ -1608,16 +1606,6 @@ export default function App() {
             {adminActiveTab === 'users' && (
               <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="relative w-full sm:w-80">
-                    <Search size={15} className="absolute left-3.5 top-3.5 text-gray-400" />
-                    <input 
-                      type="text" 
-                      value={userSearchTerm}
-                      onChange={(e) => setUserSearchTerm(e.target.value)}
-                      placeholder="Search users by email or ID..."
-                      className="w-full bg-[#050a12] border border-[#14263d] rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#ffb700]"
-                    />
-                  </div>
                   <div className="text-xs font-bold text-gray-400 bg-[#050a12] border border-[#14263d] px-4 py-2 rounded-xl">
                     Total Authenticated Google Accounts: <strong className="text-white">{allUsersList.length}</strong>
                   </div>
@@ -1638,14 +1626,14 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#102136]">
-                      {filteredUsers.length === 0 ? (
+                      {allUsersList.length === 0 ? (
                         <tr>
                           <td colSpan="8" className="p-8 text-center text-gray-500 font-bold">
                             No Google-authenticated accounts found yet.
                           </td>
                         </tr>
                       ) : (
-                        filteredUsers.map((u, i) => (
+                        allUsersList.map((u, i) => (
                           <tr key={i} className="hover:bg-[#0c1828] transition-colors">
                             <td className="p-3.5 font-bold text-white font-mono-finance flex items-center gap-2">
                               {u.picture ? (
