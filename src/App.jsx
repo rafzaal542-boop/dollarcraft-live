@@ -64,6 +64,7 @@ export default function App() {
   const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
   const [currentUserYield, setCurrentUserYield] = useState(0.0000);
   const [liveEarned, setLiveEarned] = useState(0);
+  const [yieldCapReached, setYieldCapReached] = useState(false);
   const [yieldStartTime, setYieldStartTime] = useState(null);
   const [liveYieldRate, setLiveYieldRate] = useState(0);
   const [liveDailyTarget, setLiveDailyTarget] = useState(0);
@@ -406,19 +407,34 @@ export default function App() {
     const depositVal = Number(currentUserBalance || 0);
     if (depositVal <= 0) {
       setLiveEarned(0);
+      setYieldCapReached(false);
       return undefined;
     }
 
     const monthlyRate = 25;
     const ratePerSecond = (depositVal * (monthlyRate / 100)) / (30 * 86400);
+    const dailyCap = (depositVal * (monthlyRate / 100)) / 30;
     const intervalMs = 50;
     const incrementPerTick = ratePerSecond * (intervalMs / 1000);
-    const startTime = Number(yieldStartTime || Date.now());
-    const initialEarned = Math.max(0, currentUserYield + ((Date.now() - startTime) / 1000) * ratePerSecond);
+    const depositTime = Number(yieldStartTime || Date.now());
+    const elapsedSinceDeposit = Math.max(0, Date.now() - depositTime);
+    const activeWindowStart = depositTime + Math.floor(elapsedSinceDeposit / 86400000) * 86400000;
+    const elapsedInWindow = Math.max(0, (Date.now() - activeWindowStart) / 1000);
+    const initialEarned = Math.min(elapsedInWindow * ratePerSecond, dailyCap);
 
     setLiveEarned(initialEarned);
+    setYieldCapReached(initialEarned >= dailyCap);
+    if (initialEarned >= dailyCap) return undefined;
+
     const timer = setInterval(() => {
-      setLiveEarned((previousEarned) => previousEarned + incrementPerTick);
+      setLiveEarned((previousEarned) => {
+        const boundedYield = Math.min(previousEarned + incrementPerTick, dailyCap);
+        if (boundedYield >= dailyCap) {
+          setYieldCapReached(true);
+          clearInterval(timer);
+        }
+        return boundedYield;
+      });
     }, intervalMs);
 
     return () => clearInterval(timer);
@@ -1136,8 +1152,14 @@ export default function App() {
 
                 <div className="text-gray-400 text-[11px] font-mono-finance flex items-center gap-1">
                   <span>Speed:</span>
-                  <span className="text-[#ffb700] font-black">+${perSecondSpeed.toFixed(6)}/s</span>
-                  <span className="text-gray-500 text-[9px]">(+${(perSecondSpeed / 1000).toFixed(9)}/ms)</span>
+                  {yieldCapReached ? (
+                    <span className="text-[#00ff88] font-black">24H CAP REACHED (+$0.00/s)</span>
+                  ) : (
+                    <>
+                      <span className="text-[#ffb700] font-black">+${perSecondSpeed.toFixed(6)}/s</span>
+                      <span className="text-gray-500 text-[9px]">(+${(perSecondSpeed / 1000).toFixed(9)}/ms)</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
