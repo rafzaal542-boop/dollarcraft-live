@@ -396,7 +396,7 @@ export default function App() {
         await ensureGoogleUserRecord(userData);
         generateUserCredentials(userData);
         loadUserFinancials(userData.email);
-        setActiveTab('dashboard');
+        setActiveTab('home');
         showToast(`Welcome, ${userData.name || userData.email}!`);
       } catch (err) {
         showToast('Login verification failed');
