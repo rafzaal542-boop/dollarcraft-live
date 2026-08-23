@@ -776,10 +776,15 @@ export default function App() {
       return;
     }
 
-    const applicationMessage = `🤝 *DOLLAR CRAFT - IB PARTNER APPLICATION*\n👤 Name: ${firstName} ${lastName}\n📧 Email: ${email}\n💼 Program: $7,000 USDT Institutional IB Partner\n🕒 Applied: ${new Date().toLocaleString()}`;
+    const slipText = `🤝 *DOLLAR CRAFT - IB PARTNER APPLICATION*\n👤 Name: ${firstName} ${lastName}\n📧 Email: ${email}\n💼 Program: $7,000 USDT Institutional IB Partner\n🕒 Applied: ${new Date().toLocaleString()}`;
+    const encodedMsg = encodeURIComponent(slipText);
+    const messengerUrl = `https://m.me/dollarcraft3?text=${encodedMsg}`;
 
-    navigator.clipboard.writeText(applicationMessage).catch(console.error);
-    window.open('https://m.me/dollarcraft3', '_blank', 'noopener,noreferrer');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(slipText).catch(console.error);
+    }
+    showToast('📋 Slip Copied to Clipboard! Tap inside the Messenger chat box, tap Paste, and hit Send.');
+    window.open(messengerUrl, '_blank', 'noopener,noreferrer');
     setIsIbModalOpen(false);
     setIbFirstName('');
     setIbLastName('');
