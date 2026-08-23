@@ -104,6 +104,7 @@ export default function App() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminWithdrawals, setAdminWithdrawals] = useState([]);
   const [withdrawFilter, setWithdrawFilter] = useState('All');
+  const [withdrawSearchQuery, setWithdrawSearchQuery] = useState('');
   const [adminUserSearchQuery, setAdminUserSearchQuery] = useState('');
 
   // Admin Transfer
@@ -775,10 +776,13 @@ export default function App() {
   const isAdmin = currentUser?.email?.toLowerCase() === 'dollarcraft3@gmail.com';
 
   const filteredWithdrawals = adminWithdrawals.filter(w => {
-    if (withdrawFilter === 'Pending') return w.status === 'pending';
-    if (withdrawFilter === 'Approved') return w.status === 'approved';
-    if (withdrawFilter === 'Rejected') return w.status === 'rejected';
-    return true;
+    const query = withdrawSearchQuery.toLowerCase().trim();
+    const emailMatch = (w.userEmail || '').toLowerCase().includes(query);
+    const titleMatch = (w.accountTitle || w.destination || '').toLowerCase().includes(query);
+    const accountMatch = (w.accountNumber || w.iban || w.ibanOrNumber || '').toLowerCase().includes(query);
+    const statusMatch = withdrawFilter === 'All' || w.status?.toLowerCase() === withdrawFilter.toLowerCase();
+
+    return (emailMatch || titleMatch || accountMatch) && statusMatch;
   });
 
   const pendingWithdrawCount = adminWithdrawals.filter(w => w.status === 'pending').length;
@@ -1980,26 +1984,57 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {['All', 'Pending', 'Approved', 'Rejected'].map((filt) => (
-                    <button 
-                      key={filt}
-                      onClick={() => setWithdrawFilter(filt)}
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                        withdrawFilter === filt 
-                          ? 'bg-[#00e5ff] text-black font-extrabold' 
-                          : 'bg-[#050a12] border border-[#14263d] text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      {filt}
-                    </button>
-                  ))}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {['All', 'Pending', 'Approved', 'Rejected'].map((filt) => (
+                      <button 
+                        key={filt}
+                        onClick={() => setWithdrawFilter(filt)}
+                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                          withdrawFilter === filt 
+                            ? 'bg-[#00e5ff] text-black font-extrabold' 
+                            : 'bg-[#050a12] border border-[#14263d] text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        {filt}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full lg:max-w-lg">
+                    <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2">
+                      <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
+                      <input
+                        type="text"
+                        value={withdrawSearchQuery}
+                        onChange={(e) => setWithdrawSearchQuery(e.target.value)}
+                        placeholder="Search by User Email, Destination Name, or Account/IBAN..."
+                        className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
+                      />
+                      {withdrawSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setWithdrawSearchQuery('')}
+                          title="Clear search"
+                          className="text-gray-400 hover:text-white text-lg flex-shrink-0 transition-colors"
+                        >
+                          ✖
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-400">
+                  Showing <strong className="text-cyan-400">{filteredWithdrawals.length}</strong> of <strong className="text-white">{adminWithdrawals.length}</strong> withdrawal requests
                 </div>
 
                 <div className="space-y-3">
                   {filteredWithdrawals.length === 0 ? (
                     <div className="text-center py-10 text-gray-500 font-bold text-xs bg-[#050a12] border border-[#14263d] rounded-2xl">
-                      No withdrawal records available under selected filter.
+                      {withdrawSearchQuery.trim()
+                        ? `No withdrawal request found matching '${withdrawSearchQuery}'`
+                        : 'No withdrawal records available under selected filter.'}
                     </div>
                   ) : (
                     filteredWithdrawals.map((tx) => (
