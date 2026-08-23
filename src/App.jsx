@@ -2575,7 +2575,7 @@ export default function App() {
                   type="text"
                   value={ibFirstName}
                   onChange={(e) => setIbFirstName(e.target.value)}
-                  placeholder="e.g. Rana"
+                  placeholder="e.g. Alexander"
                   className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
                   required
                 />
@@ -2586,7 +2586,7 @@ export default function App() {
                   type="text"
                   value={ibLastName}
                   onChange={(e) => setIbLastName(e.target.value)}
-                  placeholder="e.g. Afzaal"
+                  placeholder="e.g. Morgan"
                   className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
                   required
                 />
@@ -2597,7 +2597,7 @@ export default function App() {
                   type="email"
                   value={ibEmail}
                   onChange={(e) => setIbEmail(e.target.value)}
-                  placeholder="e.g. user@gmail.com"
+                  placeholder="e.g. alex.morgan@globalvest.com"
                   className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
                   required
                 />
