@@ -759,7 +759,9 @@ export default function App() {
   };
 
   const openIbApplicationModal = () => {
-    setIbEmail(currentUser?.email || '');
+    setIbFirstName('');
+    setIbLastName('');
+    setIbEmail('');
     setIsIbModalOpen(true);
   };
 
@@ -2598,6 +2600,8 @@ export default function App() {
                   value={ibEmail}
                   onChange={(e) => setIbEmail(e.target.value)}
                   placeholder="e.g. alex.morgan@globalvest.com"
+                  readOnly={false}
+                  disabled={false}
                   className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
                   required
                 />
