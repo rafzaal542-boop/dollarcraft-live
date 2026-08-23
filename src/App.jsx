@@ -104,6 +104,7 @@ export default function App() {
   const [adminUsers, setAdminUsers] = useState([]);
   const [adminWithdrawals, setAdminWithdrawals] = useState([]);
   const [withdrawFilter, setWithdrawFilter] = useState('All');
+  const [adminUserSearchQuery, setAdminUserSearchQuery] = useState('');
 
   // Admin Transfer
   const [transferTargetEmail, setTransferTargetEmail] = useState('');
@@ -1817,35 +1818,75 @@ export default function App() {
             {/* TAB 1: USER ACCOUNTS DIRECTORY */}
             {adminActiveTab === 'users' && (
               <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="text-xs font-bold text-gray-400 bg-[#050a12] border border-[#14263d] px-4 py-2 rounded-xl">
                     Total Authenticated Google Accounts: <strong className="text-white">{adminUsers.length}</strong>
                   </div>
+                  
+                  {/* Email Search Box */}
+                  <div className="relative w-full sm:max-w-md">
+                    <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2.5">
+                      <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
+                      <input
+                        type="text"
+                        value={adminUserSearchQuery}
+                        onChange={(e) => setAdminUserSearchQuery(e.target.value)}
+                        placeholder="Search user by email (e.g apexofficial991@gmail.com)..."
+                        className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none flex-1"
+                      />
+                      {adminUserSearchQuery && (
+                        <button
+                          onClick={() => setAdminUserSearchQuery('')}
+                          className="text-gray-400 hover:text-white text-lg flex-shrink-0 transition-colors"
+                          title="Clear search"
+                        >
+                          ✖
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="overflow-x-auto border border-[#14263d] rounded-2xl">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#050a12] text-gray-400 uppercase font-black tracking-wider text-[10px] border-b border-[#14263d]">
-                      <tr>
-                        <th className="p-3.5">User Email</th>
-                        <th className="p-3.5">Joined Date</th>
-                        <th className="p-3.5">Auth Type</th>
-                        <th className="p-3.5">Plan / Tier</th>
-                        <th className="p-3.5">Principal</th>
-                        <th className="p-3.5">Earned Yield</th>
-                        <th className="p-3.5 text-center">Reset Profit</th>
-                        <th className="p-3.5 text-center">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#102136]">
-                      {adminUsers.length === 0 ? (
-                        <tr>
-                          <td colSpan="8" className="p-8 text-center text-gray-500 font-bold">
-                            No Google-authenticated accounts found yet.
-                          </td>
-                        </tr>
-                      ) : (
-                        adminUsers.map((u, i) => (
+                {/* Filtered Users Count */}
+                {(() => {
+                  const filteredUsers = adminUsers.filter(u => 
+                    (u.email || '').toLowerCase().includes(adminUserSearchQuery.toLowerCase().trim())
+                  );
+                  
+                  return (
+                    <>
+                      {adminUserSearchQuery && (
+                        <div className="text-xs text-gray-400 bg-[#050a12]/80 border border-[#14263d] px-4 py-2 rounded-xl">
+                          Showing <strong className="text-cyan-400">{filteredUsers.length}</strong> of <strong className="text-white">{adminUsers.length}</strong> users
+                        </div>
+                      )}
+
+                      <div className="overflow-x-auto border border-[#14263d] rounded-2xl">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-[#050a12] text-gray-400 uppercase font-black tracking-wider text-[10px] border-b border-[#14263d]">
+                            <tr>
+                              <th className="p-3.5">User Email</th>
+                              <th className="p-3.5">Joined Date</th>
+                              <th className="p-3.5">Auth Type</th>
+                              <th className="p-3.5">Plan / Tier</th>
+                              <th className="p-3.5">Principal</th>
+                              <th className="p-3.5">Earned Yield</th>
+                              <th className="p-3.5 text-center">Reset Profit</th>
+                              <th className="p-3.5 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#102136]">
+                            {filteredUsers.length === 0 ? (
+                              <tr>
+                                <td colSpan="8" className="p-8 text-center text-gray-500 font-bold">
+                                  {adminUsers.length === 0 
+                                    ? 'No Google-authenticated accounts found yet.'
+                                    : `No user account found matching '${adminUserSearchQuery}'`
+                                  }
+                                </td>
+                              </tr>
+                            ) : (
+                              filteredUsers.map((u, i) => (
                           <tr key={u.id || i} className="hover:bg-[#0c1828] transition-colors">
                             <td className="p-3.5 font-bold text-white font-mono-finance flex items-center gap-2">
                               {u.picture ? (
@@ -1888,10 +1929,13 @@ export default function App() {
                             </td>
                           </tr>
                         ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
 
