@@ -1751,7 +1751,7 @@ export default function App() {
                       value={ibCodeInput}
                       onChange={(e) => setIbCodeInput(e.target.value)}
                       placeholder="ENTER SECRET ACCESS CODE"
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-cyan-400 placeholder-slate-600 font-mono tracking-widest focus:outline-none focus:border-cyan-500 transition-all uppercase"
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-cyan-400 placeholder-slate-600 font-mono tracking-wide focus:outline-none focus:border-cyan-500 transition-all"
                     />
                     <button
                       type="button"
