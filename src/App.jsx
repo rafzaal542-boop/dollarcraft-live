@@ -765,7 +765,7 @@ export default function App() {
     setIsIbModalOpen(true);
   };
 
-  const handleIbApplicationSubmit = async (e) => {
+  const handleIbApplicationSubmit = (e) => {
     e.preventDefault();
     const firstName = ibFirstName.trim();
     const lastName = ibLastName.trim();
@@ -778,23 +778,22 @@ export default function App() {
 
     const applicationMessage = `🤝 *DOLLAR CRAFT - IB PARTNER APPLICATION*\n👤 Name: ${firstName} ${lastName}\n📧 Email: ${email}\n💼 Program: $7,000 USDT Institutional IB Partner\n🕒 Applied: ${new Date().toLocaleString()}`;
 
-    try {
-      await addDoc(collection(db, 'ib_applications'), {
-        firstName,
-        lastName,
-        email,
-        status: 'pending',
-        timestamp: Date.now(),
-        userId: currentUser?.uid || null
-      });
-      await navigator.clipboard.writeText(applicationMessage);
-      window.open('https://m.me/dollarcraft3', '_blank', 'noopener,noreferrer');
-      setIsIbModalOpen(false);
-      showToast('✅ Application recorded! Your details have been copied. Messenger is opening so you can send your application directly to Dollar Craft support.');
-    } catch (error) {
-      console.error('IB application submission failed:', error);
-      showToast('Unable to record your application. Please try again.');
-    }
+    navigator.clipboard.writeText(applicationMessage).catch(console.error);
+    window.open('https://m.me/dollarcraft3', '_blank', 'noopener,noreferrer');
+    setIsIbModalOpen(false);
+    setIbFirstName('');
+    setIbLastName('');
+    setIbEmail('');
+    showToast('⚡ Opening Messenger... Slip copied to clipboard!');
+
+    addDoc(collection(db, 'ib_applications'), {
+      firstName,
+      lastName,
+      email,
+      status: 'pending',
+      timestamp: Date.now(),
+      userId: currentUser?.uid || 'guest'
+    }).catch(console.error);
   };
 
   const showToast = (msg) => {
