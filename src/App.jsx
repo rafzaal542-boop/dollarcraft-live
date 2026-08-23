@@ -40,7 +40,7 @@ import {
   Menu
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
-import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord, submitWithdrawalRequest } from './firebase';
 import { VALID_IB_CODES } from './data/ibCodes';
 
@@ -134,6 +134,10 @@ export default function App() {
   // IB Program
   const [ibCodeInput, setIbCodeInput] = useState('');
   const [generatedIbLink, setGeneratedIbLink] = useState('');
+  const [isIbModalOpen, setIsIbModalOpen] = useState(false);
+  const [ibFirstName, setIbFirstName] = useState('');
+  const [ibLastName, setIbLastName] = useState('');
+  const [ibEmail, setIbEmail] = useState('');
 
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -752,6 +756,43 @@ export default function App() {
     const link = `https://dollarcraft3.com/?ref=${currentUser?.uid || 'partner'}&code=${code}`;
     setGeneratedIbLink(link);
     showToast('✅ Authorized IB Link generated successfully!');
+  };
+
+  const openIbApplicationModal = () => {
+    setIbEmail(currentUser?.email || '');
+    setIsIbModalOpen(true);
+  };
+
+  const handleIbApplicationSubmit = async (e) => {
+    e.preventDefault();
+    const firstName = ibFirstName.trim();
+    const lastName = ibLastName.trim();
+    const email = ibEmail.trim();
+
+    if (!firstName || !lastName || !email) {
+      showToast('Please complete your first name, last name, and email address.');
+      return;
+    }
+
+    const applicationMessage = `🤝 *DOLLAR CRAFT - IB PARTNER APPLICATION*\n👤 Name: ${firstName} ${lastName}\n📧 Email: ${email}\n💼 Program: $7,000 USDT Institutional IB Partner\n🕒 Applied: ${new Date().toLocaleString()}`;
+
+    try {
+      await addDoc(collection(db, 'ib_applications'), {
+        firstName,
+        lastName,
+        email,
+        status: 'pending',
+        timestamp: Date.now(),
+        userId: currentUser?.uid || null
+      });
+      await navigator.clipboard.writeText(applicationMessage);
+      window.open('https://m.me/dollarcraft3', '_blank', 'noopener,noreferrer');
+      setIsIbModalOpen(false);
+      showToast('✅ Application recorded! Your details have been copied. Messenger is opening so you can send your application directly to Dollar Craft support.');
+    } catch (error) {
+      console.error('IB application submission failed:', error);
+      showToast('Unable to record your application. Please try again.');
+    }
   };
 
   const showToast = (msg) => {
@@ -1618,7 +1659,7 @@ export default function App() {
               </div>
 
               <button 
-                onClick={() => showToast('IB Partner membership checkout initialized')}
+                onClick={openIbApplicationModal}
                 className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-extrabold px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/25 whitespace-nowrap"
               >
                 <Award size={15} />
@@ -2498,6 +2539,84 @@ export default function App() {
               <div className="flex gap-2.5 pt-2">
                 <button type="button" onClick={() => setWithdrawModalOpen(false)} className="w-1/3 bg-[#08182d] hover:bg-[#0c223e] text-gray-300 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider">CANCEL</button>
                 <button type="submit" disabled={!isValid} className={`w-2/3 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all ${isValid ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 cursor-pointer shadow-lg shadow-cyan-500/20' : 'bg-slate-700 text-slate-400 opacity-40 cursor-not-allowed'}`}>SUBMIT REQUEST</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: IB PARTNER APPLICATION ================= */}
+      {isIbModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#050e1c] border border-[#00e5ff]/40 w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 relative">
+            <button
+              type="button"
+              onClick={() => setIsIbModalOpen(false)}
+              title="Close IB application"
+              className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex items-center gap-3 pr-8">
+              <div className="w-10 h-10 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff] text-lg">
+                🤝
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-white">Apply for IB Partnership ($7,000 Program)</h3>
+                <p className="text-[10px] text-gray-400 mt-1">Submit your details to activate institutional partner status</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleIbApplicationSubmit} className="space-y-4">
+              <div>
+                <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider block mb-1.5">First Name</label>
+                <input
+                  type="text"
+                  value={ibFirstName}
+                  onChange={(e) => setIbFirstName(e.target.value)}
+                  placeholder="e.g. Rana"
+                  className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider block mb-1.5">Last Name</label>
+                <input
+                  type="text"
+                  value={ibLastName}
+                  onChange={(e) => setIbLastName(e.target.value)}
+                  placeholder="e.g. Afzaal"
+                  className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider block mb-1.5">Email Address</label>
+                <input
+                  type="email"
+                  value={ibEmail}
+                  onChange={(e) => setIbEmail(e.target.value)}
+                  placeholder="e.g. user@gmail.com"
+                  className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsIbModalOpen(false)}
+                  className="sm:w-1/3 bg-[#08182d] hover:bg-[#0c223e] text-gray-300 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider"
+                >
+                  CANCEL
+                </button>
+                <button
+                  type="submit"
+                  className="sm:w-2/3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-500/20"
+                >
+                  SUBMIT APPLICATION &amp; CONNECT ON MESSENGER
+                </button>
               </div>
             </form>
           </div>
