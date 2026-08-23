@@ -37,7 +37,9 @@ import {
   Shield,
   Plus,
   RotateCcw,
-  Menu
+  Menu,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import { addDoc, collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
@@ -133,6 +135,7 @@ export default function App() {
 
   // IB Program
   const [ibCodeInput, setIbCodeInput] = useState('');
+  const [showIbCode, setShowIbCode] = useState(false);
   const [generatedIbLink, setGeneratedIbLink] = useState('');
   const [isIbModalOpen, setIsIbModalOpen] = useState(false);
   const [ibFirstName, setIbFirstName] = useState('');
@@ -1742,13 +1745,24 @@ export default function App() {
                   <span className="text-[9px] text-red-400 font-extrabold uppercase tracking-widest">REQUIRED</span>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  <input 
-                    type="password"
-                    value={ibCodeInput}
-                    onChange={(e) => setIbCodeInput(e.target.value)}
-                    placeholder="ENTER SECRET ACCESS CODE"
-                    className="flex-1 bg-[#030810] border border-[#0f233d] rounded-xl px-4 py-3.5 text-xs font-mono-finance text-white tracking-widest focus:outline-none focus:border-[#00e5ff]"
-                  />
+                  <div className="relative flex-1 flex items-center">
+                    <input 
+                      type={showIbCode ? 'text' : 'password'}
+                      value={ibCodeInput}
+                      onChange={(e) => setIbCodeInput(e.target.value)}
+                      placeholder="ENTER SECRET ACCESS CODE"
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-cyan-400 placeholder-slate-600 font-mono tracking-widest focus:outline-none focus:border-cyan-500 transition-all uppercase"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowIbCode(!showIbCode)}
+                      className="absolute right-3.5 p-1.5 text-slate-400 hover:text-cyan-400 transition-colors focus:outline-none"
+                      title={showIbCode ? 'Hide Access Code' : 'Show Access Code'}
+                      aria-label={showIbCode ? 'Hide Access Code' : 'Show Access Code'}
+                    >
+                      {showIbCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
                   <button 
                     type="submit"
                     className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-extrabold px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 whitespace-nowrap"
