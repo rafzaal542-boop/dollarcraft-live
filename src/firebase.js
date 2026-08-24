@@ -23,16 +23,19 @@ export const ensureGoogleUserRecord = async (userData) => {
   const userRef = doc(db, "users", userData.uid || userData.email);
   try {
     const existingUser = await getDoc(userRef);
+    const loginTimestamp = Date.now();
     const userRecord = {
       email: userData.email,
-      joinedDate: new Date().toISOString().split("T")[0],
       authType: "Google Auth",
       status: "active",
       name: userData.name || userData.email.split("@")[0],
       picture: userData.picture || "",
-      createdAt: serverTimestamp()
+      lastLoginAt: loginTimestamp,
+      lastLoginDate: new Date(loginTimestamp).toISOString().split("T")[0]
     };
     if (!existingUser.exists()) {
+      userRecord.joinedDate = new Date(loginTimestamp).toISOString().split("T")[0];
+      userRecord.createdAt = serverTimestamp();
       userRecord.deposit = 0;
       userRecord.earnedYield = 0;
       userRecord.withdrawnYield = 0;

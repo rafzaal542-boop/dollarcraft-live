@@ -1963,7 +1963,16 @@ export default function App() {
                               )}
                               <span>{u.email}</span>
                             </td>
-                            <td className="p-3.5 text-gray-400 font-mono-finance">{u.joinedDate || '2026-08-22'}</td>
+                            <td className="p-3.5 text-gray-400 font-mono-finance">
+                              {(() => {
+                                const joinedAt = u.createdAt || u.joinedDate;
+                                if (!joinedAt) return '—';
+                                if (typeof joinedAt === 'string') return joinedAt;
+                                if (typeof joinedAt.toDate === 'function') return joinedAt.toDate().toLocaleDateString('en-US');
+                                if (typeof joinedAt.toMillis === 'function') return new Date(joinedAt.toMillis()).toLocaleDateString('en-US');
+                                return new Date(joinedAt).toLocaleDateString('en-US');
+                              })()}
+                            </td>
                             <td className="p-3.5 text-[#00e5ff] font-mono-finance text-[11px] flex items-center gap-1">
                               <Key size={11} className="text-[#ffb700]" />
                               <span>{u.authType || 'Google Auth'}</span>
