@@ -279,14 +279,29 @@ export default function App() {
       const liveDailyRate = deposit * (monthlyPercentage / 100) / 30;
       const liveRatePerSecond = liveDailyRate / 86400;
       const withdrawnTotal = parseFloat(userData?.withdrawnYield || 0) || 0;
-      const yieldAnchor = userData?.lastResetAt || userData?.planStartDate || userData?.depositDate;
-      let persistedYieldStart = typeof yieldAnchor === 'number'
-        ? yieldAnchor
-        : typeof yieldAnchor?.toMillis === 'function'
-          ? yieldAnchor.toMillis()
-          : Date.now();
+      let persistedYieldStart = Date.now();
+      if (userData?.depositTimestamp) {
+        persistedYieldStart = typeof userData.depositTimestamp === 'number'
+          ? userData.depositTimestamp
+          : typeof userData.depositTimestamp.toMillis === 'function'
+            ? userData.depositTimestamp.toMillis()
+            : Date.now();
+      } else if (userData?.createdAt) {
+        persistedYieldStart = typeof userData.createdAt === 'number'
+          ? userData.createdAt
+          : typeof userData.createdAt.toMillis === 'function'
+            ? userData.createdAt.toMillis()
+            : Date.now();
+      } else {
+        persistedYieldStart = Date.now() - 3600000;
+      }
       if (!Number.isFinite(persistedYieldStart) || persistedYieldStart <= 0) {
-        persistedYieldStart = Date.now();
+        persistedYieldStart = Date.now() - 3600000;
+      }
+      if (deposit > 0 && !userData?.depositTimestamp) {
+        updateDoc(userRef, { depositTimestamp: Date.now() }).catch((error) => {
+          console.error('Could not repair deposit timestamp:', error);
+        });
       }
       setCurrentUserBalance(deposit);
       setWithdrawnYield(withdrawnTotal);
@@ -459,7 +474,7 @@ export default function App() {
     const startTime = Number(yieldStartTime || Date.now() - 3600000);
 
     const updateLiveEarned = () => {
-      const elapsedSec = Math.max(0, (Date.now() - startTime) / 1000);
+      const elapsedSec = Math.max(1, (Date.now() - startTime) / 1000);
       const grossYield = Math.min(elapsedSec * ratePerSec, depositVal * 2);
       const netYield = Math.max(0, grossYield - withdrawn);
       setLiveEarned(Number.isNaN(netYield) ? 0.000001 : netYield);
@@ -713,44 +728,16 @@ export default function App() {
   };
 
   // ADMIN: Reset User Profit Function
-  const handleResetUserProfit = async (targetEmail) => {
+  const handleResetUserProfit = (targetEmail) => {
     if (!isAdmin) return;
     const cleanTarget = targetEmail.toLowerCase().trim();
     const safeTargetKey = cleanTarget.replace(/[^a-zA-Z0-9]/g, '_');
     const anchorKey = `dc_anchor_time_${safeTargetKey}`;
-    const resetAt = Date.now();
-    const matchedUser = adminUsers.find((user) => user.email?.toLowerCase() === cleanTarget);
-    const targetId = matchedUser?.id || cleanTarget;
-
-    try {
-      await updateDoc(doc(db, 'users', targetId), {
-        earnedYield: 0,
-        totalProfit: 0,
-        lastResetAt: resetAt,
-        lastYieldUpdate: resetAt
-      });
-    } catch (error) {
-      console.error('Firestore profit reset failed:', error);
-      showToast('Reset failed: unable to update Firestore');
-      return;
-    }
-
-    localStorage.setItem(anchorKey, resetAt.toString());
-
-    const users = JSON.parse(localStorage.getItem('dc_real_google_users_directory') || '[]');
-    const targetIdx = users.findIndex((user) => user.email?.toLowerCase() === cleanTarget);
-    if (targetIdx >= 0) {
-      users[targetIdx].earnedYield = 0;
-      users[targetIdx].totalProfit = 0;
-      users[targetIdx].lastResetAt = resetAt;
-      users[targetIdx].lastYieldUpdate = resetAt;
-      localStorage.setItem('dc_real_google_users_directory', JSON.stringify(users));
-    }
+    
+    localStorage.setItem(anchorKey, Date.now().toString());
 
     if (currentUser && currentUser.email.toLowerCase() === cleanTarget) {
       accumulatedProfitRef.current = 0;
-      setLiveEarned(0);
-      setYieldStartTime(resetAt);
     }
 
     showToast(`Profit successfully reset to $0.00 for ${cleanTarget}`);
