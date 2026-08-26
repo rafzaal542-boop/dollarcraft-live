@@ -46,6 +46,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import { addDoc, collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db, ensureGoogleUserRecord, submitWithdrawalRequest } from './firebase';
 import { VALID_IB_CODES } from './data/ibCodes';
+import SplashScreen from './SplashScreen';
 
 const GLOBAL_HUBS = [
   { country: 'USA', code: 'us', reg: 'MSB #310002148291' },
@@ -851,6 +852,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#040810] text-white flex flex-col selection:bg-[#00f0ff] selection:text-black">
+      <SplashScreen />
       
       {/* Toast Notification */}
       {toastMessage && (
