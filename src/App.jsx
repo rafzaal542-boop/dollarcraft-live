@@ -968,7 +968,7 @@ export default function App() {
           <div className="hidden md:flex items-center gap-1.5 xl:gap-2 flex-shrink-0 ml-auto overflow-visible">
             <a
               href="/dollarcraft.apk"
-              download="DollarCraft.apk"
+              download
               className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-[#00e5ff]/70 bg-[#07172c] px-2.5 xl:px-3.5 py-2 text-[10px] xl:text-xs font-extrabold text-[#00e5ff] whitespace-nowrap shadow-[0_0_14px_rgba(0,229,255,0.22)] transition-all hover:border-[#eab308] hover:bg-[#0c223e] hover:text-[#fde047] hover:shadow-[0_0_20px_rgba(234,179,8,0.3)]"
             >
               <Download className="w-4 h-4" />
@@ -1060,7 +1060,7 @@ export default function App() {
               )}
               <a
                 href="/dollarcraft.apk"
-                download="DollarCraft.apk"
+                download
                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#00e5ff]/70 bg-[#07172c] px-3 py-2.5 text-xs font-extrabold text-[#00e5ff] shadow-[0_0_14px_rgba(0,229,255,0.22)] transition-all hover:border-[#eab308] hover:bg-[#0c223e] hover:text-[#fde047]"
               >
                 <Download size={15} />
@@ -1127,7 +1127,7 @@ export default function App() {
                 </button>
                 <a
                   href="/dollarcraft.apk"
-                  download="DollarCraft.apk"
+                  download
                   className="bg-[#07172c] hover:bg-[#0c223e] border border-[#00e5ff]/70 hover:border-[#eab308] text-[#00e5ff] hover:text-[#fde047] font-extrabold px-7 py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-[0_0_16px_rgba(0,229,255,0.2)] hover:shadow-[0_0_22px_rgba(234,179,8,0.28)] transition-all"
                 >
                   <Download size={15} />
