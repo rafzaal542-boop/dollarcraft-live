@@ -44,10 +44,9 @@ export default function SplashScreen() {
             <DollarSign className="splash-screen__fallback" aria-hidden="true" />
           </div>
         </div>
-        <p className="splash-screen__name">DOLLAR CRAFT</p>
         <div className="splash-screen__loading">
           <span className="splash-screen__spinner" aria-hidden="true" />
-          <span>Initializing Secure Session...</span>
+          <span>Loading Secure Session...</span>
         </div>
         <div className="splash-screen__progress" aria-hidden="true">
           <span />
