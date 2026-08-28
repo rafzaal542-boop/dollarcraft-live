@@ -38,7 +38,6 @@ import {
   Plus,
   RotateCcw,
   Menu,
-  Download,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -966,14 +965,6 @@ export default function App() {
 
           {/* Right User Bar */}
           <div className="hidden md:flex items-center gap-1.5 xl:gap-2 flex-shrink-0 ml-auto overflow-visible">
-            <a
-              href="/dollarcraft.apk"
-              download
-              className="flex-shrink-0 flex items-center gap-1.5 rounded-xl border border-[#00e5ff]/70 bg-[#07172c] px-2.5 xl:px-3.5 py-2 text-[10px] xl:text-xs font-extrabold text-[#00e5ff] whitespace-nowrap shadow-[0_0_14px_rgba(0,229,255,0.22)] transition-all hover:border-[#eab308] hover:bg-[#0c223e] hover:text-[#fde047] hover:shadow-[0_0_20px_rgba(234,179,8,0.3)]"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download App (.APK)</span>
-            </a>
             {currentUser ? (
               <>
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-700/60 rounded-lg text-[11px] text-slate-300 max-w-[110px] xl:max-w-[150px] truncate">
@@ -1058,14 +1049,6 @@ export default function App() {
               ) : (
                 <button onClick={() => { loginWithGoogle(); setMobileMenuOpen(false); }} className="w-full bg-white text-black font-extrabold text-xs px-4 py-2.5 rounded-xl">Continue with Google</button>
               )}
-              <a
-                href="/dollarcraft.apk"
-                download
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#00e5ff]/70 bg-[#07172c] px-3 py-2.5 text-xs font-extrabold text-[#00e5ff] shadow-[0_0_14px_rgba(0,229,255,0.22)] transition-all hover:border-[#eab308] hover:bg-[#0c223e] hover:text-[#fde047]"
-              >
-                <Download size={15} />
-                <span>Download App (.APK)</span>
-              </a>
             </div>
           )}
         </div>
@@ -1125,14 +1108,6 @@ export default function App() {
                   <Layers size={15} />
                   <span>VIEW PACKAGES (DC1, DC2, DC3)</span>
                 </button>
-                <a
-                  href="/dollarcraft.apk"
-                  download
-                  className="bg-[#07172c] hover:bg-[#0c223e] border border-[#00e5ff]/70 hover:border-[#eab308] text-[#00e5ff] hover:text-[#fde047] font-extrabold px-7 py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-[0_0_16px_rgba(0,229,255,0.2)] hover:shadow-[0_0_22px_rgba(234,179,8,0.28)] transition-all"
-                >
-                  <Download size={15} />
-                  <span>Download App (.APK)</span>
-                </a>
               </div>
             </div>
 
