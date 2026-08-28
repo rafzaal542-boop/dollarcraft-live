@@ -120,6 +120,7 @@ export default function App() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [legalDocument, setLegalDocument] = useState(null);
   const [plansModalOpen, setPlansModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = useState(false);
@@ -2660,39 +2661,90 @@ export default function App() {
       {contactModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative backdrop-blur-xl">
-            <button onClick={() => setContactModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]"><Mail size={18} /></div>
-              <div><h3 className="font-extrabold text-base text-white uppercase tracking-tight">CONTACT DOLLAR CRAFT</h3><span className="text-[10px] text-gray-400 block font-medium">24/7 Global Institutional Support Desk</span></div>
-            </div>
-            <div className="bg-[#030810] border border-[#0f233d] rounded-xl p-3.5 flex items-center justify-between">
-              <div className="flex items-center gap-2.5"><div className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center"><Mail size={14} /></div><div><span className="text-[9px] text-gray-400 font-bold uppercase block">OFFICIAL SUPPORT EMAIL</span><span className="text-xs font-bold text-[#00e5ff] font-mono-finance">dollarcraft3@gmail.com</span></div></div>
-              <button onClick={() => copyToClipboard('dollarcraft3@gmail.com', 'Support Email')} className="bg-[#08182d] border border-[#102b4d] text-gray-300 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"><Copy size={12} /><span>Copy</span></button>
-            </div>
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">24/7 LIVE SUPPORT</span><span className="text-xs font-bold text-white">24/7 Email Support Desk</span></div><a href="mailto:dollarcraft3@gmail.com" className="bg-gradient-to-r from-[#00d0ff] to-emerald-400 text-black font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md"><span>EMAIL SUPPORT 24/7</span><ExternalLink size={12} /></a></div>
-              <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">LIVE MESSENGER SUPPORT</span><span className="text-xs font-bold text-[#00e5ff]">Facebook Messenger</span></div><a href="https://m.me/dollarcraft3" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-600 to-[#0099ff] text-white font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md"><span>OPEN MESSENGER</span><ExternalLink size={12} /></a></div>
-            </div>
-            <div className="pt-2 border-t border-[#0b1b30] text-left text-xs text-gray-400 space-y-0.5">
-              <div className="flex items-center gap-1 text-[#ffb700] font-extrabold text-[10px] uppercase tracking-wider"><Building size={12} /><span>REGISTERED HQ</span></div>
-              <p className="font-bold text-white text-xs">Dollar Craft Pte Ltd</p>
-              <p className="text-[10px] text-gray-500">c/o Company Name<br/>70 Bendemeer Road, #03-02<br/>Luzerne, Singapore 339940</p>
-            </div>
-            <footer className="border-t border-[#0b1b30] pt-4 text-[10px] leading-relaxed text-slate-400">
-              <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
-                <div className="space-y-1">
-                  <p>© 2008–2026 Dollar Craft. All rights reserved.</p>
-                  <p>Operating locally in Pakistan and serving Pakistani users with regional compliance.</p>
+            <button onClick={() => { setLegalDocument(null); setContactModalOpen(false); }} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
+            {legalDocument ? (
+              <section className="flex min-h-0 flex-col" aria-labelledby="legal-document-title">
+                <div className="flex items-center justify-between gap-4 border-b border-[#0b1b30] pb-4 pr-8">
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#00e5ff]">Dollar Craft Legal Center</p>
+                    <h3 id="legal-document-title" className="mt-1 text-lg font-extrabold uppercase tracking-tight text-white">{legalDocument.title}</h3>
+                    <p className="mt-1 text-[10px] text-gray-500">Effective August 28, 2026</p>
+                  </div>
+                  <button type="button" onClick={() => setLegalDocument(null)} className="shrink-0 rounded-lg border border-[#102b4d] bg-[#08182d] px-3 py-2 text-xs font-bold text-gray-300 transition-colors hover:text-white">BACK</button>
                 </div>
-                <nav aria-label="Legal information" className="flex flex-wrap items-center gap-x-3 gap-y-1 md:justify-end">
-                  <a href="/terms-of-service" className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">Terms of Service</a>
-                  <span className="text-[#29405d]" aria-hidden="true">|</span>
-                  <a href="/privacy-policy" className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">Privacy Policy</a>
-                  <span className="text-[#29405d]" aria-hidden="true">|</span>
-                  <a href="/risk-disclosure" className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">Risk Disclosure</a>
-                </nav>
-              </div>
-            </footer>
+                <div className="legal-document-scroll mt-5 max-h-[60vh] space-y-5 overflow-y-auto pr-3 text-xs leading-relaxed text-slate-300">
+                  {legalDocument.sections.map((section) => (
+                    <div key={section.heading} className="space-y-1.5">
+                      <h4 className="font-extrabold uppercase tracking-wide text-white">{section.heading}</h4>
+                      <p>{section.body}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-5 flex justify-end border-t border-[#0b1b30] pt-4">
+                  <button type="button" onClick={() => setLegalDocument(null)} className="rounded-lg bg-[#08182d] px-4 py-2 text-xs font-bold uppercase text-white transition-colors hover:bg-[#0c223e]">CLOSE DOCUMENT</button>
+                </div>
+              </section>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]"><Mail size={18} /></div>
+                  <div><h3 className="font-extrabold text-base text-white uppercase tracking-tight">CONTACT DOLLAR CRAFT</h3><span className="text-[10px] text-gray-400 block font-medium">24/7 Global Institutional Support Desk</span></div>
+                </div>
+                <div className="bg-[#030810] border border-[#0f233d] rounded-xl p-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5"><div className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center"><Mail size={14} /></div><div><span className="text-[9px] text-gray-400 font-bold uppercase block">OFFICIAL SUPPORT EMAIL</span><span className="text-xs font-bold text-[#00e5ff] font-mono-finance">dollarcraft3@gmail.com</span></div></div>
+                  <button onClick={() => copyToClipboard('dollarcraft3@gmail.com', 'Support Email')} className="bg-[#08182d] border border-[#102b4d] text-gray-300 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"><Copy size={12} /><span>Copy</span></button>
+                </div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">24/7 LIVE SUPPORT</span><span className="text-xs font-bold text-white">24/7 Email Support Desk</span></div><a href="mailto:dollarcraft3@gmail.com" className="bg-gradient-to-r from-[#00d0ff] to-emerald-400 text-black font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md"><span>EMAIL SUPPORT 24/7</span><ExternalLink size={12} /></a></div>
+                  <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">LIVE MESSENGER SUPPORT</span><span className="text-xs font-bold text-[#00e5ff]">Facebook Messenger</span></div><a href="https://m.me/dollarcraft3" target="_blank" rel="noopener noreferrer" className="bg-gradient-to-r from-blue-600 to-[#0099ff] text-white font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md"><span>OPEN MESSENGER</span><ExternalLink size={12} /></a></div>
+                </div>
+                <div className="pt-2 border-t border-[#0b1b30] text-left text-xs text-gray-400 space-y-0.5">
+                  <div className="flex items-center gap-1 text-[#ffb700] font-extrabold text-[10px] uppercase tracking-wider"><Building size={12} /><span>REGISTERED HQ</span></div>
+                  <p className="font-bold text-white text-xs">Dollar Craft Pte Ltd</p>
+                  <p className="text-[10px] text-gray-500">c/o Company Name<br/>70 Bendemeer Road, #03-02<br/>Luzerne, Singapore 339940</p>
+                </div>
+                <footer className="border-t border-[#0b1b30] pt-4 text-[10px] leading-relaxed text-slate-400">
+                  <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-1">
+                      <p>© 2008–2026 Dollar Craft. All rights reserved.</p>
+                      <p>Operating locally in Pakistan and serving Pakistani users with regional compliance.</p>
+                    </div>
+                    <nav aria-label="Legal information" className="flex flex-wrap items-center gap-x-3 gap-y-1 md:justify-end">
+                      {[
+                        { label: 'Terms of Service', title: 'Terms of Service', sections: [
+                          { heading: 'Agreement and scope', body: 'These Terms of Service govern access to and use of Dollar Craft, including its website, account tools, support channels, and micro-yield investment products. Dollar Craft has operated since 2008. By creating an account or using the platform, you confirm that you have read, understood, and accepted these Terms.' },
+                          { heading: 'Eligibility and account security', body: 'You must be legally capable of entering a contract and provide accurate, current information. You are responsible for your credentials, device security, and all activity under your account. Do not share access, create duplicate accounts, misrepresent your identity, or use the platform for unlawful activity, fraud, money laundering, sanctions evasion, or market abuse.' },
+                          { heading: 'Services and transactions', body: 'Available products, rates, minimums, processing times, and eligibility requirements are displayed in the platform and may change. Account balances, yields, deposits, withdrawals, and other records are subject to verification and our operational controls. We may delay, reject, suspend, or reverse activity where required for security, compliance, technical integrity, or legal obligations.' },
+                          { heading: 'Pakistan and global users', body: 'Dollar Craft serves users internationally and also operates locally in Pakistan. Pakistani users are responsible for complying with applicable Pakistani laws, tax obligations, foreign-exchange rules, payment-provider requirements, and identity-verification requests. Users elsewhere must comply with the laws and financial restrictions of their country. Access may be restricted where our services are not permitted.' },
+                          { heading: 'Acceptable use and termination', body: 'You may use the platform only for its stated purposes and must follow all instructions, disclosures, and verification requirements. We may suspend or terminate access for breach of these Terms, suspicious activity, non-payment, legal risk, or security concerns. Provisions concerning ownership, payment obligations, disclaimers, limitations, dispute handling, and records survive termination.' },
+                          { heading: 'Disclaimers and contact', body: 'The platform is provided subject to availability and may contain interruptions or errors. Nothing on the platform is legal, tax, accounting, or personalized investment advice. You should obtain independent advice before using any product. These Terms are read together with the Privacy Policy and Risk Disclosure. Questions may be directed to dollarcraft3@gmail.com.' }
+                        ] },
+                        { label: 'Privacy Policy', title: 'Privacy Policy', sections: [
+                          { heading: 'Information we collect', body: 'Dollar Craft may collect identity and contact details, account credentials, verification records, transaction and withdrawal information, device and browser data, approximate location, communications, and usage or diagnostic records. We collect information you provide, information generated through platform activity, and information from service providers used for verification, payments, fraud prevention, and security.' },
+                          { heading: 'How we use information', body: 'We use information to create and maintain accounts, provide products and support, process deposits and withdrawals, verify identity, prevent fraud and financial crime, protect the platform, comply with legal and regulatory duties, improve performance, resolve disputes, and communicate important service or security notices. We do not use personal information for purposes incompatible with this Policy without an appropriate legal basis or notice.' },
+                          { heading: 'Sharing and international transfers', body: 'We may share necessary information with affiliates, hosting and technology providers, payment and banking partners, professional advisers, auditors, regulators, law-enforcement authorities, or parties involved in a corporate transaction. Providers may process information in countries other than your own. We use contractual, technical, and organizational safeguards appropriate to the transfer and applicable law.' },
+                          { heading: 'Security and retention', body: 'We use access controls, encryption where appropriate, monitoring, authentication safeguards, backups, and least-privilege practices to protect information. No internet transmission or storage system is completely secure. We retain information only as long as reasonably necessary for the purposes described, legal and accounting requirements, dispute resolution, fraud prevention, and enforcement of agreements.' },
+                          { heading: 'Your choices and rights', body: 'Subject to applicable law, you may request access, correction, deletion, restriction, or a copy of your personal information, or object to certain processing. We may need to verify your identity and may retain information where legally required. To make a request or report a privacy concern, contact dollarcraft3@gmail.com. Pakistani and other regional users may also have rights under their local privacy and data-protection laws.' },
+                          { heading: 'Updates', body: 'We may update this Policy when our services, legal requirements, or security practices change. The effective date above identifies the current version. Continued use after an update means you acknowledge the revised Policy to the extent permitted by law.' }
+                        ] },
+                        { label: 'Risk Disclosure', title: 'Risk Disclosure', sections: [
+                          { heading: 'Important notice', body: 'Micro-yield investments and digital-asset-related products involve significant risk. They are not bank deposits, guaranteed savings, or risk-free investments. You may lose some or all of the funds committed, and you should never invest money you cannot afford to lose. Past performance, displayed yields, projections, and examples are not guarantees of future results.' },
+                          { heading: 'Market and product risks', body: 'Digital assets and related markets can be volatile, illiquid, and affected by technology, liquidity, counterparty, regulatory, economic, and geopolitical events. Yield rates, product terms, fees, minimums, settlement times, and availability may change. A displayed micro-yield accrual may be estimated, conditional, delayed, or subject to the applicable product terms and account verification.' },
+                          { heading: 'Operational and security risks', body: 'Service interruptions, maintenance, network congestion, cyberattacks, fraud, credential compromise, software defects, data loss, payment-provider failures, and events outside our control may delay or prevent access, deposits, calculations, or withdrawals. Keep your credentials private and review account activity promptly. Notify support of suspected unauthorized activity.' },
+                          { heading: 'Regulatory and tax considerations', body: 'Legal treatment of digital assets, investment products, payments, and yields differs by jurisdiction and can change. Dollar Craft serves global users and operates locally in Pakistan with regional compliance processes; this does not mean every product is authorized, suitable, or available in every jurisdiction. You are responsible for your own tax reporting, exchange-control obligations, and legal compliance.' },
+                          { heading: 'Suitability and acknowledgement', body: 'Assess your financial position, experience, objectives, liquidity needs, and risk tolerance before participating. Obtain independent financial, legal, and tax advice. By using the platform, you acknowledge these risks, the platform Terms of Service, verification requirements, variable product terms, and the possibility of loss. This disclosure does not replace the specific terms shown for an individual product.' }
+                        ] }
+                      ].map((document) => (
+                        <React.Fragment key={document.label}>
+                          <button type="button" onClick={() => setLegalDocument(document)} className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">{document.label}</button>
+                          {document.label !== 'Risk Disclosure' && <span className="text-[#29405d]" aria-hidden="true">|</span>}
+                        </React.Fragment>
+                      ))}
+                    </nav>
+                  </div>
+                </footer>
+              </>
+            )}
           </div>
         </div>
       )}

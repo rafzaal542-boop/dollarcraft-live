@@ -10,6 +10,24 @@
 	}
 }
 
+.legal-document-scroll {
+	 scrollbar-color: #29405d #030810;
+	 scrollbar-width: thin;
+}
+
+.legal-document-scroll::-webkit-scrollbar {
+	width: 6px;
+}
+
+.legal-document-scroll::-webkit-scrollbar-track {
+	background: #030810;
+}
+
+.legal-document-scroll::-webkit-scrollbar-thumb {
+	background: #29405d;
+	border-radius: 999px;
+}
+
 .splash-screen {
 	--splash-cyan: #00e5ff;
 	position: fixed;
