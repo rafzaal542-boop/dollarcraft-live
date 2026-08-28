@@ -2678,6 +2678,21 @@ export default function App() {
               <p className="font-bold text-white text-xs">Dollar Craft Pte Ltd</p>
               <p className="text-[10px] text-gray-500">c/o Company Name<br/>70 Bendemeer Road, #03-02<br/>Luzerne, Singapore 339940</p>
             </div>
+            <footer className="border-t border-[#0b1b30] pt-4 text-[10px] leading-relaxed text-slate-400">
+              <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-1">
+                  <p>© 2008–2026 Dollar Craft. All rights reserved.</p>
+                  <p>Operating locally in Pakistan and serving Pakistani users with regional compliance.</p>
+                </div>
+                <nav aria-label="Legal information" className="flex flex-wrap items-center gap-x-3 gap-y-1 md:justify-end">
+                  <a href="/terms-of-service" className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">Terms of Service</a>
+                  <span className="text-[#29405d]" aria-hidden="true">|</span>
+                  <a href="/privacy-policy" className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">Privacy Policy</a>
+                  <span className="text-[#29405d]" aria-hidden="true">|</span>
+                  <a href="/risk-disclosure" className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">Risk Disclosure</a>
+                </nav>
+              </div>
+            </footer>
           </div>
         </div>
       )}
