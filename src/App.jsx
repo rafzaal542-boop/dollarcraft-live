@@ -1147,7 +1147,7 @@ export default function App() {
                     aria-label="Play the Dollar Craft account creation tutorial"
                   >
                     <img
-                      src="https://img.youtube.com/vi/nQVRhTeidmM/maxresdefault.jpg"
+                      src="/thumbnail.jpg"
                       alt="Dollar Craft dashboard tutorial"
                       className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02] group-hover:brightness-75"
                     />
