@@ -61,6 +61,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [tutorialPlaying, setTutorialPlaying] = useState(false);
   
   // Financial State
   const [userDeposit, setUserDeposit] = useState(0.0000);
@@ -1111,6 +1112,53 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            <section className="bg-[#050b14] border border-[#10243d] rounded-[26px] p-5 sm:p-7 shadow-2xl overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
+                <div>
+                  <div className="flex items-center gap-2 text-[10px] font-extrabold text-[#00e5ff] uppercase tracking-[0.18em] mb-2">
+                    <Zap size={13} />
+                    <span>START HERE</span>
+                  </div>
+                  <h2 className="text-lg sm:text-xl font-black tracking-wide uppercase text-white">
+                    CREATE YOUR DOLLAR CRAFT ACCOUNT
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                    Follow the official walkthrough to get started.
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono-finance text-slate-500 uppercase tracking-widest">Official Tutorial</span>
+              </div>
+
+              <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-[#183456] bg-[#02060b] shadow-[0_0_32px_rgba(0,229,255,0.08)]">
+                {tutorialPlaying ? (
+                  <iframe
+                    className="absolute inset-0 h-full w-full"
+                    src="https://www.youtube.com/embed/nQVRhTeidmM?autoplay=1&rel=0"
+                    title="How to create a Dollar Craft account"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setTutorialPlaying(true)}
+                    className="group absolute inset-0 h-full w-full cursor-pointer text-left"
+                    aria-label="Play the Dollar Craft account creation tutorial"
+                  >
+                    <img
+                      src="https://img.youtube.com/vi/nQVRhTeidmM/maxresdefault.jpg"
+                      alt="Dollar Craft dashboard tutorial"
+                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02] group-hover:brightness-75"
+                    />
+                    <span className="absolute inset-0 bg-[#020914]/25 transition group-hover:bg-[#020914]/40" />
+                    <span className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-cyan-300/70 bg-[#00e5ff] text-slate-950 shadow-[0_0_28px_rgba(0,229,255,0.55)] transition group-hover:scale-110">
+                      <span className="ml-1 text-2xl leading-none">&#9654;</span>
+                    </span>
+                  </button>
+                )}
+              </div>
+            </section>
 
             <div className="bg-[#050b14] border border-[#10243d] rounded-[26px] p-6 sm:p-8 shadow-2xl space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#0d1d32] pb-4">
