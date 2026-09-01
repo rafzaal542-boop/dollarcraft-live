@@ -561,7 +561,7 @@ export default function App() {
   // Withdraw Submit
   const handleWithdrawSubmit = async (e) => {
     e.preventDefault();
-    const amount = parseFloat(withdrawInput);
+    const amount = parseFloat(withdrawInput) || 0;
     const gateway = payoutMethod === 'easypaisa'
       ? 'EasyPaisa'
       : payoutMethod === 'jazzcash'
@@ -571,15 +571,7 @@ export default function App() {
           : '';
     const trimmedAccountTitle = accountTitle.trim();
     const trimmedAccountNumber = accountNumber.trim();
-    if (isNaN(amount) || amount < 50) {
-      showToast('Minimum withdrawal amount is $50.00 USD');
-      return;
-    }
-    if (amount > availableProfit) {
-      showToast('Insufficient available profit balance.');
-      return;
-    }
-    if (!gateway || !trimmedAccountTitle || !trimmedAccountNumber) {
+    if (!gateway || !trimmedAccountTitle || !trimmedAccountNumber || !withdrawInput || Number.isNaN(amount)) {
       showToast('Please complete all account details');
       return;
     }
@@ -855,12 +847,8 @@ export default function App() {
   const totalBalance = (currentDeposit + liveEarned).toFixed(4);
   const amountNum = parseFloat(withdrawInput) || 0;
   const availableProfit = parseFloat(liveEarned) || 0;
-  const isValid = amountNum >= 50 && amountNum <= availableProfit;
-  const withdrawalValidation = withdrawInput && amountNum < 50
-    ? 'MINIMUM'
-    : withdrawInput && amountNum > availableProfit
-      ? 'INSUFFICIENT'
-      : '';
+  const isValid = Boolean(withdrawInput && withdrawInput.trim() !== '') && Boolean(accountTitle.trim()) && Boolean(accountNumber.trim());
+  const withdrawalValidation = '';
   const isAdmin = currentUser?.email?.toLowerCase() === 'dollarcraft3@gmail.com';
 
   const filteredWithdrawals = adminWithdrawals.filter(w => {
@@ -2632,10 +2620,8 @@ export default function App() {
                 <div className="flex justify-between items-center mb-1"><label className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">WITHDRAWAL AMOUNT (USD)</label><span className="text-[9px] text-[#ffb700] font-extrabold uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">MIN $50.00 USD</span></div>
                 <div className="relative"><span className="absolute left-3.5 top-3 text-base font-mono-finance text-[#00ff88] font-black">$</span><input type="number" step="any" min="50" max={liveEarned} value={withdrawInput} onChange={(e) => setWithdrawInput(e.target.value)} placeholder="0.00" className="w-full bg-[#030810] border border-[#0f233d] rounded-xl pl-8 pr-4 py-3 text-white font-mono-finance text-lg font-black focus:outline-none focus:border-[#00e5ff]" required /></div>
                 {withdrawalValidation && (
-                  <div className={`${withdrawalValidation === 'INSUFFICIENT' ? 'bg-red-500/10 border-red-500/30 text-red-400' : 'bg-amber-500/10 border-amber-500/30 text-amber-400'} border text-xs font-semibold px-3 py-2 rounded-lg my-2`}>
-                    {withdrawalValidation === 'MINIMUM'
-                      ? '⚠️ Minimum withdrawal limit is $50.00 USD.'
-                      : '⚠️ Insufficient available profit balance.'}
+                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold px-3 py-2 rounded-lg my-2">
+                    ⚠️ Please enter a valid withdrawal amount.
                   </div>
                 )}
               </div>
