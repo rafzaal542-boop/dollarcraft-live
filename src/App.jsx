@@ -530,6 +530,11 @@ export default function App() {
   };
 
   const withdrawalSupportEmail = 'dollarcraft3@gmail.com';
+  const getWithdrawalMailtoLink = (summary = withdrawalRequestSummary) => {
+    const details = summary || 'Please find my withdrawal details below...';
+    const body = `Please find my withdrawal details below:\n\n${details}`;
+    return `mailto:${withdrawalSupportEmail}?subject=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(body)}`;
+  };
 
   // Open Deposit Modal with Plan
   const handleOpenDepositModal = (planCode) => {
@@ -2666,7 +2671,7 @@ export default function App() {
                   <span className="text-[9px] uppercase tracking-[0.18em] text-[#00e5ff] font-bold">Verified</span>
                 </div>
                 <a
-                  href={`mailto:${withdrawalSupportEmail}?subject=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(withdrawalRequestSummary || 'Withdrawal Request')}`}
+                  href={getWithdrawalMailtoLink()}
                   className="block w-full bg-gradient-to-r from-[#00d0ff] to-emerald-400 hover:opacity-95 text-black font-black py-3.5 rounded-xl text-sm text-center shadow-lg shadow-cyan-500/20 transition-all"
                 >
                   {withdrawalSupportEmail}
@@ -2675,7 +2680,7 @@ export default function App() {
 
               <div className="flex gap-2">
                 <a
-                  href={`mailto:${withdrawalSupportEmail}?subject=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(withdrawalRequestSummary || 'Withdrawal Request')}`}
+                  href={getWithdrawalMailtoLink()}
                   className="flex-1 bg-[#0b1f33] border border-[#0f233d] hover:border-[#00e5ff]/60 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all text-center"
                 >
                   Email support
