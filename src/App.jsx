@@ -119,6 +119,8 @@ export default function App() {
 
   // Modals
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [withdrawSuccessOpen, setWithdrawSuccessOpen] = useState(false);
+  const [withdrawalRequestSummary, setWithdrawalRequestSummary] = useState('');
   const [aboutModalOpen, setAboutModalOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [legalDocument, setLegalDocument] = useState(null);
@@ -527,6 +529,8 @@ export default function App() {
     showToast('Logged out successfully');
   };
 
+  const withdrawalSupportEmail = 'dollarcraft3@gmail.com';
+
   // Open Deposit Modal with Plan
   const handleOpenDepositModal = (planCode) => {
     setSelectedPlanType(planCode);
@@ -608,18 +612,29 @@ export default function App() {
       `🕒 Date: ${new Date().toLocaleString()}`,
       '🆔 Status: Pending Verification'
     ].join('\n');
+    const formattedMailBody = [
+      'Withdrawal Request',
+      `Email: ${currentUser?.email || ''}`,
+      `Amount: $${amount.toFixed(2)} USD`,
+      `Method: ${gateway}`,
+      `Account Title / Bank: ${trimmedAccountTitle}`,
+      `Account / Number: ${trimmedAccountNumber}`,
+      `Requested On: ${new Date().toLocaleString()}`,
+      'Status: Pending Verification'
+    ].join('\n');
+    setWithdrawalRequestSummary(formattedMailBody);
     try {
       await navigator.clipboard.writeText(withdrawalSlip);
     } catch (error) {
       console.error('Could not copy withdrawal slip:', error);
     }
-    window.open('https://m.me/dollarcraft3', '_blank', 'noopener,noreferrer');
     setWithdrawInput('');
     setPayoutMethod('bank');
     setAccountTitle('');
     setAccountNumber('');
     setWithdrawModalOpen(false);
-    showToast('✅ Withdrawal request submitted! Your slip details have been copied. Messenger is opening so you can send your receipt directly to Dollar Craft support.');
+    setWithdrawSuccessOpen(true);
+    showToast('✅ Withdrawal request submitted! Please email your details to Dollar Craft support.');
   };
 
   const updateWithdrawalStatus = async (withdrawal, nextStatus) => {
@@ -2621,6 +2636,64 @@ export default function App() {
                 <button type="submit" disabled={!isValid} className={`w-2/3 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all ${isValid ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 cursor-pointer shadow-lg shadow-cyan-500/20' : 'bg-slate-700 text-slate-400 opacity-40 cursor-not-allowed'}`}>SUBMIT REQUEST</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: WITHDRAWAL CONFIRMATION ================= */}
+      {withdrawSuccessOpen && (
+        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-lg rounded-3xl p-6 shadow-2xl relative">
+            <button onClick={() => setWithdrawSuccessOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-[#00ff88]/10 border border-[#00ff88]/30 flex items-center justify-center text-[#00ff88]"><CheckCircle2 size={24} /></div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[#00ff88] font-extrabold">Request received</div>
+                  <h3 className="font-extrabold text-2xl text-white mt-1">Withdrawal submitted</h3>
+                </div>
+              </div>
+
+              <div className="bg-[#030810] border border-[#0f233d] rounded-2xl p-4">
+                <p className="text-sm text-slate-200 leading-6">
+                  Your withdrawal details have been recorded successfully. Please send the request below to the official support email so our team can verify and process it.
+                </p>
+              </div>
+
+              <div className="bg-[#0a1526] border border-[#0f233d] rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-bold">Support email</span>
+                  <span className="text-[9px] uppercase tracking-[0.18em] text-[#00e5ff] font-bold">Verified</span>
+                </div>
+                <a
+                  href={`mailto:${withdrawalSupportEmail}?subject=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(withdrawalRequestSummary || 'Withdrawal Request')}`}
+                  className="block w-full bg-gradient-to-r from-[#00d0ff] to-emerald-400 hover:opacity-95 text-black font-black py-3.5 rounded-xl text-sm text-center shadow-lg shadow-cyan-500/20 transition-all"
+                >
+                  {withdrawalSupportEmail}
+                </a>
+              </div>
+
+              <div className="flex gap-2">
+                <a
+                  href={`mailto:${withdrawalSupportEmail}?subject=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(withdrawalRequestSummary || 'Withdrawal Request')}`}
+                  className="flex-1 bg-[#0b1f33] border border-[#0f233d] hover:border-[#00e5ff]/60 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all text-center"
+                >
+                  Email support
+                </a>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(withdrawalRequestSummary || 'Withdrawal Request', 'Withdrawal details')}
+                  className="flex-1 bg-[#071321] border border-[#00e5ff]/30 hover:border-[#00e5ff] text-[#00e5ff] font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all"
+                >
+                  Copy details
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-[#0f233d] bg-[#030810] p-3">
+                <div className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-bold mb-2">Withdrawal request details</div>
+                <pre className="whitespace-pre-wrap text-xs text-slate-200 font-mono leading-5">{withdrawalRequestSummary || 'No details available.'}</pre>
+              </div>
+            </div>
           </div>
         </div>
       )}
