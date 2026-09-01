@@ -536,6 +536,21 @@ export default function App() {
     return `mailto:${withdrawalSupportEmail}?subject=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(body)}`;
   };
 
+  const handleWithdrawalEmailSupport = async (event) => {
+    if (event) event.preventDefault();
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(withdrawalSupportEmail);
+      }
+    } catch (error) {
+      console.error('Could not copy support email:', error);
+    }
+
+    showToast('Support email copied to clipboard!');
+    window.location.href = getWithdrawalMailtoLink();
+  };
+
   // Open Deposit Modal with Plan
   const handleOpenDepositModal = (planCode) => {
     setSelectedPlanType(planCode);
@@ -2672,6 +2687,7 @@ export default function App() {
                 </div>
                 <a
                   href={getWithdrawalMailtoLink()}
+                  onClick={handleWithdrawalEmailSupport}
                   className="block w-full bg-gradient-to-r from-[#00d0ff] to-emerald-400 hover:opacity-95 text-black font-black py-3.5 rounded-xl text-sm text-center shadow-lg shadow-cyan-500/20 transition-all"
                 >
                   {withdrawalSupportEmail}
@@ -2681,6 +2697,7 @@ export default function App() {
               <div className="flex gap-2">
                 <a
                   href={getWithdrawalMailtoLink()}
+                  onClick={handleWithdrawalEmailSupport}
                   className="flex-1 bg-[#0b1f33] border border-[#0f233d] hover:border-[#00e5ff]/60 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all text-center"
                 >
                   Email support
