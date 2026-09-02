@@ -14,7 +14,6 @@ import {
   Zap, 
   Globe, 
   ExternalLink, 
-  MessageCircle, 
   Bell, 
   LogOut, 
   Sparkles, 
@@ -539,6 +538,11 @@ export default function App() {
   const getDepositGmailLink = () => {
     const body = `Please find my payment deposit slip details below. I have attached the deposit slip for instant verification.\n\nPlan: ${selectedPlanType}\nBank: Mashreq Bank / Local\nAccount Title: IRTAZA COMMUNICATION\nIBAN: PK36MSHQ0000089200164395`;
     return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(withdrawalSupportEmail)}&su=${encodeURIComponent(`${selectedPlanType} Deposit Slip Verification`)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const getSupportGmailLink = () => {
+    const body = 'Hello Dollar Craft support,\n\nI need assistance with my account.\n\nThank you.';
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(withdrawalSupportEmail)}&su=${encodeURIComponent('Dollar Craft Support Request')}&body=${encodeURIComponent(body)}`;
   };
 
   const handleWithdrawalEmailSupport = async (event) => {
@@ -1869,15 +1873,17 @@ export default function App() {
 
       </main>
 
-      {/* Floating Messenger Action Button */}
+      {/* Floating Email Support Button */}
       <div className="fixed bottom-6 right-6 z-50">
         <a 
-          href="https://m.me/dollarcraft3"
+          href={getSupportGmailLink()}
           target="_blank" 
           rel="noopener noreferrer"
-          className="w-13 h-13 rounded-full bg-gradient-to-tr from-[#0066ff] to-[#00e5ff] flex items-center justify-center text-white shadow-2xl shadow-cyan-500/40 hover:scale-110 active:scale-95 transition-all p-3"
+          aria-label="Email Dollar Craft support"
+          title="Email Dollar Craft support"
+          className="w-13 h-13 rounded-full bg-[#08182d] border border-[#17406d] flex items-center justify-center text-[#00e5ff] shadow-2xl shadow-cyan-500/30 hover:bg-[#0d2746] hover:scale-110 active:scale-95 transition-all p-3"
         >
-          <MessageCircle size={26} />
+          <Mail size={26} />
         </a>
       </div>
 
