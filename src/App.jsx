@@ -536,6 +536,11 @@ export default function App() {
     return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(withdrawalSupportEmail)}&su=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(body)}`;
   };
 
+  const getDepositGmailLink = () => {
+    const body = `Please find my payment deposit slip details below. I have attached the deposit slip for instant verification.\n\nPlan: ${selectedPlanType}\nBank: Mashreq Bank / Local\nAccount Title: IRTAZA COMMUNICATION\nIBAN: PK36MSHQ0000089200164395`;
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(withdrawalSupportEmail)}&su=${encodeURIComponent(`${selectedPlanType} Deposit Slip Verification`)}&body=${encodeURIComponent(body)}`;
+  };
+
   const handleWithdrawalEmailSupport = async (event) => {
     if (event) event.preventDefault();
 
@@ -2575,16 +2580,16 @@ export default function App() {
             {/* Support Slip Instruction */}
             <div className="bg-[#051122] border border-[#112d50] rounded-2xl p-3.5 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2.5 text-gray-300">
-                <MessageCircle size={18} className="text-[#00e5ff] shrink-0" />
-                <span>Please share your payment deposit slip directly to Messenger for instant verification.</span>
+                <Mail size={18} className="text-[#00e5ff] shrink-0" />
+                <span>Please share your payment deposit slip directly via email to {withdrawalSupportEmail} for instant verification.</span>
               </div>
               <a 
-                href="https://m.me/dollarcraft3"
+                href={getDepositGmailLink()}
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-black text-[10px] px-3 py-2 rounded-xl uppercase tracking-wider whitespace-nowrap ml-2 shadow-md"
               >
-                Send Slip
+                Email Slip
               </a>
             </div>
 
