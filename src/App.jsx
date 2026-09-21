@@ -40,9 +40,9 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
-import { useGoogleLogin } from '@react-oauth/google';
 import { addDoc, collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
-import { db, ensureGoogleUserRecord, submitWithdrawalRequest } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db, ensureGoogleUserRecord, logOutUser, signInWithGoogle, submitWithdrawalRequest } from './firebase';
 import { VALID_IB_CODES } from './data/ibCodes';
 import SplashScreen from './SplashScreen';
 
@@ -349,15 +349,30 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+      if (!firebaseUser) {
+        localStorage.removeItem('dc_auth_active_user');
+        setCurrentUser(null);
+        return;
+      }
 
-    const savedUser = localStorage.getItem('dc_auth_active_user');
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser);
-      setCurrentUser(parsed);
-      saveAuthenticatedGoogleUser(parsed);
-      loadUserFinancials(parsed.email);
-      generateUserCredentials(parsed);
-    }
+      const userData = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
+        picture: firebaseUser.photoURL || ''
+      };
+      localStorage.setItem('dc_auth_active_user', JSON.stringify(userData));
+      setCurrentUser(userData);
+      saveAuthenticatedGoogleUser(userData);
+      generateUserCredentials(userData);
+      loadUserFinancials(userData.email);
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  useEffect(() => {
 
     const handleStorageChange = (e) => {
       if (currentUser && e.key === `dc_deposit_${currentUser.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`) {
@@ -490,37 +505,31 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentUserBalance, activePlanTier.monthlyPct, withdrawnYield, yieldStartTime]);
 
-  // Google Login Hook
-  const loginWithGoogle = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        const userInfo = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        }).then((res) => res.json());
+  const loginWithGoogle = async () => {
+    try {
+      const firebaseUser = await signInWithGoogle();
+      await ensureGoogleUserRecord(firebaseUser);
+      setActiveTab('home');
+      showToast(`Welcome, ${firebaseUser.displayName || firebaseUser.email}!`);
+    } catch (error) {
+      console.error('Firebase Google sign-in failed:', error);
+      const errorMessage = error?.code === 'auth/popup-blocked'
+        ? 'Please allow popups for Google sign-in'
+        : error?.code === 'auth/popup-closed-by-user'
+          ? 'Google sign-in was cancelled'
+          : error?.code === 'auth/unauthorized-domain'
+            ? 'This domain is not authorized in Firebase Authentication'
+            : 'Google sign-in failed. Check Firebase Auth configuration.';
+      showToast(errorMessage);
+    }
+  };
 
-        const userData = {
-          uid: userInfo.sub,
-          email: userInfo.email,
-          name: userInfo.name,
-          picture: userInfo.picture,
-        };
-
-        localStorage.setItem('dc_auth_active_user', JSON.stringify(userData));
-        setCurrentUser(userData);
-        saveAuthenticatedGoogleUser(userData);
-        await ensureGoogleUserRecord(userData);
-        generateUserCredentials(userData);
-        loadUserFinancials(userData.email);
-        setActiveTab('home');
-        showToast(`Welcome, ${userData.name || userData.email}!`);
-      } catch (err) {
-        showToast('Login verification failed');
-      }
-    },
-    onError: () => showToast('Google sign-in cancelled'),
-  });
-
-  const confirmLogout = () => {
+  const confirmLogout = async () => {
+    try {
+      await logOutUser();
+    } catch (error) {
+      console.error('Firebase logout failed:', error);
+    }
     localStorage.removeItem('dc_auth_active_user');
     setCurrentUser(null);
     setLogoutModalOpen(false);

@@ -1,0 +1,10 @@
+[33m2456aa2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Restore all functionality and fix listeners
+[33mca93cba[m Fix user document reference fallback to uid and email
+[33m14b643e[m Restore correct field mapping and listeners
+[33mbc887e4[m Fix withdrawals and users listener in App.jsx
+[33m081e6a6[m Complete admin users snapshot line
+[33me23c8dc[m Fix userRef to use email
+[33m2387b31[m Fix user document reference to use email
+[33m6287f1c[m Restore stable version
+[33ma21f889[m optimize seo keywords for dollar craft and investment search
+[33mf3baebf[m add google verification html file
