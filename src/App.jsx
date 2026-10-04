@@ -1,2972 +1,765 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Wallet, 
-  ArrowUpRight, 
-  Layers, 
-  ShieldCheck, 
-  CheckCircle2, 
-  Clock, 
-  Award, 
-  Users, 
-  Mail, 
-  Zap, 
-  Globe, 
-  ExternalLink, 
-  Bell, 
-  LogOut, 
-  Sparkles, 
-  ChevronRight, 
-  Copy, 
-  Check, 
-  Building, 
-  Landmark, 
-  X, 
-  AlertTriangle, 
-  Sliders, 
-  CheckCircle, 
-  XCircle, 
-  Search, 
-  Key, 
-  Repeat, 
-  Cpu,
-  User,
-  Calendar,
-  Shield,
-  Plus,
-  RotateCcw,
-  Menu,
-  Eye,
-  EyeOff
-} from 'lucide-react';
-import { addDoc, collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, db, ensureGoogleUserRecord, logOutUser, signInWithGoogle, submitWithdrawalRequest } from './firebase';
-import { VALID_IB_CODES } from './data/ibCodes';
-import SplashScreen from './SplashScreen';
-
-const GLOBAL_HUBS = [
-  { country: 'USA', code: 'us', reg: 'MSB #310002148291' },
-  { country: 'Canada', code: 'ca', reg: 'FINTRAC #M20184712' },
-  { country: 'Australia', code: 'au', reg: 'AUSTRAC #100684920' },
-  { country: 'UK', code: 'gb', reg: 'FCA Reg #930412' },
-  { country: 'UAE', code: 'ae', reg: 'VARA #2024-069' },
-  { country: 'Singapore', code: 'sg', reg: 'MAS CMS #101824' },
-  { country: 'Europe', code: 'eu', reg: 'MiCA #EU-8821' },
-];
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('home');
+  const [adminSubTab, setAdminSubTab] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [tutorialPlaying, setTutorialPlaying] = useState(false);
-  
-  // Financial State
-  const [userDeposit, setUserDeposit] = useState(0.0000);
-  const [userDailyYield, setUserDailyYield] = useState(0.0000);
-  const [currentUserBalance, setCurrentUserBalance] = useState(0.0000);
-  const [currentUserYield, setCurrentUserYield] = useState(0.0000);
-  const [liveEarned, setLiveEarned] = useState(0);
-  const [withdrawnYield, setWithdrawnYield] = useState(0);
-  const [yieldStartTime, setYieldStartTime] = useState(null);
-  const [liveYieldRate, setLiveYieldRate] = useState(0);
-  const [liveDailyTarget, setLiveDailyTarget] = useState(0);
-  const [userTotalProfit240, setUserTotalProfit240] = useState(0.00);
-  const [liveProfit, setLiveProfit] = useState(0);
-  const [withdrawnAmount, setWithdrawnAmount] = useState(0);
-  const [withdrawHistory, setWithdrawHistory] = useState([]);
+  const [investAmount, setInvestAmount] = useState(100);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [googleAccountPickerOpen, setGoogleAccountPickerOpen] = useState(false);
 
-  // Active Plan Attributes
-  const [activePlanTier, setActivePlanTier] = useState({
-    code: 'NONE',
-    name: 'NO ACTIVE PLAN',
-    tierName: 'INACTIVE',
-    monthlyPct: 0,
-    dailyRate: 0,
-    monthlyDollars: 0,
-    total240Profit: 0,
-    color: '#6b7280',
-    tagColor: '#374151',
-    bgColor: '#111827',
-    borderColor: '#374151'
-  });
+  // Help Center Chat State & Loading Spinner
+  const [selectedLanguage, setSelectedLanguage] = useState(null);
+  const [selectedIssue, setSelectedIssue] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState([
+    { sender: 'agent', text: '👋 Welcome! Select language / Zuban muntakhib karein:' }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [attachedFile, setAttachedFile] = useState(null);
+  const chatMessagesEndRef = useRef(null);
 
-  // User Profile & Unique Credentials State
-  const [userRegDate, setUserRegDate] = useState('Fri, Aug 21, 2018');
-  const [userAccountId, setUserAccountId] = useState('usr-client-01');
-  const [userReferralCode, setUserReferralCode] = useState('DCRAFT-01');
-  const [userReferralLink, setUserReferralLink] = useState('https://www.dollarcraft3.com/?ref=DCRAFT-01');
+  const GOOGLE_CLIENT_ID = "510350063620-fbhcbnd8o83fu15md09dd48qvp1i3vai.apps.googleusercontent.com";
 
-  // Live System Metric High-Frequency Reserves Ticker
-  const [globalReserves, setGlobalReserves] = useState(680409811.5626);
+  const scrollToBottom = () => {
+    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  // Admin Central States
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const [adminActiveTab, setAdminActiveTab] = useState('transfer');
-  const [adminUsers, setAdminUsers] = useState([]);
-  const [adminWithdrawals, setAdminWithdrawals] = useState([]);
-  const [withdrawFilter, setWithdrawFilter] = useState('All');
-  const [withdrawSearchQuery, setWithdrawSearchQuery] = useState('');
-  const [adminUserSearchQuery, setAdminUserSearchQuery] = useState('');
+  useEffect(() => {
+    if (chatOpen) {
+      scrollToBottom();
+    }
+  }, [chatOpen, messages, setIsLoading]);
 
-  // Admin Transfer
-  const [transferTargetEmail, setTransferTargetEmail] = useState('');
-  const [transferAmount, setTransferAmount] = useState('');
-  const [transferTargetId, setTransferTargetId] = useState('');
-  const [quickTransferOpen, setQuickTransferOpen] = useState(false);
-
-  // Modals
-  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
-  const [withdrawSuccessOpen, setWithdrawSuccessOpen] = useState(false);
-  const [withdrawalRequestSummary, setWithdrawalRequestSummary] = useState('');
-  const [aboutModalOpen, setAboutModalOpen] = useState(false);
-  const [contactModalOpen, setContactModalOpen] = useState(false);
-  const [legalDocument, setLegalDocument] = useState(null);
-  const [plansModalOpen, setPlansModalOpen] = useState(false);
-  const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
-
-  // Deposit Modal States (Only Bank)
-  const [depositModalOpen, setDepositModalOpen] = useState(false);
-  const [selectedPlanType, setSelectedPlanType] = useState('DC1');
-
-  // Form Fields
-  const [payoutMethod, setPayoutMethod] = useState('bank');
-  const [withdrawInput, setWithdrawInput] = useState('');
-  const [accountTitle, setAccountTitle] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-
-  // IB Program
-  const [ibCodeInput, setIbCodeInput] = useState('');
-  const [showIbCode, setShowIbCode] = useState(false);
-  const [generatedIbLink, setGeneratedIbLink] = useState('');
-  const [isIbModalOpen, setIsIbModalOpen] = useState(false);
-  const [ibFirstName, setIbFirstName] = useState('');
-  const [ibLastName, setIbLastName] = useState('');
-  const [ibEmail, setIbEmail] = useState('');
-
-  const [copiedEmail, setCopiedEmail] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-
-  // DOM Ref for Total Earned Profit Meter
-  const profitDisplayRef = useRef(null);
-  const accumulatedProfitRef = useRef(0);
-
-  // Automatic Plan Resolver based on Deposit
-  const resolvePlanDetails = (deposit) => {
-    const dep = parseFloat(deposit) || 0;
-    if (dep >= 1001) {
-      return {
-        code: 'DC3',
-        name: 'VIP PLAN (35% MONTHLY)',
-        tierName: 'DIAMOND TIER (AUTOMATIC)',
-        monthlyPct: 35,
-        dailyRate: (dep * 0.35) / 30,
-        monthlyDollars: dep * 0.35,
-        total240Profit: ((dep * 0.35) / 30) * 240,
-        color: '#f0abfc',
-        tagColor: '#d946ef',
-        bgColor: '#17041f',
-        borderColor: '#d946ef'
-      };
-    } else if (dep >= 501) {
-      return {
-        code: 'DC2',
-        name: 'PREMIUM PLAN (30% MONTHLY)',
-        tierName: 'GOLD TIER (AUTOMATIC)',
-        monthlyPct: 30,
-        dailyRate: (dep * 0.30) / 30,
-        monthlyDollars: dep * 0.30,
-        total240Profit: ((dep * 0.30) / 30) * 240,
-        color: '#facc15',
-        tagColor: '#eab308',
-        bgColor: '#171203',
-        borderColor: '#eab308'
-      };
-    } else if (dep >= 100) {
-      return {
-        code: 'DC1',
-        name: 'STANDARD PLAN (25% MONTHLY)',
-        tierName: 'BRONZE TIER (AUTOMATIC)',
-        monthlyPct: 25,
-        dailyRate: (dep * 0.25) / 30,
-        monthlyDollars: dep * 0.25,
-        total240Profit: ((dep * 0.25) / 30) * 240,
-        color: '#00e5cc',
-        tagColor: '#00c8b3',
-        bgColor: '#031714',
-        borderColor: '#00c8b3'
-      };
+  const handleGetStartedClick = () => {
+    if (!isLoggedIn) {
+      setAuthModalOpen(true);
     } else {
-      return {
-        code: 'DC0',
-        name: 'STARTER (0% YIELD)',
-        tierName: 'AWAITING MIN $100 DEPOSIT',
-        monthlyPct: 0,
-        dailyRate: 0,
-        monthlyDollars: 0,
-        total240Profit: 0,
-        color: '#9ca3af',
-        tagColor: '#6b7280',
-        bgColor: '#0b1320',
-        borderColor: '#1f2937'
+      setActiveTab('dashboard');
+    }
+  };
+
+  const handleGoogleSignInClick = () => {
+    // Open realistic Google Account Chooser popup simulation
+    setAuthModalOpen(false);
+    setGoogleAccountPickerOpen(true);
+  };
+
+  const handleAccountSelect = (emailName) => {
+    setIsLoading(true);
+    setGoogleAccountPickerOpen(false);
+    setTimeout(() => {
+      setIsLoggedIn(true);
+      setIsLoading(false);
+      setActiveTab('dashboard');
+    }, 1000);
+  };
+
+  const handleSelectLanguage = (lang) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setSelectedLanguage(lang);
+      let replyText = `You selected English. How can we help?`;
+      if (lang === 'Urdu') {
+        replyText = `Aapne Urdu select ki hai. Neeche option select karein:`;
+      } else if (lang === 'Spanish') {
+        replyText = `Has seleccionado Español. ¿Cómo ayudamos?`;
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'user', text: `Language: ${lang}` },
+        { sender: 'agent', text: replyText }
+      ]);
+      setIsLoading(false);
+    }, 800);
+  };
+
+  const handleSelectIssue = (issueType) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setSelectedIssue(issueType);
+      let issueReply = '';
+
+      if (issueType === 'slip') {
+        issueReply = selectedLanguage === 'Urdu' 
+          ? '📄 Apni transaction slip ya screenshot upload karein.'
+          : selectedLanguage === 'Spanish'
+          ? '📄 Sube tu comprobante de transacción.'
+          : '📄 Please upload your transaction slip below.';
+      } else if (issueType === 'problem') {
+        issueReply = selectedLanguage === 'Urdu'
+          ? '⚠️ Kya mushkil pesh aa rahi hai? Yahan message likhein.'
+          : selectedLanguage === 'Spanish'
+          ? '⚠️ ¿Qué problema tienes? Escribe aquí.'
+          : '⚠️ What problem are you facing? Type below.';
+      } else if (issueType === 'blocked') {
+        issueReply = selectedLanguage === 'Urdu'
+          ? '🔒 Apna registered email aur account ID share karein.'
+          : selectedLanguage === 'Spanish'
+          ? '🔒 Comparte tu correo e ID de cuenta.'
+          : '🔒 Share your registered email and ID.';
+      }
+
+      const issueLabels = {
+        slip: { English: 'Transaction Slip', Urdu: 'Transaction Slip', Spanish: 'Comprobante' },
+        problem: { English: 'Facing Problem', Urdu: 'Mushkil', Spanish: 'Problema' },
+        blocked: { English: 'Account Blocked', Urdu: 'Account Blocked', Spanish: 'Cuenta Bloqueada' }
       };
-    }
+
+      const labelText = issueLabels[issueType][selectedLanguage || 'English'];
+
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'user', text: labelText },
+        { sender: 'agent', text: issueReply }
+      ]);
+      setIsLoading(false);
+    }, 800);
   };
 
-  // Global High-Frequency Accrual Ticker (every 35ms)
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (!inputMessage.trim() && !attachedFile) return;
+
+    let userText = inputMessage;
+    if (attachedFile) {
+      userText += ` [File: ${attachedFile.name}]`;
+    }
+
+    const newMsg = { sender: 'user', text: userText };
+    setMessages((prev) => [...prev, newMsg]);
+    setInputMessage('');
+    setAttachedFile(null);
+    setIsLoading(true);
+
+    setTimeout(() => {
+      let agentReply = '✅ Thank you! Request logged successfully.';
+      if (selectedLanguage === 'Urdu') {
+        agentReply = '✅ Shukriya! Request register ho chuki hai.';
+      } else if (selectedLanguage === 'Spanish') {
+        agentReply = '✅ ¡Gracias! Solicitud registrada.';
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        { sender: 'agent', text: agentReply }
+      ]);
+      setIsLoading(false);
+    }, 800);
+  };
+
+  const [liveProtocolTotal, setLiveProtocolTotal] = useState(680409813.2402);
+
   useEffect(() => {
-    const baseAmount = 680409811.5626;
-    const startTime = Date.now();
-    const ratePerMs = 0.0812;
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      setGlobalReserves(baseAmount + (elapsed * ratePerMs / 1000));
-    }, 35);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      setLiveProtocolTotal((prev) => prev + 0.1234);
+    }, 800);
+    return () => clearInterval(timer);
   }, []);
 
-  // Keep the admin directory synchronized with Firestore.
+  const dailyReturnRate = 0.50 / 30;
+  const estimatedDailyProfit = investAmount * dailyReturnRate;
+  const [liveEarnings, setLiveEarnings] = useState(0.0045);
+
   useEffect(() => {
-    if (!db) return undefined;
-
-    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const userList = [];
-      snapshot.forEach((userDoc) => {
-        userList.push({ id: userDoc.id, ...userDoc.data() });
-      });
-      setAdminUsers(userList);
-    }, (error) => {
-      console.error('Firestore listener failed:', error);
-      showToast('Unable to load user accounts from Firestore');
-    });
-
-    return () => unsubscribeUsers();
+    const timer = setInterval(() => {
+      setLiveEarnings((prev) => prev + 0.0001);
+    }, 1000);
+    return () => clearInterval(timer);
   }, []);
 
-  // Keep Admin withdrawals synchronized with Firestore.
-  useEffect(() => {
-    if (!db) return undefined;
-
-    const unsubscribeWithdrawals = onSnapshot(collection(db, 'withdrawals'), (snapshot) => {
-      const withdrawals = snapshot.docs
-        .map((withdrawalDoc) => {
-          const withdrawal = withdrawalDoc.data();
-          return {
-            id: withdrawalDoc.id,
-            ...withdrawal,
-            status: String(withdrawal.status || 'pending').toLowerCase()
-          };
-        })
-        .sort((left, right) => Number(right.createdAt || right.timestamp || 0) - Number(left.createdAt || left.timestamp || 0));
-      setAdminWithdrawals(withdrawals);
-    }, (error) => {
-      console.error('Firestore withdrawals listener failed:', error);
-      showToast('Unable to load withdrawal requests from Firestore');
-    });
-
-    return () => unsubscribeWithdrawals();
-  }, []);
-
-  // Keep the active customer's balance synchronized with their Firestore record.
-  useEffect(() => {
-    if (!db || !currentUser?.email) return undefined;
-
-    const userRef = doc(db, 'users', currentUser.uid || currentUser.email);
-    const unsubscribeUser = onSnapshot(userRef, (snapshot) => {
-      if (!snapshot.exists()) return;
-      const userData = snapshot.data();
-      const deposit = parseFloat(userData?.deposit || userData?.totalDeposit || userData?.principal || userData?.balance || 0) || 0;
-      const plan = resolvePlanDetails(deposit);
-      const monthlyPercentage = parseFloat(userData?.monthlyPercentage || 25) || 25;
-      const liveDailyRate = deposit * (monthlyPercentage / 100) / 30;
-      const liveRatePerSecond = liveDailyRate / 86400;
-      const withdrawnTotal = parseFloat(userData?.withdrawnYield || 0) || 0;
-      let persistedYieldStart = Date.now();
-      if (userData?.depositTimestamp) {
-        persistedYieldStart = typeof userData.depositTimestamp === 'number'
-          ? userData.depositTimestamp
-          : typeof userData.depositTimestamp.toMillis === 'function'
-            ? userData.depositTimestamp.toMillis()
-            : Date.now();
-      } else if (userData?.createdAt) {
-        persistedYieldStart = typeof userData.createdAt === 'number'
-          ? userData.createdAt
-          : typeof userData.createdAt.toMillis === 'function'
-            ? userData.createdAt.toMillis()
-            : Date.now();
-      } else {
-        persistedYieldStart = Date.now() - 3600000;
-      }
-      if (!Number.isFinite(persistedYieldStart) || persistedYieldStart <= 0) {
-        persistedYieldStart = Date.now() - 3600000;
-      }
-      if (deposit > 0 && !userData?.depositTimestamp) {
-        updateDoc(userRef, { depositTimestamp: Date.now() }).catch((error) => {
-          console.error('Could not repair deposit timestamp:', error);
-        });
-      }
-      setCurrentUserBalance(deposit);
-      setWithdrawnYield(withdrawnTotal);
-      setCurrentUserYield(0);
-      setLiveDailyTarget(liveDailyRate);
-      setLiveYieldRate(liveRatePerSecond);
-      setYieldStartTime(persistedYieldStart || Date.now());
-      accumulatedProfitRef.current = 0;
-      setUserDeposit(deposit);
-      setActivePlanTier({ ...plan, monthlyPct: monthlyPercentage });
-      setUserDailyYield(liveDailyRate);
-      setUserTotalProfit240(plan.total240Profit);
-    }, (error) => {
-      console.error('Customer Firestore listener failed:', error);
-    });
-
-    return () => unsubscribeUser();
-  }, [currentUser]);
-
-  // Keep the customer's withdrawal records synchronized with Admin status changes.
-  useEffect(() => {
-    if (!db || !currentUser?.email) return undefined;
-
-    const withdrawalsQuery = query(
-      collection(db, 'withdrawals'),
-      where('userEmail', '==', currentUser.email)
-    );
-    const unsubscribeWithdrawals = onSnapshot(withdrawalsQuery, (snapshot) => {
-      const records = snapshot.docs
-        .map((withdrawalDoc) => ({
-          id: withdrawalDoc.id,
-          ...withdrawalDoc.data()
-        }))
-        .sort((left, right) => Number(right.createdAt || right.timestamp || 0) - Number(left.createdAt || left.timestamp || 0));
-      setWithdrawHistory(records);
-    }, (error) => {
-      console.error('Customer withdrawals listener failed:', error);
-    });
-
-    return () => unsubscribeWithdrawals();
-  }, [currentUser]);
-
-  useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
-      if (!firebaseUser) {
-        localStorage.removeItem('dc_auth_active_user');
-        setCurrentUser(null);
-        return;
-      }
-
-      const userData = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0],
-        picture: firebaseUser.photoURL || ''
-      };
-      localStorage.setItem('dc_auth_active_user', JSON.stringify(userData));
-      setCurrentUser(userData);
-      saveAuthenticatedGoogleUser(userData);
-      generateUserCredentials(userData);
-      loadUserFinancials(userData.email);
-    });
-
-    return () => unsubscribeAuth();
-  }, []);
-
-  useEffect(() => {
-
-    const handleStorageChange = (e) => {
-      if (currentUser && e.key === `dc_deposit_${currentUser.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')}`) {
-        loadUserFinancials(currentUser.email);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [currentUser]);
-
-  const generateUserCredentials = (userData) => {
-    if (!userData || !userData.email) return;
-    const cleanEmail = userData.email.toLowerCase().trim();
-    const safeKey = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
-
-    const regDateKey = `dc_reg_date_${safeKey}`;
-    let savedDate = localStorage.getItem(regDateKey);
-    if (!savedDate) {
-      const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-      savedDate = new Date().toLocaleDateString('en-US', options);
-      localStorage.setItem(regDateKey, savedDate);
-    }
-    setUserRegDate(savedDate);
-
-    let hash = 0;
-    for (let i = 0; i < cleanEmail.length; i++) {
-      hash = ((hash << 5) - hash) + cleanEmail.charCodeAt(i);
-      hash |= 0;
-    }
-    const absHash = Math.abs(hash).toString(36).toUpperCase().padStart(6, '0');
-    const accId = `usr-${cleanEmail.split('@')[0].slice(0, 5)}-${absHash}`;
-    setUserAccountId(accId);
-
-    const refCode = `DC-${absHash}`;
-    setUserReferralCode(refCode);
-    setUserReferralLink(`https://www.dollarcraft3.com/?ref=${refCode}`);
-  };
-
-  const saveAuthenticatedGoogleUser = (userData) => {
-    if (!userData || !userData.email) return;
-    const cleanEmail = userData.email.toLowerCase().trim();
-
-    let users = JSON.parse(localStorage.getItem('dc_real_google_users_directory') || '[]');
-    const existingIndex = users.findIndex(u => u.email.toLowerCase() === cleanEmail);
-
-    const safeKey = cleanEmail.replace(/[^a-zA-Z0-9]/g, '_');
-    const depositKey = `dc_deposit_${safeKey}`;
-    const userDep = parseFloat(localStorage.getItem(depositKey) || '0.00');
-
-    const plan = resolvePlanDetails(userDep);
-
-    const userObj = {
-      email: userData.email,
-      name: userData.name || cleanEmail.split('@')[0],
-      picture: userData.picture || '',
-      joinedDate: existingIndex >= 0 ? users[existingIndex].joinedDate : new Date().toISOString().split('T')[0],
-      authType: 'Google Auth',
-      deposit: userDep,
-      tier: plan.name,
-      principal: userDep,
-      earnedYield: plan.dailyRate,
-      status: 'active'
-    };
-
-    if (existingIndex >= 0) {
-      users[existingIndex] = { ...users[existingIndex], ...userObj };
-    } else {
-      users = [userObj, ...users];
-    }
-
-    localStorage.setItem('dc_real_google_users_directory', JSON.stringify(users));
-  };
-
-  const loadUserFinancials = (email) => {
-    const safeKey = email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
-    const depositKey = `dc_deposit_${safeKey}`;
-    const savedDeposit = parseFloat(localStorage.getItem(depositKey) || '0.0000');
-    setUserDeposit(savedDeposit);
-    
-    const plan = resolvePlanDetails(savedDeposit);
-    const dailyTarget = savedDeposit * (plan.monthlyPct / 100) / 30;
-    setActivePlanTier(plan);
-    setUserDailyYield(dailyTarget);
-    setLiveDailyTarget(dailyTarget);
-    setLiveYieldRate(dailyTarget / 86400);
-    setUserTotalProfit240(plan.total240Profit);
-
-    const withdrawnKey = `dc_withdrawn_${safeKey}`;
-    const savedWithdrawn = parseFloat(localStorage.getItem(withdrawnKey) || '0');
-    setWithdrawnAmount(savedWithdrawn);
-
-    const anchorKey = `dc_anchor_time_${safeKey}`;
-    let savedAnchor = localStorage.getItem(anchorKey);
-    if (!savedAnchor) {
-      savedAnchor = Date.now().toString();
-      localStorage.setItem(anchorKey, savedAnchor);
-    }
-    
-    const elapsedSec = (Date.now() - parseInt(savedAnchor)) / 1000;
-    accumulatedProfitRef.current = Math.max(0, elapsedSec * (dailyTarget / 86400));
-    setYieldStartTime((previousStartTime) => previousStartTime || parseInt(savedAnchor));
-  };
-
-  // Universal live yield stream with persistent withdrawal deductions.
-  useEffect(() => {
-    const depositVal = parseFloat(currentUserBalance || 0) || 0;
-    const monthlyRate = parseFloat(activePlanTier.monthlyPct || 25) || 25;
-    const withdrawn = parseFloat(withdrawnYield || 0) || 0;
-    if (depositVal <= 0) {
-      setLiveEarned(0);
-      return undefined;
-    }
-
-    const ratePerSec = (depositVal * (monthlyRate / 100)) / (30 * 86400);
-    const startTime = Number(yieldStartTime || Date.now() - 3600000);
-
-    const updateLiveEarned = () => {
-      const elapsedSec = Math.max(1, (Date.now() - startTime) / 1000);
-      const grossYield = Math.min(elapsedSec * ratePerSec, depositVal * 2);
-      const netYield = Math.max(0, grossYield - withdrawn);
-      setLiveEarned(Number.isNaN(netYield) ? 0.000001 : netYield);
-    };
-
-    updateLiveEarned();
-    const interval = setInterval(updateLiveEarned, 50);
-
-    return () => clearInterval(interval);
-  }, [currentUserBalance, activePlanTier.monthlyPct, withdrawnYield, yieldStartTime]);
-
-  const loginWithGoogle = async () => {
-    try {
-      const firebaseUser = await signInWithGoogle();
-      await ensureGoogleUserRecord(firebaseUser);
-      setActiveTab('home');
-      showToast(`Welcome, ${firebaseUser.displayName || firebaseUser.email}!`);
-    } catch (error) {
-      console.error('Firebase Google sign-in failed:', error);
-      const errorMessage = error?.code === 'auth/popup-blocked'
-        ? 'Please allow popups for Google sign-in'
-        : error?.code === 'auth/popup-closed-by-user'
-          ? 'Google sign-in was cancelled'
-          : error?.code === 'auth/unauthorized-domain'
-            ? 'This domain is not authorized in Firebase Authentication'
-            : 'Google sign-in failed. Check Firebase Auth configuration.';
-      showToast(errorMessage);
-    }
-  };
-
-  const confirmLogout = async () => {
-    try {
-      await logOutUser();
-    } catch (error) {
-      console.error('Firebase logout failed:', error);
-    }
-    localStorage.removeItem('dc_auth_active_user');
-    setCurrentUser(null);
-    setLogoutModalOpen(false);
-    setActiveTab('home');
-    showToast('Logged out successfully');
-  };
-
-  const withdrawalSupportEmail = 'dollarcraft3@gmail.com';
-  const getWithdrawalGmailLink = (summary = withdrawalRequestSummary) => {
-    const details = summary || 'Please find my withdrawal details below...';
-    const body = `Please find my withdrawal details below:\n\n${details}`;
-    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(withdrawalSupportEmail)}&su=${encodeURIComponent('Withdrawal Request')}&body=${encodeURIComponent(body)}`;
-  };
-
-  const getDepositGmailLink = () => {
-    const body = `Please find my payment deposit slip details below. I have attached the deposit slip for instant verification.\n\nPlan: ${selectedPlanType}\nBank: Mashreq Bank / Local\nAccount Title: IRTAZA COMMUNICATION\nIBAN: PK36MSHQ0000089200164395`;
-    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(withdrawalSupportEmail)}&su=${encodeURIComponent(`${selectedPlanType} Deposit Slip Verification`)}&body=${encodeURIComponent(body)}`;
-  };
-
-  const getSupportGmailLink = () => {
-    const body = 'Hello Dollar Craft support,\n\nI need assistance with my account.\n\nThank you.';
-    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(withdrawalSupportEmail)}&su=${encodeURIComponent('Dollar Craft Support Request')}&body=${encodeURIComponent(body)}`;
-  };
-
-  const handleWithdrawalEmailSupport = async (event) => {
-    if (event) event.preventDefault();
-
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(withdrawalSupportEmail);
-      }
-    } catch (error) {
-      console.error('Could not copy support email:', error);
-    }
-
-    showToast('Support email copied to clipboard!');
-    window.open(getWithdrawalGmailLink(), '_blank', 'noopener,noreferrer');
-  };
-
-  // Open Deposit Modal with Plan
-  const handleOpenDepositModal = (planCode) => {
-    setSelectedPlanType(planCode);
-    setPlansModalOpen(false);
-    setDepositModalOpen(true);
-  };
-
-  // Withdraw Submit
-  const handleWithdrawSubmit = async (e) => {
-    e.preventDefault();
-    const amount = parseFloat(withdrawInput) || 0;
-    const gateway = payoutMethod === 'easypaisa'
-      ? 'EasyPaisa'
-      : payoutMethod === 'jazzcash'
-        ? 'JazzCash'
-        : payoutMethod === 'bank'
-          ? 'Bank'
-          : '';
-    const trimmedAccountTitle = accountTitle.trim();
-    const trimmedAccountNumber = accountNumber.trim();
-    if (!gateway || !trimmedAccountTitle || !trimmedAccountNumber || !withdrawInput || Number.isNaN(amount)) {
-      showToast('Please complete all account details');
-      return;
-    }
-
-    const safeKey = currentUser.email.toLowerCase().replace(/[^a-zA-Z0-9]/g, '_');
-    const withdrawnKey = `dc_withdrawn_${safeKey}`;
-
-    const newWithdrawnTotal = withdrawnAmount + amount;
-    setWithdrawnAmount(newWithdrawnTotal);
-    const newWithdrawnYield = withdrawnYield + amount;
-    setWithdrawnYield(newWithdrawnYield);
-    localStorage.setItem(withdrawnKey, newWithdrawnTotal.toString());
-
-    const remainingProfit = Math.max(0, liveEarned - amount);
-    accumulatedProfitRef.current = remainingProfit;
-    setLiveEarned(remainingProfit);
-
-    if (db && currentUser?.email) {
-      try {
-        await setDoc(doc(db, 'users', currentUser.uid || currentUser.email), {
-          withdrawnYield: newWithdrawnYield,
-          accumulatedYieldBase: 0
-        }, { merge: true });
-        await submitWithdrawalRequest({
-          userEmail: currentUser.email,
-          userId: currentUser.uid || currentUser.email,
-          userName: currentUser.displayName || currentUser.name || 'User',
-          amount,
-          gateway,
-          accountTitle: trimmedAccountTitle,
-          accountNumber: trimmedAccountNumber,
-          ibanOrNumber: trimmedAccountNumber,
-          timestamp: Date.now(),
-          date: new Date().toISOString().split('T')[0]
-        });
-      } catch (error) {
-        console.error('Could not persist withdrawal profit update:', error);
-        showToast('Withdrawal failed: unable to update Firestore');
-        return;
-      }
-    }
-
-    const withdrawalSlip = [
-      '📄 *DOLLAR CRAFT WITHDRAWAL SLIP*',
-      `👤 Account: ${currentUser?.email || ''}`,
-      `💵 Amount: $${amount.toFixed(2)} USD`,
-      `🏦 Method: ${gateway}`,
-      `💳 Title / Bank: ${trimmedAccountTitle}`,
-      `🔢 Account / No: ${trimmedAccountNumber}`,
-      `🕒 Date: ${new Date().toLocaleString()}`,
-      '🆔 Status: Pending Verification'
-    ].join('\n');
-    const formattedMailBody = [
-      'Withdrawal Request',
-      `Email: ${currentUser?.email || ''}`,
-      `Amount: $${amount.toFixed(2)} USD`,
-      `Method: ${gateway}`,
-      `Account Title / Bank: ${trimmedAccountTitle}`,
-      `Account / Number: ${trimmedAccountNumber}`,
-      `Requested On: ${new Date().toLocaleString()}`,
-      'Status: Pending Verification'
-    ].join('\n');
-    setWithdrawalRequestSummary(formattedMailBody);
-    try {
-      await navigator.clipboard.writeText(withdrawalSlip);
-    } catch (error) {
-      console.error('Could not copy withdrawal slip:', error);
-    }
-    setWithdrawInput('');
-    setPayoutMethod('bank');
-    setAccountTitle('');
-    setAccountNumber('');
-    setWithdrawModalOpen(false);
-    setWithdrawSuccessOpen(true);
-    showToast('✅ Withdrawal request submitted! Please email your details to Dollar Craft support.');
-  };
-
-  const updateWithdrawalStatus = async (withdrawal, nextStatus) => {
-    if (!isAdmin || !db || !withdrawal?.id) return;
-
-    try {
-      await updateDoc(doc(db, 'withdrawals', withdrawal.id), { status: nextStatus });
-      if (nextStatus === 'rejected') {
-        const user = adminUsers.find((account) => account.email?.toLowerCase() === withdrawal.userEmail?.toLowerCase());
-        if (user?.id) {
-          await updateDoc(doc(db, 'users', user.id), {
-            withdrawnYield: Math.max(0, Number(user.withdrawnYield || 0) - Number(withdrawal.amount || 0))
-          });
-        }
-      }
-      showToast(`Request ${withdrawal.id} marked as ${nextStatus}`);
-    } catch (error) {
-      console.error('Firestore withdrawal update failed:', error);
-      showToast('Unable to update withdrawal request');
-    }
-  };
-
-  // ADMIN TRANSFER: Direct instant deposit injection with plan calculation
-  const handleAdminInternalTransfer = async (e) => {
-    e.preventDefault();
-    if (!isAdmin) return;
-    const amt = parseFloat(transferAmount);
-    if (!transferTargetEmail || isNaN(amt) || amt <= 0) {
-      showToast('Please enter valid target email and transfer amount');
-      return;
-    }
-
-    const cleanTarget = transferTargetEmail.toLowerCase().trim();
-    const matchedUser = adminUsers.find((user) => user.email?.toLowerCase() === cleanTarget);
-    const targetId = transferTargetId || matchedUser?.id || cleanTarget;
-    const safeTargetKey = cleanTarget.replace(/[^a-zA-Z0-9]/g, '_');
-    const depositKey = `dc_deposit_${safeTargetKey}`;
-    const anchorKey = `dc_anchor_time_${safeTargetKey}`;
-    
-    const currentDep = Number(matchedUser?.deposit ?? matchedUser?.balance ?? localStorage.getItem(depositKey) ?? 0);
-    const newDep = currentDep + amt;
-    const plan = resolvePlanDetails(newDep);
-    const existingDepositTimestamp = matchedUser?.depositTimestamp;
-
-    try {
-      const transferRecord = {
-        email: cleanTarget,
-        deposit: newDep,
-        principal: newDep,
-        earnedYield: plan.dailyRate,
-        monthlyPercentage: plan.monthlyPct,
-        plan: plan.name,
-        depositTimestamp: existingDepositTimestamp || Date.now(),
-        withdrawnYield: Number(matchedUser?.withdrawnYield || 0)
-      };
-      await setDoc(doc(db, 'users', targetId), transferRecord, { merge: true });
-    } catch (error) {
-      console.error('Firestore transfer failed:', error);
-      showToast('Transfer failed: unable to update Firestore');
-      return;
-    }
-
-    localStorage.setItem(depositKey, newDep.toString());
-    localStorage.setItem(anchorKey, Date.now().toString());
-
-    let users = JSON.parse(localStorage.getItem('dc_real_google_users_directory') || '[]');
-    const targetIdx = users.findIndex(u => u.email.toLowerCase() === cleanTarget);
-    
-    if (targetIdx >= 0) {
-      users[targetIdx].principal = newDep;
-      users[targetIdx].earnedYield = plan.dailyRate;
-      users[targetIdx].tier = plan.name;
-    } else {
-      users.unshift({
-        email: cleanTarget,
-        name: cleanTarget.split('@')[0],
-        picture: '',
-        joinedDate: new Date().toISOString().split('T')[0],
-        authType: 'Google Auth',
-        tier: plan.name,
-        principal: newDep,
-        earnedYield: plan.dailyRate,
-        status: 'active'
-      });
-    }
-    
-    localStorage.setItem('dc_real_google_users_directory', JSON.stringify(users));
-
-    if (currentUser && currentUser.email.toLowerCase() === cleanTarget) {
-      setUserDeposit(newDep);
-      setActivePlanTier(plan);
-      setUserDailyYield(plan.dailyRate);
-      setUserTotalProfit240(plan.total240Profit);
-      accumulatedProfitRef.current = 0;
-    }
-
-    setTransferAmount('');
-    setTransferTargetEmail('');
-    setTransferTargetId('');
-    setQuickTransferOpen(false);
-    showToast(`Successfully transferred $${amt.toFixed(2)} to ${cleanTarget}`);
-  };
-
-  const openQuickTransfer = (user) => {
-    setTransferTargetId(user.id);
-    setTransferTargetEmail(user.email);
-    setTransferAmount('');
-    setQuickTransferOpen(true);
-  };
-
-  // ADMIN: Reset User Profit Function
-  const handleResetUserProfit = (targetEmail) => {
-    if (!isAdmin) return;
-    const cleanTarget = targetEmail.toLowerCase().trim();
-    const safeTargetKey = cleanTarget.replace(/[^a-zA-Z0-9]/g, '_');
-    const anchorKey = `dc_anchor_time_${safeTargetKey}`;
-    
-    localStorage.setItem(anchorKey, Date.now().toString());
-
-    if (currentUser && currentUser.email.toLowerCase() === cleanTarget) {
-      accumulatedProfitRef.current = 0;
-    }
-
-    showToast(`Profit successfully reset to $0.00 for ${cleanTarget}`);
-  };
-
-  const copyToClipboard = (text, label = 'Copied') => {
-    navigator.clipboard.writeText(text);
-    showToast(`${label} copied to clipboard!`);
-  };
-
-  const handleGenerateIbLink = (e) => {
-    e.preventDefault();
-    const code = ibCodeInput.trim();
-    if (!VALID_IB_CODES.has(code)) {
-      setGeneratedIbLink('');
-      showToast('❌ Invalid IB Access Code. Please enter an authorized security code to generate your referral link.');
-      return;
-    }
-    const link = `https://dollarcraft3.com/?ref=${currentUser?.uid || 'partner'}&code=${code}`;
-    setGeneratedIbLink(link);
-    showToast('✅ Authorized IB Link generated successfully!');
-  };
-
-  const openIbApplicationModal = () => {
-    setIbFirstName('');
-    setIbLastName('');
-    setIbEmail('');
-    setIsIbModalOpen(true);
-  };
-
-  const handleIbApplicationSubmit = (e) => {
-    e.preventDefault();
-    const firstName = ibFirstName.trim();
-    const lastName = ibLastName.trim();
-    const email = ibEmail.trim();
-
-    if (!firstName || !lastName || !email) {
-      showToast('Please complete your first name, last name, and email address.');
-      return;
-    }
-
-    const slipText = `🤝 *DOLLAR CRAFT - IB PARTNER APPLICATION*\n👤 Name: ${firstName} ${lastName}\n📧 Email: ${email}\n💼 Program: $7,000 USDT Institutional IB Partner\n🕒 Applied: ${new Date().toLocaleString()}`;
-    const encodedMsg = encodeURIComponent(slipText);
-    const messengerUrl = `https://m.me/dollarcraft3?text=${encodedMsg}`;
-
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(slipText).catch(console.error);
-    }
-    showToast('📋 Slip Copied to Clipboard! Tap inside the Messenger chat box, tap Paste, and hit Send.');
-    window.open(messengerUrl, '_blank', 'noopener,noreferrer');
-    setIsIbModalOpen(false);
-    setIbFirstName('');
-    setIbLastName('');
-    setIbEmail('');
-    showToast('⚡ Opening Messenger... Slip copied to clipboard!');
-
-    addDoc(collection(db, 'ib_applications'), {
-      firstName,
-      lastName,
-      email,
-      status: 'pending',
-      timestamp: Date.now(),
-      userId: currentUser?.uid || 'guest'
-    }).catch(console.error);
-  };
-
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 4000);
-  };
-
-  const currentDeposit = Number(currentUserBalance || userDeposit || 0);
-  const monthlyRate = Number(activePlanTier.monthlyPct) || 25;
-  const dailyTarget = (currentDeposit * (monthlyRate / 100)) / 30;
-  const perSecondSpeed = dailyTarget / 86400;
-  const total240dProfit = dailyTarget * 240;
-  const totalBalance = (currentDeposit + liveEarned).toFixed(4);
-  const amountNum = parseFloat(withdrawInput) || 0;
-  const availableProfit = parseFloat(liveEarned) || 0;
-  const isValid = Boolean(withdrawInput && withdrawInput.trim() !== '') && Boolean(accountTitle.trim()) && Boolean(accountNumber.trim());
-  const withdrawalValidation = '';
-  const isAdmin = currentUser?.email?.toLowerCase() === 'dollarcraft3@gmail.com';
-
-  const filteredWithdrawals = adminWithdrawals.filter(w => {
-    const query = withdrawSearchQuery.toLowerCase().trim();
-    const emailMatch = (w.userEmail || '').toLowerCase().includes(query);
-    const titleMatch = (w.accountTitle || w.destination || '').toLowerCase().includes(query);
-    const accountMatch = (w.accountNumber || w.iban || w.ibanOrNumber || '').toLowerCase().includes(query);
-    const statusMatch = withdrawFilter === 'All' || w.status?.toLowerCase() === withdrawFilter.toLowerCase();
-
-    return (emailMatch || titleMatch || accountMatch) && statusMatch;
-  });
-
-  const pendingWithdrawCount = adminWithdrawals.filter(w => w.status === 'pending').length;
-  const approvedWithdrawCount = adminWithdrawals.filter(w => w.status === 'approved').length;
-  const rejectedWithdrawCount = adminWithdrawals.filter(w => w.status === 'rejected').length;
-  const withdrawalTotalAmount = adminWithdrawals.reduce((total, withdrawal) => total + Number(withdrawal.amount || 0), 0);
-
-  const formatReservesParts = (val) => {
-    const whole = Math.floor(val).toLocaleString('en-US');
-    const decimal = (val % 1).toFixed(4).substring(1);
-    return { whole, decimal };
-  };
-
-  const currentReservesParts = formatReservesParts(globalReserves);
+  const globalHubs = [
+    { name: 'USA', code: 'us' },
+    { name: 'Canada', code: 'ca' },
+    { name: 'Australia', code: 'au' },
+    { name: 'UK', code: 'gb' },
+    { name: 'UAE', code: 'ae' },
+    { name: 'Singapore', code: 'sg' },
+    { name: 'Europe', code: 'eu' }
+  ];
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#040810] text-white flex flex-col selection:bg-[#00f0ff] selection:text-black">
-      <SplashScreen />
-      
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-5 right-5 z-[100] bg-[#00f0ff] text-black px-5 py-3 rounded-xl shadow-2xl font-black text-xs uppercase tracking-wider flex items-center gap-2 animate-bounce">
-          <CheckCircle2 size={18} />
-          <span>{toastMessage}</span>
-        </div>
-      )}
+    <div className="min-h-screen bg-gradient-to-b from-[#090d23] via-[#050814] to-[#03050a] text-white font-sans text-xs sm:text-sm selection:bg-violet-500 selection:text-white relative overflow-x-hidden">
+      {/* Pro ARY Style 3D Multi-Axis Tumbling Animation CSS */}
+      <style>{`
+        @keyframes aryChannel3d {
+          0% {
+            transform: perspective(800px) rotateX(25deg) rotateY(0deg) rotateZ(0deg) scale(1);
+          }
+          25% {
+            transform: perspective(800px) rotateX(-25deg) rotateY(90deg) rotateZ(15deg) scale(1.08);
+          }
+          50% {
+            transform: perspective(800px) rotateX(25deg) rotateY(180deg) rotateZ(0deg) scale(1);
+          }
+          75% {
+            transform: perspective(800px) rotateX(-25deg) rotateY(270deg) rotateZ(-15deg) scale(1.08);
+          }
+          100% {
+            transform: perspective(800px) rotateX(25deg) rotateY(360deg) rotateZ(0deg) scale(1);
+          }
+        }
+        .animate-ary-3d {
+          animation: aryChannel3d 4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+          transform-style: preserve-3d;
+        }
+      `}</style>
 
-      {/* Top Navbar */}
-      <header className="w-full overflow-visible px-3 xl:px-6 py-2.5 sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
-        <div className="w-full overflow-visible flex flex-wrap md:flex-nowrap items-center justify-between gap-1.5 xl:gap-4 min-h-16">
-          
-          {/* Brand Logo */}
-          <div className="flex flex-shrink-0 whitespace-nowrap items-center gap-3.5 cursor-pointer" onClick={() => setActiveTab('home')}>
-            <div className="w-8 h-8 rounded-xl bg-[#081526] border border-[#00f0ff]/40 flex items-center justify-center p-1 shadow-lg shadow-cyan-500/20 overflow-hidden">
-              <img 
-                src="/logo.png" 
-                alt="Logo" 
-                onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                className="w-full h-full object-contain"
-              />
-              <div className="w-full h-full hidden items-center justify-center">
-                <DollarSign className="text-[#00f0ff] stroke-[2.5]" size={16} />
+      {/* Background Ambient Glows */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+      {/* Navbar */}
+      <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#090d23]/90 border-b border-violet-500/20 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-2.5 cursor-pointer" onClick={() => setActiveTab('home')}>
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-sm shadow-md shadow-violet-500/30 text-white">
+                DC
               </div>
+              <span className="text-base font-extrabold tracking-wider bg-gradient-to-r from-white via-violet-200 to-cyan-400 bg-clip-text text-transparent">
+                Dollar Craft
+              </span>
             </div>
-            <div>
-              <span className="text-base font-extrabold tracking-wider whitespace-nowrap block leading-none text-white">DOLLAR CRAFT</span>
-              <span className="hidden lg:block text-[9px] text-cyan-400 font-semibold tracking-wider uppercase mt-1 whitespace-nowrap">Global Investment Platform</span>
-            </div>
-          </div>
 
-          {/* Navigation Tabs */}
-          <nav className="hidden md:flex items-center gap-1.5 xl:gap-2 flex-shrink overflow-visible bg-[#071322] border border-[#10243e] rounded-2xl p-1">
-            <button 
-              onClick={() => setActiveTab('home')}
-              className={`px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all ${
-                activeTab === 'home' 
-                  ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
-                  : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
-              }`}
-            >
-              Home
-            </button>
-            <button 
-              onClick={() => {
-                if (!currentUser) {
-                  loginWithGoogle();
-                } else {
-                  setActiveTab('dashboard');
-                }
-              }}
-              className={`px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap transition-all ${
-                activeTab === 'dashboard' 
-                  ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
-                  : 'text-gray-400 hover:text-white hover:bg-[#0c1e34]'
-              }`}
-            >
-              <Layers size={14} />
-              Customer Dashboard
-            </button>
-            
-            <button 
-              onClick={() => setPlansModalOpen(true)}
-              className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap text-[#eab308] border border-[#eab308]/30 bg-[#eab308]/5 hover:bg-[#eab308]/15 transition-all"
-            >
-              <TrendingUp size={14} className="text-[#eab308]" />
-              Plans
-            </button>
-
-            {/* ADMIN BUTTON */}
-            {isAdmin && (
-              <button 
-                onClick={() => setAdminModalOpen(true)}
-                className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap bg-gradient-to-r from-amber-500/20 to-amber-600/30 border border-amber-500/60 text-[#ffb700] hover:bg-amber-500/30 shadow-lg shadow-amber-500/20 transition-all animate-pulse"
-              >
-                <Sliders size={14} className="text-[#ffb700]" />
-                <span>Admin</span>
-                {pendingWithdrawCount > 0 && (
-                  <span className="bg-red-500 text-white font-black text-[9px] px-1.5 py-0.2 rounded-full">
-                    {pendingWithdrawCount}
-                  </span>
-                )}
-              </button>
-            )}
-
-            <button 
-              onClick={() => setAboutModalOpen(true)}
-              className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
-            >
-              About Us
-            </button>
-            <button 
-              onClick={() => setActiveTab('ib')}
-              className={`px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold flex items-center gap-1 whitespace-nowrap transition-all ${
-                activeTab === 'ib' 
-                  ? 'bg-[#00e5ff] text-black font-extrabold shadow-md shadow-cyan-500/30' 
-                  : 'text-[#eab308] hover:text-[#fde047] hover:bg-[#0c1e34]'
-              }`}
-            >
-              <Award size={14} />
-              IB Program
-            </button>
-            <button 
-              onClick={() => setContactModalOpen(true)}
-              className="px-2 xl:px-3 py-1 rounded-lg text-[11px] xl:text-xs font-semibold whitespace-nowrap text-slate-300 hover:text-white hover:bg-slate-800/60 transition-all"
-            >
-              Contact
-            </button>
-          </nav>
-
-          {/* Right User Bar */}
-          <div className="hidden md:flex items-center gap-1.5 xl:gap-2 flex-shrink-0 ml-auto overflow-visible">
-            {currentUser ? (
-              <>
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-700/60 rounded-lg text-[11px] text-slate-300 max-w-[110px] xl:max-w-[150px] truncate">
-                  {currentUser.picture ? (
-                    <img src={currentUser.picture} alt="User" className="w-7 h-7 rounded-xl object-cover" />
-                  ) : (
-                    <div className="w-7 h-7 rounded-xl bg-[#00e5ff] text-black font-black flex items-center justify-center text-xs">
-                      {currentUser.email ? currentUser.email[0].toUpperCase() : 'U'}
-                    </div>
-                  )}
-                  <span className="truncate">
-                    {currentUser.email}
-                  </span>
-                </div>
-
-                <button 
-                  onClick={() => setLogoutModalOpen(true)}
-                  title="Logout"
-                  className="p-1.5 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 flex-shrink-0 transition-all cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-
-                <button 
-                  onClick={() => setWithdrawModalOpen(true)}
-                  className="px-2.5 xl:px-3.5 py-1 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-[11px] xl:text-xs font-bold whitespace-nowrap shadow-sm shadow-cyan-500/20 flex items-center gap-1 flex-shrink-0"
-                >
-                  <ArrowUpRight className="w-4 h-4" />
-                  Withdraw
-                </button>
-              </>
-            ) : (
-              <button 
-                onClick={() => loginWithGoogle()}
-                className="flex-shrink-0 bg-white hover:bg-gray-100 text-black font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-white/10 whitespace-nowrap"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                <span>Continue with Google</span>
-              </button>
-            )}
-
-            <button 
-              onClick={() => showToast('No unread alerts')}
-              className="p-1.5 rounded-lg border border-slate-700/60 text-slate-300 hover:bg-slate-800/60 flex-shrink-0 transition-all"
-            >
-              <Bell className="w-4 h-4" />
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen((open) => !open)}
-            className="md:hidden w-10 h-10 rounded-xl bg-[#071322] border border-[#10243e] text-[#00e5ff] flex items-center justify-center"
-            aria-label="Toggle navigation menu"
-            aria-expanded={mobileMenuOpen}
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-
-          {mobileMenuOpen && (
-            <div className="md:hidden basis-full w-full bg-[#071322] border border-[#10243e] rounded-2xl p-3 space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Home</button>
-                <button onClick={() => { if (!currentUser) loginWithGoogle(); else setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Customer Dashboard</button>
-                <button onClick={() => { setPlansModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#eab308]/30 bg-[#eab308]/5 px-3 py-2.5 text-left text-xs font-bold text-[#eab308]">Plans</button>
-                {isAdmin && <button onClick={() => { setAdminModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-left text-xs font-bold text-[#ffb700]">Admin</button>}
-                <button onClick={() => { setAboutModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">About Us</button>
-                <button onClick={() => { setActiveTab('ib'); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#eab308]/30 bg-[#eab308]/5 px-3 py-2.5 text-left text-xs font-bold text-[#eab308]">IB Program</button>
-                <button onClick={() => { setContactModalOpen(true); setMobileMenuOpen(false); }} className="w-full rounded-xl border border-[#10243e] bg-[#08182d] px-3 py-2.5 text-left text-xs font-bold text-gray-200">Contact</button>
-              </div>
-              {currentUser ? (
-                <div className="flex flex-wrap items-center gap-2 border-t border-[#10243e] pt-3">
-                  <span className="min-w-0 max-w-[140px] truncate text-xs text-gray-200 font-mono-finance">{currentUser.email}</span>
-                  <button onClick={() => { setWithdrawModalOpen(true); setMobileMenuOpen(false); }} className="flex-1 min-w-[120px] bg-[#07172c] border border-[#00e5ff]/50 text-[#00e5ff] font-extrabold text-xs px-3 py-2.5 rounded-xl">Withdraw</button>
-                  <button onClick={() => { setLogoutModalOpen(true); setMobileMenuOpen(false); }} className="w-10 h-10 rounded-xl bg-[#140c14] border border-red-500/30 text-red-400 flex items-center justify-center" aria-label="Logout"><LogOut size={15} /></button>
-                </div>
-              ) : (
-                <button onClick={() => { loginWithGoogle(); setMobileMenuOpen(false); }} className="w-full bg-white text-black font-extrabold text-xs px-4 py-2.5 rounded-xl">Continue with Google</button>
+            <div className="hidden md:flex items-center space-x-6 text-xs font-medium text-gray-300">
+              <button onClick={() => setActiveTab('home')} className={`transition-colors py-1 ${activeTab === 'home' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Home</button>
+              {isLoggedIn && (
+                <>
+                  <button onClick={() => setActiveTab('dashboard')} className={`transition-colors py-1 ${activeTab === 'dashboard' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Dashboard</button>
+                  <button onClick={() => setActiveTab('plans')} className={`transition-colors py-1 ${activeTab === 'plans' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Invest</button>
+                </>
+              )}
+              <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeTab === 'contact' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>FAQ</button>
+              {isLoggedIn && (
+                <button onClick={() => setActiveTab('admin')} className={`px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
-          )}
-        </div>
-      </header>
 
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-4 py-8 flex-1 w-full max-w-full overflow-x-hidden space-y-6">
-        
-        {/* ================= VIEW 1: HOME ================= */}
-        {activeTab === 'home' && (
-          <div className="space-y-6">
-            
-            <div className="bg-gradient-to-b from-[#071426] via-[#050f1d] to-[#040810] border border-[#10243e] rounded-[28px] p-4 md:p-6 shadow-2xl relative overflow-hidden">
-              <div className="flex flex-wrap items-center gap-3 mb-6 max-w-full">
-                <div className="bg-[#06192d] border border-[#00d0ff]/40 text-[#00d0ff] text-[11px] font-extrabold px-3.5 py-1.5 rounded-full flex items-center gap-2">
-                  <Globe size={13} className="text-[#00d0ff]" />
-                  <span>OFFICIAL SMART INVESTMENT PROTOCOL</span>
-                </div>
-                <div className="bg-[#051c1c] border border-emerald-500/40 text-emerald-400 text-[11px] font-extrabold px-3.5 py-1.5 rounded-full flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span>LIVE CONTINUOUS MICRO-YIELD</span>
-                </div>
-              </div>
-
-              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight leading-tight uppercase text-white max-w-4xl">
-                DOLLAR CRAFT – HIGH PRECISION MICRO-YIELD INVESTMENT PLATFORM
-              </h1>
-
-              <p className="text-gray-300 text-sm sm:text-base max-w-3xl mt-5 leading-relaxed font-normal">
-                Dollar Craft is an institutional-grade digital asset micro-yield protocol and financial management ecosystem. Operating legally across <strong className="text-white font-extrabold">7 regulated global hubs</strong>, we deliver sub-second 26-decimal precision compounding, audited multi-signature custody, and automated daily capital growth.
-              </p>
-
-              <div className="flex flex-wrap gap-4 mt-8 max-w-full">
-                {currentUser ? (
-                  <button 
-                    onClick={() => setActiveTab('dashboard')}
-                    className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-extrabold px-7 py-3.5 rounded-2xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-cyan-500/25"
-                  >
-                    <Layers size={15} />
-                    <span>GO TO CUSTOMER DASHBOARD</span>
-                  </button>
-                ) : (
-                  <button 
-                    onClick={() => loginWithGoogle()}
-                    className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-extrabold px-7 py-3.5 rounded-2xl text-xs uppercase tracking-wider flex items-center gap-2 shadow-xl shadow-cyan-500/25 transition-transform hover:scale-[1.02]"
-                  >
-                    <Zap size={15} className="fill-black" />
-                    <span>GET STARTED WITH GOOGLE</span>
-                    <ChevronRight size={14} />
-                  </button>
-                )}
-                
-                <button 
-                  onClick={() => setPlansModalOpen(true)}
-                  className="bg-[#07172c] hover:bg-[#0c223e] border border-[#163660] text-[#00d0ff] font-extrabold px-7 py-3.5 rounded-2xl text-xs uppercase tracking-wider flex items-center gap-2"
-                >
-                  <Layers size={15} />
-                  <span>VIEW PACKAGES (DC1, DC2, DC3)</span>
-                </button>
-              </div>
+            <div className="hidden md:flex items-center space-x-3">
+              <button onClick={handleGetStartedClick} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-xs shadow-lg shadow-violet-500/30 transition-all">
+                {isLoggedIn ? 'My Dashboard' : 'Get Started'}
+              </button>
             </div>
 
-            <section className="bg-[#050b14] border border-[#10243d] rounded-[26px] p-5 sm:p-7 shadow-2xl overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-5">
-                <div>
-                  <div className="flex items-center gap-2 text-[10px] font-extrabold text-[#00e5ff] uppercase tracking-[0.18em] mb-2">
-                    <Zap size={13} />
-                    <span>START HERE</span>
-                  </div>
-                  <h2 className="text-lg sm:text-xl font-black tracking-wide uppercase text-white">
-                    CREATE YOUR DOLLAR CRAFT ACCOUNT
-                  </h2>
-                  <p className="text-xs sm:text-sm text-gray-400 mt-1">
-                    Follow the official walkthrough to get started.
-                  </p>
-                </div>
-                <span className="text-[10px] font-mono-finance text-slate-500 uppercase tracking-widest">Official Tutorial</span>
+            <div className="md:hidden flex items-center">
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-gray-300 p-1.5 rounded-lg bg-white/5 border border-white/10">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mobileMenuOpen ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />}
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-[#090d23]/95 backdrop-blur-2xl border-b border-violet-500/20 px-4 pt-2 pb-4 space-y-2 text-xs">
+            <button onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Home</button>
+            {isLoggedIn && (
+              <>
+                <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Dashboard</button>
+                <button onClick={() => { setActiveTab('plans'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Invest</button>
+              </>
+            )}
+            <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-violet-400 font-bold">FAQ</button>
+            {isLoggedIn && (
+              <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Admin Panel</button>
+            )}
+          </div>
+        )}
+      </nav>
+
+      {/* Main Container */}
+      <main className="py-8 relative z-10">
+        
+        {/* 1. HOME VIEW */}
+        {activeTab === 'home' && (
+          <div className="space-y-10 max-w-6xl mx-auto px-4">
+            <section className="text-center pt-4">
+              
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-semibold mb-6 shadow-md">
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-ping"></span>
+                ⚡ Live Yield Protocol Active — Start Earning Today
               </div>
 
-              <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-[#183456] bg-[#02060b] shadow-[0_0_32px_rgba(0,229,255,0.08)]">
-                {tutorialPlaying ? (
-                  <iframe
-                    className="absolute inset-0 h-full w-full"
-                    src="https://www.youtube.com/embed/nQVRhTeidmM?autoplay=1&rel=0"
-                    title="How to create a Dollar Craft account"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setTutorialPlaying(true)}
-                    className="group absolute inset-0 h-full w-full cursor-pointer text-left"
-                    aria-label="Play the Dollar Craft account creation tutorial"
-                  >
-                    <img
-                      src="/thumbnail.jpg"
-                      alt="Dollar Craft dashboard tutorial"
-                      className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02] group-hover:brightness-75"
-                    />
-                    <span className="absolute inset-0 bg-[#020914]/25 transition group-hover:bg-[#020914]/40" />
-                    <span className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-cyan-300/70 bg-[#00e5ff] text-slate-950 shadow-[0_0_28px_rgba(0,229,255,0.55)] transition group-hover:scale-110">
-                      <span className="ml-1 text-2xl leading-none">&#9654;</span>
-                    </span>
-                  </button>
-                )}
+              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white mb-4 leading-tight">
+                Micro-Yields, <br />
+                <span className="bg-gradient-to-r from-violet-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                  Earn Real Daily Money
+                </span>
+              </h1>
+
+              <p className="max-w-xl mx-auto text-xs sm:text-sm text-gray-300 mb-8 leading-relaxed">
+                Join thousands of users earning daily returns through our secure automated protocol. Boost your capital with our powerful 50% monthly compounding framework.
+              </p>
+
+              {/* Only Top and Bottom Get Started Buttons */}
+              <div className="flex items-center justify-center">
+                <button onClick={handleGetStartedClick} className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/40 transition-all transform hover:scale-105">
+                  Get Started →
+                </button>
               </div>
             </section>
 
-            <div className="bg-[#050b14] border border-[#10243d] rounded-[26px] p-6 sm:p-8 shadow-2xl space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#0d1d32] pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#ffb700]">
-                    <Landmark size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-black tracking-wide uppercase text-white">
-                      REGISTERED & OPERATING GLOBAL HUBS
-                    </h2>
-                    <span className="text-[10px] text-gray-400 font-medium block">
-                      Fully compliant operations with Tier-1 local regulatory frameworks.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full self-start sm:self-auto">
-                  <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">
-                    7 ACTIVE OPERATING HUBS
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-1">
-                {GLOBAL_HUBS.map((hub) => (
-                  <div 
-                    key={hub.country} 
-                    className="bg-[#03070d] border border-[#0d1c30] hover:border-[#00e5ff]/40 p-3 rounded-xl flex flex-col items-center justify-center text-center transition-all group"
-                  >
-                    <img 
-                      src={`https://flagcdn.com/w80/${hub.code}.png`} 
-                      alt={hub.country}
-                      className="w-9 h-6 object-cover rounded shadow-md border border-[#142c4c] mb-2 group-hover:scale-105 transition-transform"
-                    />
-                    <span className="font-extrabold text-xs text-white block">{hub.country}</span>
-                    <span className="text-[8px] text-[#00ff88] font-mono-finance block uppercase font-bold mt-0.5">COMPLIANT</span>
-                    <span className="text-[7.5px] text-gray-500 font-mono-finance block truncate w-full mt-0.5">{hub.reg}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-[#030810] border border-[#0d1f37] rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2.5 text-gray-300 text-left">
-                  <ShieldCheck size={16} className="text-[#00e5ff] shrink-0" />
-                  <span className="text-[11px]">
-                    <strong className="text-white">Institutional Custody Guarantee:</strong> Quarterly third-party compliance audits & proof-of-reserve validation across all 7 operational hubs.
-                  </span>
-                </div>
-                <span className="bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 text-[9px] font-extrabold px-3 py-1 rounded-md uppercase whitespace-nowrap">
-                  AUDITED & VERIFIED
+            {/* Live Ticker Banner */}
+            <section className="max-w-3xl mx-auto">
+              <div className="bg-gradient-to-r from-slate-900/90 via-violet-950/40 to-slate-900/90 border border-violet-500/30 rounded-2xl p-5 shadow-xl text-center relative overflow-hidden backdrop-blur-xl">
+                <span className="text-[10px] font-extrabold text-violet-400 uppercase tracking-widest block mb-1">
+                  🟢 LIVE GLOBAL ACCRUAL TICKER (26-DECIMAL TICK)
                 </span>
-              </div>
-            </div>
-
-            <div className="bg-[#050b14] border border-[#10243d] rounded-[26px] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#0d1d32] pb-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#08182b] border border-[#122e50] flex items-center justify-center text-[#00e5ff]">
-                    <Cpu size={20} />
-                  </div>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-black tracking-wide uppercase text-white">
-                      SYSTEM METRICS & REAL-TIME PROTOCOL ACCRUAL ENGINE
-                    </h2>
-                    <span className="text-[10px] text-gray-400 font-medium block">
-                      Sub-Second 26-Decimal Micro-Tick Precision Engine
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full flex items-center gap-2 self-start sm:self-auto">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">24/7 ONLINE ACCRUAL</span>
-                </div>
-              </div>
-
-              <div className="py-7 text-left">
-                <div className="flex items-center gap-2 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00e5ff] animate-ping"></span>
-                  <span>REAL-TIME HIGH-FREQUENCY ACCUMULATION TICKER</span>
-                </div>
-                <div className="text-4xl sm:text-6xl font-black font-mono-finance tracking-tight">
-                  <span className="text-[#00e5ff]">$</span>
-                  <span className="text-white">{currentReservesParts.whole}</span>
-                  <span className="text-[#00e5ff]">{currentReservesParts.decimal}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
-                <div className="bg-[#03070d] border border-[#0d1c30] p-4 rounded-xl">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL NET RESERVES</span>
-                  <div className="text-base font-black text-[#00ff88] font-mono-finance mt-0.5">$680.3M+</div>
-                </div>
-
-                <div className="bg-[#03070d] border border-[#0d1c30] p-4 rounded-xl">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL CUMULATIVE YIELD</span>
-                  <div className="text-base font-black text-[#00e5ff] font-mono-finance mt-0.5">$45.89M+</div>
-                </div>
-
-                <div className="bg-[#03070d] border border-[#0d1c30] p-4 rounded-xl">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">CALCULATION PRECISION</span>
-                  <div className="text-base font-black text-white font-mono-finance mt-0.5">26 Decimals</div>
-                </div>
-
-                <div className="bg-[#03070d] border border-[#0d1c30] p-4 rounded-xl">
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">OPERATING UPTIME</span>
-                  <div className="text-base font-black text-[#00e5ff] font-mono-finance mt-0.5">99.99%</div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ================= VIEW 2: CUSTOMER DASHBOARD ================= */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            
-            <div className="bg-gradient-to-r from-[#061426] via-[#091e36] to-[#061426] border border-[#102744] rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#081d36] border border-[#143c6b] flex items-center justify-center text-[#00e5ff]">
-                  <Users size={24} />
-                </div>
-                <div>
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-xl sm:text-2xl font-black tracking-wide text-white uppercase">CUSTOMER DASHBOARD</h1>
-                    <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">
-                      AUTHENTICATED
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-0.5">Personal customer portal, credentials, portfolio balances & contract yields</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 bg-[#040a14] border border-[#0d1f37] rounded-xl px-4 py-2.5">
-                {currentUser?.picture ? (
-                  <img src={currentUser.picture} alt="User" className="w-8 h-8 rounded-lg object-cover" />
-                ) : (
-                  <div className="w-8 h-8 rounded-lg bg-[#00e5ff] text-black font-black flex items-center justify-center text-xs">
-                    {currentUser?.email ? currentUser.email[0].toUpperCase() : 'U'}
-                  </div>
-                )}
-                <div className="text-left">
-                  <span className="text-[9px] text-gray-400 block uppercase font-bold tracking-wider">ACTIVE ACCOUNT</span>
-                  <span className="text-xs font-bold text-gray-200 font-mono-finance">{currentUser?.email}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Total Balance Card */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-4 md:p-6 shadow-xl">
-              <div className="flex items-center gap-2 text-[#00d0ff] text-xs font-bold uppercase tracking-widest mb-2">
-                <Wallet size={15} />
-                <span>TOTAL BALANCE</span>
-              </div>
-              <div className="text-4xl sm:text-5xl font-black text-white font-mono-finance tracking-tight">
-                ${totalBalance}
-              </div>
-            </div>
-
-            {/* Total Deposit Card */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-4 md:p-6 shadow-xl">
-              <div className="flex items-center gap-2 text-[#00ff88] text-xs font-bold uppercase tracking-widest mb-2">
-                <DollarSign size={15} />
-                <span>TOTAL DEPOSIT</span>
-              </div>
-              <div className="text-4xl sm:text-5xl font-black text-[#00ff88] font-mono-finance tracking-tight">
-                ${currentDeposit.toFixed(4)}
-              </div>
-              <div className="mt-5 pt-4 border-t border-[#0b1b30] flex items-center justify-between text-xs">
-                <div className="text-gray-400 font-medium flex items-center gap-1.5">
-                  <Clock size={14} className="text-gray-400" />
-                  <span>Contract Duration (240 Days):</span>
-                </div>
-                <span className="font-bold text-[#00ff88] font-mono-finance text-xs">
-                  +${total240dProfit.toFixed(2)} Total 240d Profit
-                </span>
-              </div>
-            </div>
-
-            {/* Earned Profit Card */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-4 md:p-6 shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[#ffb700] text-xs font-bold uppercase tracking-widest">
-                  <TrendingUp size={15} />
-                  <span>TOTAL EARNED PROFIT</span>
-                </div>
-                <div className="bg-[#041c22] border border-[#00e5ff]/30 px-2.5 py-1 rounded-md">
-                  <span className="text-[9px] text-[#00e5ff] font-extrabold uppercase tracking-wider">MILLISECOND STREAM LIVE</span>
-                </div>
-              </div>
-
-              <div ref={profitDisplayRef} className="text-4xl sm:text-5xl font-black text-[#ffb700] font-mono-finance tabular-nums tracking-tight">
-                ${liveEarned.toFixed(6)}
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-[#0b1b30] pt-4 text-xs gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-400 text-xs font-medium">24-Hour Target:</span>
-                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[11px] font-black px-2.5 py-0.5 rounded-md font-mono-finance">
-                    +${dailyTarget.toFixed(4)} USD / 24h
-                  </span>
-                </div>
-
-                <div className="text-gray-400 text-[11px] font-mono-finance flex items-center gap-1">
-                  <span>Speed:</span>
-                  <>
-                    <span className="text-[#ffb700] font-black">+${perSecondSpeed.toFixed(6)}/s</span>
-                    <span className="text-gray-500 text-[9px]">(+${(perSecondSpeed / 1000).toFixed(9)}/ms)</span>
-                  </>
-                </div>
-              </div>
-            </div>
-
-            {/* Active Plan Tier Card */}
-            {userDeposit >= 100 && (
-              <div 
-                style={{ 
-                  backgroundColor: activePlanTier.bgColor, 
-                  borderColor: activePlanTier.borderColor,
-                  boxShadow: `0 0 25px ${activePlanTier.borderColor}22`
-                }}
-                className="border-2 rounded-[24px] p-6 sm:p-7 shadow-2xl space-y-5 transition-all animate-in fade-in zoom-in duration-300"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-                  <div className="flex items-center gap-3">
-                    <span 
-                      style={{ backgroundColor: activePlanTier.tagColor }}
-                      className="text-black font-black text-xs px-2.5 py-1 rounded-md"
-                    >
-                      {activePlanTier.code}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-black text-base uppercase text-white tracking-wide">
-                          {activePlanTier.name}
-                        </h3>
-                        <span 
-                          style={{ color: activePlanTier.color, borderColor: `${activePlanTier.tagColor}55` }}
-                          className="bg-black/40 border text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider"
-                        >
-                          {activePlanTier.tierName}
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-gray-400 block font-medium mt-0.5">
-                        8 Months (240 Days Duration) • Continuous 1-second Micro-yield streaming
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-left sm:text-right">
-                    <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block">
-                      AUTOMATED DAILY EARNINGS
-                    </span>
-                    <span 
-                      style={{ color: activePlanTier.color }}
-                      className="text-lg font-black font-mono-finance"
-                    >
-                      +{userDailyYield.toFixed(4)} USD / Day
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                  
-                  <div className="bg-black/40 border border-white/5 p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">MONTHLY YIELD</span>
-                    <div 
-                      style={{ color: activePlanTier.color }}
-                      className="text-base font-black font-mono-finance"
-                    >
-                      {activePlanTier.monthlyPct}% / mo
-                    </div>
-                  </div>
-
-                  <div className="bg-black/40 border border-white/5 p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">MONTHLY DOLLARS</span>
-                    <div className="text-base font-black text-[#00ff88] font-mono-finance">
-                      +${activePlanTier.monthlyDollars.toFixed(2)}
-                    </div>
-                  </div>
-
-                  <div className="bg-black/40 border border-white/5 p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">CONTRACT DURATION</span>
-                    <div className="text-base font-black text-white font-mono-finance">
-                      240 Days
-                    </div>
-                  </div>
-
-                  <div className="bg-black/40 border border-white/5 p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">TOTAL CONTRACT PROFIT</span>
-                    <div 
-                      style={{ color: activePlanTier.color }}
-                      className="text-base font-black font-mono-finance"
-                    >
-                      +${activePlanTier.total240Profit.toFixed(2)}
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            )}
-
-            {/* Customer Quick Action Hub */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-6 shadow-xl">
-              <div className="flex items-center gap-2 text-[#00d0ff] text-xs font-bold uppercase tracking-widest mb-4">
-                <ShieldCheck size={16} />
-                <span>CUSTOMER QUICK ACTION HUB</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button 
-                  onClick={() => setPlansModalOpen(true)}
-                  className="bg-[#07162b] hover:bg-[#0b203c] border border-[#112d50] text-[#00ff88] font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <DollarSign size={15} />
-                  <span>DEPOSIT FUNDS</span>
-                </button>
-                <button 
-                  onClick={() => setWithdrawModalOpen(true)}
-                  className="bg-[#07162b] hover:bg-[#0b203c] border border-[#112d50] text-[#00e5ff] font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <ArrowUpRight size={15} />
-                  <span>WITHDRAW EARNINGS</span>
-                </button>
-                <button 
-                  onClick={() => setHistoryModalOpen(true)}
-                  className="bg-[#07162b] hover:bg-[#0b203c] border border-[#112d50] text-[#ffb700] font-bold py-3.5 px-4 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
-                >
-                  <Clock size={15} />
-                  <span>WITHDRAW HISTORY</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Account Credentials & Identity */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              
-              <div className="lg:col-span-2 bg-[#050b14] border border-[#10243d] rounded-[24px] p-6 sm:p-7 shadow-xl space-y-5">
-                <div className="flex items-center justify-between border-b border-[#0d1e33] pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#08182b] border border-[#122e50] flex items-center justify-center text-[#00e5ff]">
-                      <User size={20} />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-sm text-white uppercase tracking-wider">
-                        ACCOUNT CREDENTIALS & IDENTITY
-                      </h3>
-                      <span className="text-[10px] text-gray-400 font-medium">
-                        Verified customer sign-in details & profile attributes
-                      </span>
-                    </div>
-                  </div>
-
-                  <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
-                    <CheckCircle2 size={11} /> VERIFIED
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                  
-                  <div className="bg-[#03070d] border border-[#0d1c30] p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider block">CUSTOMER NAME</span>
-                    <div className="flex items-center gap-2 text-xs font-bold text-white">
-                      <User size={13} className="text-[#00e5ff]" />
-                      <span className="truncate">{currentUser?.name || 'Customer'}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#03070d] border border-[#0d1c30] p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider block">SIGNED-IN EMAIL</span>
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#00ff88] font-mono-finance">
-                      <Mail size={13} className="text-[#00ff88] shrink-0" />
-                      <span className="truncate">{currentUser?.email}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#03070d] border border-[#0d1c30] p-3.5 rounded-xl space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider block">ACCOUNT ID</span>
-                      <button 
-                        onClick={() => copyToClipboard(userAccountId, 'Account ID')}
-                        className="text-[9px] text-[#00e5ff] font-extrabold uppercase hover:underline flex items-center gap-0.5"
-                      >
-                        <Copy size={10} /> COPY
-                      </button>
-                    </div>
-                    <div className="text-xs font-bold text-[#00e5ff] font-mono-finance tracking-tight">
-                      {userAccountId}
-                    </div>
-                  </div>
-
-                  <div className="bg-[#03070d] border border-[#0d1c30] p-3.5 rounded-xl space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider block">REFERRAL CODE</span>
-                      <button 
-                        onClick={() => copyToClipboard(userReferralCode, 'Referral Code')}
-                        className="text-[9px] text-[#ffb700] font-extrabold uppercase hover:underline flex items-center gap-0.5"
-                      >
-                        <Copy size={10} /> COPY
-                      </button>
-                    </div>
-                    <div className="text-xs font-black text-[#ffb700] font-mono-finance tracking-wide">
-                      {userReferralCode}
-                    </div>
-                  </div>
-
-                  <div className="bg-[#03070d] border border-[#0d1c30] p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider block">REGISTRATION DATE</span>
-                    <div className="flex items-center gap-2 text-xs font-bold text-gray-300 font-mono-finance">
-                      <Calendar size={13} className="text-[#00e5ff]" />
-                      <span>{userRegDate}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-[#03070d] border border-[#0d1c30] p-3.5 rounded-xl space-y-1">
-                    <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider block">SECURITY CLEARANCE</span>
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#00ff88]">
-                      <ShieldCheck size={13} className="text-[#00ff88]" />
-                      <span>2FA & Google Auth Enabled</span>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                
-                <div className="bg-[#050b14] border border-[#10243d] rounded-[24px] p-6 shadow-xl space-y-3.5">
-                  <div className="flex items-center gap-2 text-[#ffb700]">
-                    <Award size={18} />
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-white">CUSTOMER REFERRAL PROGRAM</h4>
-                  </div>
-                  <p className="text-[11px] text-gray-300 leading-relaxed">
-                    Share your unique referral link to earn tiered commissions on client deposits.
-                  </p>
-
-                  <div className="space-y-1.5 pt-1">
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">YOUR REFERRAL LINK</span>
-                    <div className="bg-[#03070d] border border-[#0d1c30] p-2.5 rounded-xl flex items-center justify-between text-xs">
-                      <span className="font-mono-finance text-[#00e5ff] text-[11px] truncate mr-2">
-                        {userReferralLink}
-                      </span>
-                      <button 
-                        onClick={() => copyToClipboard(userReferralLink, 'Referral Link')}
-                        className="bg-[#00e5ff]/10 hover:bg-[#00e5ff] text-[#00e5ff] hover:text-black p-1.5 rounded-lg transition-all"
-                        title="Copy Link"
-                      >
-                        <Copy size={13} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#050b14] border border-[#10243d] rounded-[24px] p-6 shadow-xl space-y-2">
-                  <div className="flex items-center gap-2 text-[#00e5ff]">
-                    <Shield size={16} />
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-white">INSTITUTIONAL FUND PROTECTION</h4>
-                  </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed font-normal">
-                    All customer principal deposits are held in segregated cold wallets backed by multi-signature cryptographic proof.
-                  </p>
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* Active Investment Deposits Table */}
-            <div className="bg-[#050b14] border border-[#10243d] rounded-[24px] p-6 sm:p-7 shadow-xl space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#0d1e33] pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-[#08182b] border border-[#122e50] flex items-center justify-center text-[#00ff88]">
-                    <Layers size={20} />
-                  </div>
-                  <div>
-                    <h3 className="font-black text-sm text-white uppercase tracking-wider">
-                      ACTIVE INVESTMENT DEPOSITS ({userDeposit >= 100 ? '1' : '0'})
-                    </h3>
-                    <span className="text-[10px] text-gray-400 font-medium">
-                      Contracts generating real-time interest stream
-                    </span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => setPlansModalOpen(true)}
-                  className="bg-[#00ff88] hover:bg-[#33ff9e] text-black font-extrabold text-xs px-4 py-2.5 rounded-xl uppercase tracking-wider flex items-center gap-1.5 shadow-lg shadow-emerald-500/20 transition-all self-start sm:self-auto"
-                >
-                  <Plus size={14} className="stroke-[3]" />
-                  <span>New Deposit</span>
-                </button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="text-gray-400 uppercase font-black tracking-wider text-[10px] border-b border-[#0d1e33]">
-                    <tr>
-                      <th className="pb-3">DEPOSIT ID</th>
-                      <th className="pb-3">AMOUNT</th>
-                      <th className="pb-3">PLAN</th>
-                      <th className="pb-3">DAILY RATE</th>
-                      <th className="pb-3">STATUS</th>
-                      <th className="pb-3 text-right">DATE</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#0c1a2c]">
-                    {userDeposit >= 100 ? (
-                      <tr className="hover:bg-[#071322]/50 transition-colors">
-                        <td className="py-4 font-mono-finance text-[#00e5ff] font-bold">
-                          dep-prin-{userAccountId.slice(-6)}
-                        </td>
-                        <td className="py-4 font-mono-finance font-black text-[#00ff88] text-sm">
-                          ${userDeposit.toFixed(2)}
-                        </td>
-                        <td className="py-4 font-extrabold text-white">
-                          {activePlanTier.name}
-                        </td>
-                        <td className="py-4 font-mono-finance text-gray-300">
-                          +{((activePlanTier.monthlyPct / 30)).toFixed(3)}% / day
-                        </td>
-                        <td className="py-4">
-                          <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase">
-                            ACTIVE
-                          </span>
-                        </td>
-                        <td className="py-4 text-right font-mono-finance text-gray-400 text-[11px]">
-                          {userRegDate}
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr>
-                        <td colSpan="6" className="py-6 text-center text-gray-500 font-bold">
-                          No active deposit contracts found. Deposit funds to start receiving daily yields.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* ================= VIEW 3: FULL IB PROGRAM ================= */}
-        {activeTab === 'ib' && (
-          <div className="space-y-5">
-            <div className="bg-gradient-to-r from-[#061426] via-[#091e36] to-[#061426] border border-[#102744] rounded-2xl p-8 shadow-xl flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="max-w-2xl">
-                <span className="text-xs font-extrabold text-gray-400 tracking-widest uppercase">BECOME AN IB PROGRAM</span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white mt-1 uppercase tracking-tight">
-                  PAY $7000 AND EARN <span className="text-[#00e5ff]">10% PER REFERRAL</span>
+                <h2 className="text-2xl sm:text-4xl font-black text-cyan-400 font-mono tracking-tight">
+                  ${liveProtocolTotal.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                 </h2>
-                <p className="text-xs text-gray-300 mt-3 leading-relaxed">
-                  Activate your official IB Membership for <strong className="text-white">$7,000 USDT</strong>. Your full $7,000 deposit is 100% credited directly into your main trading balance while unlocking institutional partner status to earn an instant <strong className="text-[#00e5ff]">10% direct commission</strong> on every referral!
-                </p>
+                <p className="text-[11px] text-gray-300 mt-1">Compound capital flowing in real-time across active investor vaults.</p>
               </div>
+            </section>
 
-              <button 
-                onClick={openIbApplicationModal}
-                className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-extrabold px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xl shadow-cyan-500/25 whitespace-nowrap"
-              >
-                <Award size={15} />
-                <span>BECOME AN IB PARTNER</span>
-              </button>
+            {/* Global Hubs */}
+            <section className="max-w-6xl mx-auto">
+              <div className="bg-slate-900/80 backdrop-blur-xl border border-violet-500/20 rounded-2xl p-5 shadow-xl">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4 pb-4 border-b border-white/10">
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">🏛 REGISTERED & OPERATING GLOBAL HUBS</h3>
+                    <p className="text-gray-300 text-xs">Fully compliant operations with Tier-1 local regulatory frameworks.</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-[10px] font-bold">7 ACTIVE HUBS</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                  {globalHubs.map((hub, idx) => (
+                    <div key={idx} className="bg-black/40 border border-white/10 rounded-xl p-3 text-center hover:border-violet-500/50 transition-all flex flex-col items-center">
+                      <img src={`https://flagcdn.com/96x72/${hub.code}.png`} alt={hub.name} className="w-10 h-7 object-cover rounded shadow mb-1.5 border border-white/20" />
+                      <h4 className="font-bold text-white text-xs">{hub.name}</h4>
+                      <span className="text-[9px] text-cyan-400 font-semibold uppercase block mt-0.5">COMPLIANT</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* 2. INVEST TAB */}
+        {activeTab === 'plans' && (
+          <section className="max-w-3xl mx-auto px-4">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-extrabold text-white mb-1">Exclusive Super DC Investment Plan</h2>
+              <p className="text-xs text-gray-300">Minimum $50, Maximum $10,000 — Daily Earning & 50% Monthly Return.</p>
+            </div>
+            <div className="relative rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 p-6 shadow-xl">
+              <div className="absolute top-0 right-0 bg-gradient-to-l from-violet-600 to-cyan-400 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase shadow">VIP Premium</div>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-white/10 pb-6">
+                <div>
+                  <span className="text-violet-400 font-semibold text-xs uppercase">Flagship Protocol</span>
+                  <h3 className="text-xl font-black text-white mt-0.5">SUPER DC PLAN</h3>
+                </div>
+                <div className="text-left md:text-right">
+                  <span className="text-3xl font-extrabold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">50%</span>
+                  <span className="text-gray-300 block text-xs">Monthly Return (~1.66% Daily)</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <span className="text-gray-300 text-[10px] uppercase block mb-1">Minimum Investment</span>
+                  <span className="text-lg font-bold text-white">$50 USD</span>
+                </div>
+                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                  <span className="text-gray-300 text-[10px] uppercase block mb-1">Maximum Investment</span>
+                  <span className="text-lg font-bold text-white">$10,000 USD</span>
+                </div>
+              </div>
+              <div className="bg-violet-950/20 border border-violet-500/30 rounded-xl p-4 mb-6">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="text-xs font-semibold text-gray-200">Investment Amount ($):</label>
+                  <span className="text-cyan-400 font-bold text-sm">${investAmount}</span>
+                </div>
+                <input type="range" min="50" max="10000" step="50" value={investAmount} onChange={(e) => setInvestAmount(e.target.value)} className="w-full h-1.5 bg-slate-700 rounded-lg accent-cyan-400 mb-4 cursor-pointer" />
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-violet-500/20">
+                  <div>
+                    <span className="text-gray-300 text-[10px] block">Estimated Daily Profit</span>
+                    <span className="text-sm font-extrabold text-cyan-400">+${estimatedDailyProfit.toFixed(2)} / day</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-300 text-[10px] block">Monthly Return (50%)</span>
+                    <span className="text-sm font-extrabold text-white">+${(investAmount * 0.50).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+              <button className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all">Confirm Super DC Investment</button>
+            </div>
+          </section>
+        )}
+
+        {/* 3. CUSTOMER DASHBOARD TAB */}
+        {activeTab === 'dashboard' && (
+          <section className="max-w-5xl mx-auto px-4 space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-2xl font-extrabold text-white">Customer Dashboard</h2>
+                <p className="text-gray-300 text-xs">Manage your deposits, earnings, referral wallet, and active positions.</p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-[10px] font-bold">
+                🟢 Live Sync Active
+              </span>
+            </div>
+
+            <div className="bg-gradient-to-r from-slate-900 via-violet-950/30 to-slate-900 border border-violet-500/30 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest block mb-1">💰 Total Balance</span>
+                <h1 className="text-3xl font-black text-cyan-400 font-mono">$1,250.00</h1>
+              </div>
+              <div className="flex items-center gap-3 w-full md:w-auto">
+                <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-xs shadow-md shadow-violet-500/30 transition-all">
+                  + Deposit
+                </button>
+                <button className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/15 transition-all">
+                  ↑ Withdraw
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-[#050e1c] border border-[#0f233d] p-5 rounded-2xl shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">TOTAL DIRECT SALES</span>
-                  <Users size={14} className="text-[#00e5ff]" />
-                </div>
-                <div className="text-2xl font-black text-white font-mono-finance">$0.00</div>
-                <div className="text-[10px] text-[#00e5ff] mt-2 flex items-center gap-1 font-medium">
-                  <TrendingUp size={11} /> Direct referred clients investment volume
-                </div>
+              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Deposit Wallet</span>
+                <h3 className="text-lg font-black text-white font-mono">$500.00</h3>
               </div>
-
-              <div className="bg-[#050e1c] border border-[#0f233d] p-5 rounded-2xl shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">TOTAL EARNED COMMISSION</span>
-                  <Award size={14} className="text-[#ffb700]" />
-                </div>
-                <div className="text-2xl font-black text-[#ffb700] font-mono-finance">$0.00</div>
-                <div className="text-[10px] text-[#ffb700] mt-2 flex items-center gap-1 font-medium">
-                  <Sparkles size={11} /> Cumulative IB referral rewards
-                </div>
+              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Earning Wallet</span>
+                <h3 className="text-lg font-black text-cyan-400 font-mono">+${liveEarnings.toFixed(4)}</h3>
               </div>
+              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Referral Wallet</span>
+                <h3 className="text-lg font-black text-white font-mono">$250.00</h3>
+              </div>
+              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Rewards Wallet</span>
+                <h3 className="text-lg font-black text-white font-mono">$100.00</h3>
+              </div>
+            </div>
+          </section>
+        )}
 
-              <div className="bg-[#050e1c] border border-[#0f233d] p-5 rounded-2xl shadow-lg flex flex-col justify-between">
+        {/* 4. FAQ TAB */}
+        {activeTab === 'contact' && (
+          <section className="max-w-4xl mx-auto px-4">
+            <div className="bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 rounded-2xl p-6 sm:p-8 shadow-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center text-white text-xl font-black shadow-md shadow-violet-500/30">
+                  ❓
+                </div>
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">COMMISSION WALLET</span>
-                    <Wallet size={14} className="text-[#00e5ff]" />
-                  </div>
-                  <div className="text-2xl font-black text-white font-mono-finance">$0.00</div>
+                  <span className="text-violet-400 text-[10px] font-bold uppercase tracking-widest">HELP & SUPPORT</span>
+                  <h2 className="text-2xl font-black text-white tracking-tight">Frequently Asked Questions</h2>
                 </div>
-                <button 
-                  onClick={() => showToast('Commission balance is currently $0.00')}
-                  className="mt-3 bg-[#08182d] hover:bg-[#0c223e] text-[#00e5ff] text-[9px] font-extrabold py-2 rounded-lg uppercase tracking-wider flex items-center justify-center gap-1 border border-[#102b4d]"
-                >
-                  <ArrowUpRight size={11} /> WITHDRAW COMMISSION
-                </button>
               </div>
 
-              <div className="bg-[#050e1c] border border-[#0f233d] p-5 rounded-2xl shadow-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">$7000 MEMBERSHIPS SOLD</span>
-                  <CheckCircle2 size={14} className="text-[#00ff88]" />
+              <div className="space-y-4 mb-6">
+                <div className="bg-black/50 border border-violet-500/20 rounded-xl p-4">
+                  <h4 className="text-sm font-bold text-white mb-1">How does the Super DC daily micro-yield work?</h4>
+                  <p className="text-xs text-gray-300 leading-relaxed">Our high-precision protocol automatically compounds daily capital growth, providing approximately 50% monthly returns calculated with 26-decimal sub-second precision.</p>
                 </div>
-                <div className="text-2xl font-black text-[#00ff88] font-mono-finance">0 <span className="text-xs text-gray-400 font-sans">UNITS</span></div>
-                <div className="text-[10px] text-[#00ff88] mt-2 flex items-center gap-1 font-medium">
-                  <Zap size={11} /> Earn 10% ($700) per sale
+                <div className="bg-black/50 border border-violet-500/20 rounded-xl p-4">
+                  <h4 className="text-sm font-bold text-white mb-1">What is the minimum and maximum investment?</h4>
+                  <p className="text-xs text-gray-300 leading-relaxed">The minimum investment amount is $50 USD, and the maximum cap per Super DC plan position is $10,000 USD.</p>
                 </div>
+              </div>
+
+              <div className="rounded-xl bg-gradient-to-r from-violet-950/40 via-slate-900 to-cyan-950/40 border border-violet-500/30 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <span className="text-[10px] font-bold text-violet-400 tracking-widest uppercase block mb-0.5">🏛️ REGISTERED CORPORATE HEADQUARTERS</span>
+                  <h4 className="text-sm font-bold text-white">Dollar Craft Pte Ltd</h4>
+                  <p className="text-[11px] text-gray-300">70 Bendemeer Road, #03-07, Luzerne, Singapore 339940</p>
+                </div>
+                <span className="px-3 py-1 rounded-lg bg-violet-500/10 border border-violet-500/30 text-violet-300 text-[10px] font-bold">
+                  VERIFIED HQ
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 5. ADMIN PANEL TAB */}
+        {activeTab === 'admin' && (
+          <section className="max-w-6xl mx-auto px-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-white">Admin Control Center</h2>
+                <p className="text-gray-300 text-xs">Manage users, deposits, daily ROI payouts, and configurations.</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5 bg-white/5 p-1 rounded-xl border border-violet-500/20">
+                <button onClick={() => setAdminSubTab('dashboard')} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${adminSubTab === 'dashboard' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-300 hover:text-white'}`}>Dashboard</button>
+                <button onClick={() => setAdminSubTab('users')} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${adminSubTab === 'users' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-300 hover:text-white'}`}>Users</button>
+                <button onClick={() => setAdminSubTab('finance')} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${adminSubTab === 'finance' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-300 hover:text-white'}`}>Finance</button>
+                <button onClick={() => setAdminSubTab('settings')} className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${adminSubTab === 'settings' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-300 hover:text-white'}`}>Settings</button>
               </div>
             </div>
 
-            {/* IB Referral Generator */}
-            <div className="bg-[#050e1c] border border-[#0f233d] rounded-2xl p-6 shadow-xl space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]">
-                  <Layers size={18} />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-sm text-white uppercase tracking-wide">IB REFERRAL GENERATOR</h3>
-                  <p className="text-xs text-gray-400">Generate high-speed global IB referral links.</p>
+            {adminSubTab === 'dashboard' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                    <span className="text-gray-300 text-[10px] uppercase">Total Users</span>
+                    <h3 className="text-2xl font-bold text-white mt-0.5">1,248</h3>
+                  </div>
+                  <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                    <span className="text-gray-300 text-[10px] uppercase">Active Capital</span>
+                    <h3 className="text-2xl font-bold text-cyan-400 mt-0.5">$45,200</h3>
+                  </div>
+                  <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                    <span className="text-gray-300 text-[10px] uppercase">Pending Withdrawals</span>
+                    <h3 className="text-2xl font-bold text-amber-400 mt-1">12</h3>
+                  </div>
+                  <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
+                    <span className="text-gray-300 text-[10px] uppercase">Daily ROI Payout</span>
+                    <h3 className="text-2xl font-bold text-cyan-400 mt-1">$750</h3>
+                  </div>
                 </div>
               </div>
-
-              <form onSubmit={handleGenerateIbLink} className="space-y-3 pt-1">
-                <div className="flex justify-between items-center text-xs">
-                  <span className="font-extrabold text-[#ffb700] uppercase tracking-wider text-[10px]">MANDATORY IB ACCESS CODE</span>
-                  <span className="text-[9px] text-red-400 font-extrabold uppercase tracking-widest">REQUIRED</span>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="relative flex-1 flex items-center">
-                    <input 
-                      type={showIbCode ? 'text' : 'password'}
-                      value={ibCodeInput}
-                      onChange={(e) => setIbCodeInput(e.target.value)}
-                      placeholder="ENTER SECRET ACCESS CODE"
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 pr-12 text-sm text-cyan-400 placeholder-slate-600 font-mono tracking-wide focus:outline-none focus:border-cyan-500 transition-all"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowIbCode(!showIbCode)}
-                      className="absolute right-3.5 p-1.5 text-slate-400 hover:text-cyan-400 transition-colors focus:outline-none"
-                      title={showIbCode ? 'Hide Access Code' : 'Show Access Code'}
-                      aria-label={showIbCode ? 'Hide Access Code' : 'Show Access Code'}
-                    >
-                      {showIbCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  <button 
-                    type="submit"
-                    className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-extrabold px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 whitespace-nowrap"
-                  >
-                    <span>+ GENERATE NEW IB LINK</span>
-                  </button>
-                </div>
-              </form>
-
-              {generatedIbLink && (
-                <div className="mt-3 p-3.5 bg-[#030810] border border-[#00e5ff]/40 rounded-xl flex items-center justify-between text-xs">
-                  <span className="font-mono-finance text-[#00e5ff] truncate mr-2">{generatedIbLink}</span>
-                  <button 
-                    onClick={() => { navigator.clipboard.writeText(generatedIbLink); showToast('IB Link copied!'); }}
-                    className="bg-[#00e5ff]/20 text-[#00e5ff] hover:bg-[#00e5ff] hover:text-black font-extrabold px-3 py-1 rounded-md flex items-center gap-1 uppercase text-[9px]"
-                  >
-                    <Copy size={11} /> Copy
-                  </button>
-                </div>
-              )}
-            </div>
-
-          </div>
+            )}
+          </section>
         )}
 
       </main>
 
-      {/* Floating Email Support Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <a 
-          href={getSupportGmailLink()}
-          target="_blank" 
-          rel="noopener noreferrer"
-          aria-label="Email Dollar Craft support"
-          title="Email Dollar Craft support"
-          className="w-13 h-13 rounded-full bg-[#08182d] border border-[#17406d] flex items-center justify-center text-[#00e5ff] shadow-2xl shadow-cyan-500/30 hover:bg-[#0d2746] hover:scale-110 active:scale-95 transition-all p-3"
-        >
-          <Mail size={26} />
-        </a>
-      </div>
-
-      {/* ================= MODAL: ADMIN ================= */}
-      {adminModalOpen && isAdmin && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-          <div className="bg-[#080d14] border border-[#162942] w-full max-w-6xl rounded-[28px] p-6 sm:p-8 shadow-2xl space-y-6 relative max-h-[95vh] overflow-y-auto">
+      {/* GOOGLE SIGN IN MODAL */}
+      {authModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-violet-500/40 rounded-2xl p-6 shadow-[0_15px_40px_rgba(0,0,0,0.9)] text-white relative">
             
-            {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-[#122338] pb-5">
-              <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#ffb700]">
-                  <Sliders size={22} />
+            <button onClick={() => setAuthModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs">
+              ✕
+            </button>
+
+            <div className="text-center mb-6 pt-2">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-lg shadow-lg shadow-violet-500/30 text-white mx-auto mb-3">
+                DC
+              </div>
+              <h3 className="text-lg font-black text-white">Welcome to Dollar Craft</h3>
+              <p className="text-xs text-gray-400 mt-1">Sign in with Google to access your account & start earning.</p>
+            </div>
+
+            <button 
+              onClick={handleGoogleSignInClick}
+              disabled={isLoading}
+              className="w-full py-3 px-4 rounded-xl bg-white hover:bg-gray-100 text-gray-900 font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
+            >
+              {/* Official Google Colored Logo SVG */}
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.2v3.15C3.21 21.32 7.29 24 12 24z"/>
+                <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.2C.44 8.13 0 9.83 0 12s.44 3.87 1.2 5.39l4.07-3.15z"/>
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.29 0 3.21 2.68 1.2 6.61l4.07 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
+              </svg>
+              Sign in with Google
+            </button>
+
+            <p className="text-[10px] text-gray-500 text-center mt-5">
+              By signing in, you agree to Dollar Craft Terms & Conditions and Privacy Policy.
+            </p>
+
+          </div>
+        </div>
+      )}
+
+      {/* REALISTIC GOOGLE ACCOUNT CHOOSER POPUP */}
+      {googleAccountPickerOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-white text-gray-900 rounded-2xl shadow-2xl p-6 relative overflow-hidden">
+            
+            <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.2v3.15C3.21 21.32 7.29 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.2C.44 8.13 0 9.83 0 12s.44 3.87 1.2 5.39l4.07-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.29 0 3.21 2.68 1.2 6.61l4.07 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
+                </svg>
+                <span className="font-bold text-base text-gray-800">Sign in with Google</span>
+              </div>
+              <button onClick={() => setGoogleAccountPickerOpen(false)} className="text-gray-400 hover:text-gray-700 font-bold text-sm">✕</button>
+            </div>
+
+            <div className="mb-4">
+              <h4 className="font-bold text-lg text-gray-900">Choose an account</h4>
+              <p className="text-xs text-gray-500">to continue to <span className="font-semibold text-gray-700">Dollar Craft</span> (Client ID: dollarcraft)</p>
+            </div>
+
+            {isLoading ? (
+              <div className="py-12 text-center space-y-3">
+                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                <p className="text-xs font-bold text-gray-600">Connecting securely to Google...</p>
+              </div>
+            ) : (
+              <div className="space-y-2 mb-4">
+                <div onClick={() => handleAccountSelect('user@gmail.com')} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-all">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 text-white font-black flex items-center justify-center text-sm shadow">
+                    U
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <h5 className="font-bold text-sm text-gray-900 truncate">User Account</h5>
+                    <p className="text-xs text-gray-500 truncate">user.dollarcraft@gmail.com</p>
+                  </div>
+                </div>
+
+                <div onClick={() => handleAccountSelect('admin@gmail.com')} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer transition-all">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-cyan-600 to-teal-600 text-white font-black flex items-center justify-center text-sm shadow">
+                    A
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <h5 className="font-bold text-sm text-gray-900 truncate">Admin Vault</h5>
+                    <p className="text-xs text-gray-500 truncate">admin.dollarcraft@gmail.com</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="pt-3 border-t border-gray-200 text-[11px] text-gray-500">
+              To continue, Google will share your name, email address, and profile picture with Dollar Craft.
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* FIXED BOTTOM-RIGHT HELP CENTER WITH PRO ARY STYLE 3D TUMBLING LOGO */}
+      <div className="fixed bottom-4 right-4 z-50 pointer-events-auto flex flex-col items-end">
+        {chatOpen && (
+          <div className="mb-2 w-[280px] h-[360px] bg-gradient-to-b from-slate-900 via-[#0c1329] to-black backdrop-blur-3xl border border-violet-500/40 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden text-white relative">
+            
+            {/* Header: Help Center */}
+            <div className="bg-gradient-to-r from-violet-900/60 via-slate-900 to-cyan-950/60 px-3 py-2 border-b border-white/10 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-violet-500 to-cyan-400 flex items-center justify-center font-black text-black shadow-md text-[9px]">
+                  AI
                 </div>
                 <div>
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">
-                      Dollar Craft Admin
-                    </h2>
-                    <span className="bg-amber-500/20 text-[#ffb700] border border-amber-500/40 text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-                      SYSTEM SUPERVISOR
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400 font-medium mt-0.5">
-                    Global Liquidity Oversight & Fraud Audit Desk
-                  </p>
+                  <h4 className="font-extrabold text-[11px] text-violet-300">Help Center</h4>
                 </div>
               </div>
-
-              <button 
-                onClick={() => setAdminModalOpen(false)}
-                className="text-gray-400 hover:text-white bg-[#0f1d2e] hover:bg-[#162c47] w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border border-[#1d3554]"
-              >
-                <X size={16} />
+              <button onClick={() => setChatOpen(false)} className="text-gray-400 hover:text-white px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[9px] transition-all">
+                ✕
               </button>
             </div>
 
-            {/* Admin Tabs */}
-            <div className="flex flex-wrap items-center gap-2 border-b border-[#122338] pb-3 text-xs font-bold">
-              <button 
-                onClick={() => setAdminActiveTab('users')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
-                  adminActiveTab === 'users' 
-                    ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20' 
-                    : 'text-gray-400 hover:text-white hover:bg-[#102033]'
-                }`}
-              >
-                <Users size={14} />
-                <span>User Accounts ({adminUsers.length})</span>
-              </button>
-
-              <button 
-                onClick={() => setAdminActiveTab('withdrawals')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
-                  adminActiveTab === 'withdrawals' 
-                    ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20' 
-                    : 'text-gray-400 hover:text-white hover:bg-[#102033]'
-                }`}
-              >
-                <DollarSign size={14} />
-                <span>Withdrawals & History ({adminWithdrawals.length})</span>
-                {pendingWithdrawCount > 0 && (
-                  <span className="bg-red-500 text-white font-black text-[9px] px-1.5 py-0.2 rounded-full">
-                    {pendingWithdrawCount}
-                  </span>
-                )}
-              </button>
-
-              <button 
-                onClick={() => setAdminActiveTab('transfer')}
-                className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 ${
-                  adminActiveTab === 'transfer' 
-                    ? 'bg-emerald-400 text-black font-black shadow-lg shadow-emerald-400/20' 
-                    : 'text-emerald-400 hover:bg-emerald-400/10'
-                }`}
-              >
-                <Repeat size={14} />
-                <span>Internal Transfer & Vault</span>
-              </button>
-            </div>
-
-            {/* TAB 1: USER ACCOUNTS DIRECTORY */}
-            {adminActiveTab === 'users' && (
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="text-xs font-bold text-gray-400 bg-[#050a12] border border-[#14263d] px-4 py-2 rounded-xl">
-                    Total Authenticated Google Accounts: <strong className="text-white">{adminUsers.length}</strong>
-                  </div>
-                  
-                  {/* Email Search Box */}
-                  <div className="relative w-full sm:max-w-md">
-                    <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2.5">
-                      <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
-                      <input
-                        type="text"
-                        value={adminUserSearchQuery}
-                        onChange={(e) => setAdminUserSearchQuery(e.target.value)}
-                        placeholder="Search user by email (e.g apexofficial991@gmail.com)..."
-                        className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none flex-1"
-                      />
-                      {adminUserSearchQuery && (
-                        <button
-                          onClick={() => setAdminUserSearchQuery('')}
-                          className="text-gray-400 hover:text-white text-lg flex-shrink-0 transition-colors"
-                          title="Clear search"
-                        >
-                          ✖
-                        </button>
-                      )}
-                    </div>
+            {/* Chat Messages Area */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1.5 bg-black/50 text-[9px]">
+              {messages.map((msg, index) => (
+                <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[90%] rounded-xl px-2.5 py-1.5 leading-tight ${msg.sender === 'user' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-semibold rounded-br-none shadow' : 'bg-white/10 text-gray-200 rounded-bl-none border border-white/10'}`}>
+                    {msg.text}
                   </div>
                 </div>
+              ))}
 
-                {/* Filtered Users Count */}
-                {(() => {
-                  const filteredUsers = adminUsers.filter(u => 
-                    (u.email || '').toLowerCase().includes(adminUserSearchQuery.toLowerCase().trim())
-                  );
-                  
-                  return (
-                    <>
-                      {adminUserSearchQuery && (
-                        <div className="text-xs text-gray-400 bg-[#050a12]/80 border border-[#14263d] px-4 py-2 rounded-xl">
-                          Showing <strong className="text-cyan-400">{filteredUsers.length}</strong> of <strong className="text-white">{adminUsers.length}</strong> users
-                        </div>
-                      )}
-
-                      <div className="overflow-x-auto border border-[#14263d] rounded-2xl">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-[#050a12] text-gray-400 uppercase font-black tracking-wider text-[10px] border-b border-[#14263d]">
-                            <tr>
-                              <th className="p-3.5">User Email</th>
-                              <th className="p-3.5">Joined Date</th>
-                              <th className="p-3.5">Auth Type</th>
-                              <th className="p-3.5">Plan / Tier</th>
-                              <th className="p-3.5">Principal</th>
-                              <th className="p-3.5">Earned Yield</th>
-                              <th className="p-3.5 text-center">Reset Profit</th>
-                              <th className="p-3.5 text-center">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-[#102136]">
-                            {filteredUsers.length === 0 ? (
-                              <tr>
-                                <td colSpan="8" className="p-8 text-center text-gray-500 font-bold">
-                                  {adminUsers.length === 0 
-                                    ? 'No Google-authenticated accounts found yet.'
-                                    : `No user account found matching '${adminUserSearchQuery}'`
-                                  }
-                                </td>
-                              </tr>
-                            ) : (
-                              filteredUsers.map((u, i) => (
-                          <tr key={u.id || i} className="hover:bg-[#0c1828] transition-colors">
-                            <td className="p-3.5 font-bold text-white font-mono-finance flex items-center gap-2">
-                              {u.picture ? (
-                                <img src={u.picture} alt="" className="w-6 h-6 rounded-lg object-cover" />
-                              ) : (
-                                <div className="w-6 h-6 rounded-lg bg-[#00e5ff]/20 text-[#00e5ff] font-black flex items-center justify-center text-[10px]">
-                                  {u.email[0].toUpperCase()}
-                                </div>
-                              )}
-                              <span>{u.email}</span>
-                            </td>
-                            <td className="p-3.5 text-gray-400 font-mono-finance">
-                              {(() => {
-                                const joinedAt = u.createdAt || u.joinedDate;
-                                if (!joinedAt) return '—';
-                                if (typeof joinedAt === 'string') return joinedAt;
-                                if (typeof joinedAt.toDate === 'function') return joinedAt.toDate().toLocaleDateString('en-US');
-                                if (typeof joinedAt.toMillis === 'function') return new Date(joinedAt.toMillis()).toLocaleDateString('en-US');
-                                return new Date(joinedAt).toLocaleDateString('en-US');
-                              })()}
-                            </td>
-                            <td className="p-3.5 text-[#00e5ff] font-mono-finance text-[11px] flex items-center gap-1">
-                              <Key size={11} className="text-[#ffb700]" />
-                              <span>{u.authType || 'Google Auth'}</span>
-                            </td>
-                            <td className="p-3.5 text-[#ffb700] font-black text-[10px]">{u.plan || 'STANDARD PLAN (25% MONTHLY)'}</td>
-                            <td className="p-3.5 font-black text-white font-mono-finance">${u.deposit !== undefined ? u.deposit : 0}</td>
-                            <td className="p-3.5 font-black text-[#00ff88] font-mono-finance">${u.earnedYield !== undefined ? u.earnedYield : 0}/day</td>
-                            <td className="p-3.5 text-center">
-                              <div className="flex items-center justify-center gap-2">
-                                <button 
-                                  onClick={() => handleResetUserProfit(u.email)}
-                                  className="bg-red-500/10 hover:bg-red-500/25 border border-red-500/40 text-red-400 font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-wider text-[10px] flex items-center gap-1 transition-all"
-                                >
-                                  <RotateCcw size={11} /> Reset
-                                </button>
-                                <button
-                                  onClick={() => openQuickTransfer(u)}
-                                  className="bg-cyan-500/10 hover:bg-cyan-400/25 border border-cyan-400/50 text-cyan-300 font-extrabold px-3 py-1.5 rounded-lg uppercase tracking-wider text-[10px] flex items-center gap-1 transition-all"
-                                >
-                                  <ArrowUpRight size={11} /> Transfer
-                                </button>
-                              </div>
-                            </td>
-                            <td className="p-3.5 text-center">
-                              <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-black text-[9px] uppercase">
-                                {(u.status || 'ACTIVE').toUpperCase()}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* TAB 2: WITHDRAWALS & FRAUD AUDIT DESK */}
-            {adminActiveTab === 'withdrawals' && (
-              <div className="space-y-5">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-[#050a12] border border-[#14263d] p-4 rounded-2xl">
-                    <div className="flex items-center justify-between text-gray-400 text-[10px] font-extrabold uppercase">
-                      <span>Pending Queue</span>
-                      <Clock size={14} className="text-[#ffb700]" />
-                    </div>
-                    <div className="text-xl font-black text-[#ffb700] mt-1 font-mono-finance">{pendingWithdrawCount} Requests</div>
-                  </div>
-
-                  <div className="bg-[#050a12] border border-[#14263d] p-4 rounded-2xl">
-                    <div className="flex items-center justify-between text-gray-400 text-[10px] font-extrabold uppercase">
-                      <span>Approved / Disbursed</span>
-                      <CheckCircle size={14} className="text-[#00ff88]" />
-                    </div>
-                    <div className="text-xl font-black text-[#00ff88] mt-1 font-mono-finance">
-                      {approvedWithdrawCount} Paid Out
-                    </div>
-                  </div>
-
-                  <div className="bg-[#050a12] border border-[#14263d] p-4 rounded-2xl">
-                    <div className="flex items-center justify-between text-gray-400 text-[10px] font-extrabold uppercase">
-                      <span>Rejected Requests</span>
-                      <XCircle size={14} className="text-red-400" />
-                    </div>
-                    <div className="text-xl font-black text-red-400 mt-1 font-mono-finance">
-                      {rejectedWithdrawCount} Rejected
-                    </div>
-                  </div>
-
-                  <div className="bg-[#050a12] border border-[#14263d] p-4 rounded-2xl">
-                    <div className="flex items-center justify-between text-gray-400 text-[10px] font-extrabold uppercase">
-                      <span>Total Volume</span>
-                      <DollarSign size={14} className="text-[#00e5ff]" />
-                    </div>
-                    <div className="text-xl font-black text-white mt-1 font-mono-finance">${withdrawalTotalAmount.toFixed(2)} Total</div>
+              {/* Smooth Loading Spinner */}
+              {isLoading && (
+                <div className="flex justify-start items-center gap-1 py-0.5">
+                  <div className="bg-white/10 border border-white/10 rounded-xl px-2 py-1 flex items-center gap-1">
+                    <div className="w-1 h-1 bg-violet-400 rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-violet-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                    <div className="w-1 h-1 bg-violet-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                    <span className="text-[8px] text-violet-300">Thinking...</span>
                   </div>
                 </div>
+              )}
 
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {['All', 'Pending', 'Approved', 'Rejected'].map((filt) => (
-                      <button 
-                        key={filt}
-                        onClick={() => setWithdrawFilter(filt)}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                          withdrawFilter === filt 
-                            ? 'bg-[#00e5ff] text-black font-extrabold' 
-                            : 'bg-[#050a12] border border-[#14263d] text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        {filt}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="relative w-full lg:max-w-lg">
-                    <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 rounded-xl px-4 py-2">
-                      <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
-                      <input
-                        type="text"
-                        value={withdrawSearchQuery}
-                        onChange={(e) => setWithdrawSearchQuery(e.target.value)}
-                        placeholder="Search by User Email, Destination Name, or Account/IBAN..."
-                        className="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
-                      />
-                      {withdrawSearchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setWithdrawSearchQuery('')}
-                          title="Clear search"
-                          className="text-gray-400 hover:text-white text-lg flex-shrink-0 transition-colors"
-                        >
-                          ✖
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="text-xs text-gray-400">
-                  Showing <strong className="text-cyan-400">{filteredWithdrawals.length}</strong> of <strong className="text-white">{adminWithdrawals.length}</strong> withdrawal requests
-                </div>
-
-                <div className="space-y-3">
-                  {filteredWithdrawals.length === 0 ? (
-                    <div className="text-center py-10 text-gray-500 font-bold text-xs bg-[#050a12] border border-[#14263d] rounded-2xl">
-                      {withdrawSearchQuery.trim()
-                        ? `No withdrawal request found matching '${withdrawSearchQuery}'`
-                        : 'No withdrawal records available under selected filter.'}
-                    </div>
-                  ) : (
-                    filteredWithdrawals.map((tx) => (
-                      <div 
-                        key={tx.id} 
-                        className="bg-[#050a12] border border-[#14263d] hover:border-[#1d395d] p-4 rounded-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all"
-                      >
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg font-black text-white font-mono-finance">
-                              ${Number(tx.amount || 0).toFixed(2)} USD
-                            </span>
-                            <span className="bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 text-[9px] font-extrabold px-2.5 py-0.5 rounded-md uppercase">
-                              {tx.gateway}
-                            </span>
-                            <span className={`text-[9px] font-black px-2.5 py-0.5 rounded-md uppercase ${
-                              tx.status === 'pending'
-                                ? 'bg-amber-500/10 text-[#ffb700] border border-amber-500/30 animate-pulse'
-                                : tx.status === 'approved'
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-red-500/10 text-red-400 border border-red-500/30'
-                            }`}>
-                              {tx.status.toUpperCase()}
-                            </span>
-                          </div>
-
-                          <div className="text-xs text-gray-300 font-medium flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span>User: <strong className="text-white font-mono-finance">{tx.userEmail}</strong></span>
-                            <span>Requested: <strong className="text-gray-400 font-mono-finance">{tx.timestamp ? new Date(tx.timestamp).toLocaleString() : tx.date}</strong></span>
-                          </div>
-
-                          <div className="text-xs bg-[#03060a] border border-[#0f1d2e] p-2.5 rounded-xl font-mono-finance text-gray-300 flex items-center justify-between">
-                            <span>Destination: <strong className="text-[#00ff88]">{tx.accountTitle}</strong> | Account / IBAN: <strong className="text-white">{tx.ibanOrNumber || tx.accountNumber}</strong></span>
-                            <button 
-                              onClick={() => copyToClipboard(`${tx.accountTitle} - ${tx.ibanOrNumber || tx.accountNumber}`, 'Bank Account Details')}
-                              className="text-[#00e5ff] hover:underline text-[10px] font-bold uppercase ml-2"
-                            >
-                              Copy
-                            </button>
-                          </div>
-                        </div>
-
-                        {tx.status === 'pending' && (
-                          <div className="flex items-center gap-2">
-                            <button 
-                              onClick={() => updateWithdrawalStatus(tx, 'rejected')}
-                              className="bg-[#180a0a] hover:bg-red-950/40 border border-red-500/40 text-red-400 font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all"
-                            >
-                              <XCircle size={14} />
-                              <span>Reject</span>
-                            </button>
-
-                            <button 
-                              onClick={() => updateWithdrawalStatus(tx, 'approved')}
-                              className="bg-emerald-500 hover:bg-emerald-400 text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-lg shadow-emerald-500/25"
-                            >
-                              <CheckCircle size={14} />
-                              <span>Approve & Disburse</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: ADMIN VAULT & INSTANT INTERNAL TRANSFER */}
-            {adminActiveTab === 'transfer' && (
-              <div className="space-y-6">
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="bg-[#050a12] border border-[#14263d] rounded-2xl p-6 space-y-3 relative overflow-hidden">
-                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                      <ShieldCheck size={16} />
-                      <span>ADMIN PERSONAL WEB WALLET (OWNER VAULT)</span>
-                    </div>
-                    <div className="text-3xl sm:text-4xl font-black text-white font-mono-finance tracking-tight">
-                      $9,273,632,653,543.00
-                    </div>
-                    <p className="text-xs text-gray-400 leading-relaxed">
-                      Available capital liquidity for direct instant internal client transfers & system seed capital.
-                    </p>
-                  </div>
-
-                  <div className="bg-[#050a12] border border-[#14263d] rounded-2xl p-6 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-[#ffb700] uppercase tracking-wider">AUTO BONUS ON SIGNUP</span>
-                      <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">ACTIVE</span>
-                    </div>
-                    <p className="text-xs text-gray-400">
-                      When enabled, any new user who registers will automatically receive an instant welcome bonus transfer.
-                    </p>
-                    <div className="flex items-center gap-3 pt-2">
-                      <input 
-                        type="text" 
-                        defaultValue="$5.00" 
-                        className="bg-[#03060a] border border-[#14263d] rounded-xl px-3.5 py-2 text-xs font-mono-finance text-white w-28 text-center"
-                      />
-                      <button 
-                        onClick={() => showToast('Signup bonus configuration saved')}
-                        className="bg-[#ffb700] hover:bg-[#ffc933] text-black font-extrabold px-4 py-2 rounded-xl text-xs uppercase transition-all"
-                      >
-                        SAVE SETTINGS
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-[#050a12] border border-[#14263d] rounded-2xl p-6 space-y-4">
-                  <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
-                    <Repeat size={16} className="text-emerald-400" />
-                    <span>SEND FUNDS VIA INSTANT INTERNAL TRANSFER</span>
-                  </div>
-
-                  <form onSubmit={handleAdminInternalTransfer} className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-1">
-                    
-                    <div className="sm:col-span-5">
-                      <label className="text-[10px] text-gray-400 font-extrabold uppercase block mb-1.5">
-                        TARGET CLIENT EMAIL
-                      </label>
-                      <input 
-                        type="email" 
-                        value={transferTargetEmail}
-                        onChange={(e) => setTransferTargetEmail(e.target.value)}
-                        placeholder="client@gmail.com"
-                        className="w-full bg-[#03060a] border border-[#14263d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400 font-mono-finance"
-                        required
-                      />
-                    </div>
-
-                    <div className="sm:col-span-4">
-                      <label className="text-[10px] text-gray-400 font-extrabold uppercase block mb-1.5">
-                        TRANSFER AMOUNT (USD)
-                      </label>
-                      <input 
-                        type="number" 
-                        step="any"
-                        min="1"
-                        value={transferAmount}
-                        onChange={(e) => setTransferAmount(e.target.value)}
-                        placeholder="e.g. 100, 500, 7000"
-                        className="w-full bg-[#03060a] border border-[#14263d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-400 font-mono-finance text-base font-bold"
-                        required
-                      />
-                    </div>
-
-                    <div className="sm:col-span-3 flex items-end">
-                      <button 
-                        type="submit"
-                        className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-black py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Zap size={15} />
-                        <span>TRANSFER FUNDS INSTANTLY</span>
-                      </button>
-                    </div>
-
-                  </form>
-                </div>
-
-              </div>
-            )}
-
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: QUICK ADMIN TRANSFER ================= */}
-      {quickTransferOpen && isAdmin && (
-        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#071322] border border-cyan-400/40 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-white uppercase tracking-tight">Quick Transfer</h3>
-                <p className="text-xs text-gray-400 mt-1">Send funds directly to this account.</p>
-              </div>
-              <button type="button" onClick={() => setQuickTransferOpen(false)} title="Close transfer modal" className="w-8 h-8 rounded-xl bg-[#0f1d2e] border border-[#1d3554] text-gray-400 hover:text-white flex items-center justify-center">
-                <X size={16} />
-              </button>
-            </div>
-            <form onSubmit={handleAdminInternalTransfer} className="space-y-4">
-              <div>
-                <label className="text-[10px] text-gray-400 font-extrabold uppercase block mb-1.5">User Email</label>
-                <input type="email" value={transferTargetEmail} readOnly className="w-full bg-[#03060a] border border-[#14263d] rounded-xl px-3.5 py-3 text-xs text-gray-300 font-mono-finance" />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-400 font-extrabold uppercase block mb-1.5">Amount (USD)</label>
-                <input type="number" min="0.01" step="any" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} placeholder="0.00" className="w-full bg-[#03060a] border border-cyan-400/40 rounded-xl px-3.5 py-3 text-base text-white font-mono-finance focus:outline-none focus:border-cyan-300" required autoFocus />
-              </div>
-              <button type="submit" className="w-full bg-cyan-400 hover:bg-cyan-300 text-black font-black py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-400/25 flex items-center justify-center gap-2">
-                <ArrowUpRight size={15} />
-                <span>Send Funds</span>
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: LOGOUT CONFIRMATION ================= */}
-      {logoutModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#071322] border border-[#132c4e] w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 text-center relative animate-in fade-in zoom-in duration-200">
-            <div className="w-14 h-14 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 mx-auto">
-              <AlertTriangle size={28} />
-            </div>
-            <div>
-              <h3 className="text-lg font-black text-white uppercase tracking-tight">Confirm Logout</h3>
-              <p className="text-xs text-gray-300 mt-1.5 leading-relaxed">
-                Are you sure you want to log out of <strong className="text-[#00e5ff]">{currentUser?.email}</strong>?
-              </p>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setLogoutModalOpen(false)}
-                className="flex-1 bg-[#0b1b30] hover:bg-[#102744] border border-[#163660] text-gray-300 font-extrabold py-3 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer"
-              >
-                No, Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmLogout}
-                className="flex-1 bg-red-600 hover:bg-red-500 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-red-600/30 cursor-pointer"
-              >
-                Yes, Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: PLANS (Activates Deposit Modal) ================= */}
-      {plansModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative max-h-[95vh] overflow-y-auto backdrop-blur-xl">
-            <button 
-              onClick={() => setPlansModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-white bg-[#0a182a] hover:bg-[#0f243f] w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border border-[#132c4e]"
-            >
-              <X size={16} />
-            </button>
-            <div className="flex items-center gap-3.5">
-              <div className="w-10 h-10 rounded-xl bg-[#08182d] border border-[#122e50] flex items-center justify-center text-[#00e5ff]">
-                <TrendingUp size={20} />
-              </div>
-              <div>
-                <div className="flex items-center gap-3">
-                  <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-white">Plans</h2>
-                  <span className="bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider">HIGH YIELD PACKAGES</span>
-                </div>
-                <p className="text-xs text-gray-400 font-medium mt-0.5">Select an official investment plan to start streaming high-frequency micro-yield returns</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-              
-              {/* DC1 Standard Plan */}
-              <div className="bg-[#040e18] border-2 border-[#00c8b3] rounded-3xl p-6 flex flex-col justify-between shadow-[0_0_25px_rgba(0,200,179,0.12)]">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="bg-[#00c8b3] text-black font-extrabold text-[11px] px-2.5 py-0.5 rounded-md">DC1</span>
-                    <span className="bg-[#003838] text-[#00e5cc] text-[9px] font-extrabold tracking-widest uppercase px-2.5 py-1 rounded-md">BRONZE TIER</span>
-                  </div>
-                  <h3 className="text-base font-extrabold text-white tracking-wide">STANDARD PLAN</h3>
-                  <div>
-                    <span className="text-3xl font-black text-[#00e5cc] font-mono-finance">25%</span>
-                    <span className="text-[10px] text-[#00e5cc] uppercase font-extrabold tracking-wider ml-1.5">MONTHLY RETURN</span>
-                  </div>
-                  <p className="text-[11px] text-gray-300 leading-relaxed font-normal">25% Monthly Return with $100 to $500 Deposit range for 8 Months (240 Days).</p>
-                  <div className="bg-[#02070e] p-3.5 rounded-2xl space-y-2 text-xs border border-[#00c8b3]/20">
-                    <div className="flex justify-between text-gray-300 font-bold text-[11px]"><span>DURATION:</span><span className="font-mono-finance text-white">8 Months (240 Days)</span></div>
-                    <div className="flex justify-between text-gray-300 font-bold text-[11px]"><span>DEPOSIT:</span><span className="font-mono-finance text-[#00e5cc] font-black">$100 - $500</span></div>
-                  </div>
-                </div>
-                <button onClick={() => handleOpenDepositModal('DC1')} className="w-full mt-6 bg-[#00e5cc] hover:bg-[#33ffe6] text-black font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(0,229,204,0.4)] flex items-center justify-center gap-1.5 cursor-pointer"><span>ACTIVATE STANDARD PLAN</span><ChevronRight size={14} className="stroke-[3]" /></button>
-              </div>
-
-              {/* DC2 Premium Plan */}
-              <div className="bg-[#100c02] border-2 border-[#eab308] rounded-3xl p-6 flex flex-col justify-between shadow-[0_0_25px_rgba(234,179,8,0.12)]">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="bg-[#eab308] text-black font-extrabold text-[11px] px-2.5 py-0.5 rounded-md">DC2</span>
-                    <span className="bg-[#3b2b00] text-[#facc15] text-[9px] font-extrabold tracking-widest uppercase px-2.5 py-1 rounded-md">GOLD TIER</span>
-                  </div>
-                  <h3 className="text-base font-extrabold text-white tracking-wide">PREMIUM PLAN</h3>
-                  <div>
-                    <span className="text-3xl font-black text-[#facc15] font-mono-finance">30%</span>
-                    <span className="text-[10px] text-[#facc15] uppercase font-extrabold tracking-wider ml-1.5">MONTHLY RETURN</span>
-                  </div>
-                  <p className="text-[11px] text-gray-300 leading-relaxed font-normal">30% Monthly Return with $501 to $1,000 Deposit range for 8 Months (240 Days).</p>
-                  <div className="bg-[#080501] p-3.5 rounded-2xl space-y-2 text-xs border border-[#eab308]/20">
-                    <div className="flex justify-between text-gray-300 font-bold text-[11px]"><span>DURATION:</span><span className="font-mono-finance text-white">8 Months (240 Days)</span></div>
-                    <div className="flex justify-between text-gray-300 font-bold text-[11px]"><span>DEPOSIT:</span><span className="font-mono-finance text-[#facc15] font-black">$501 - $1,000</span></div>
-                  </div>
-                </div>
-                <button onClick={() => handleOpenDepositModal('DC2')} className="w-full mt-6 bg-[#eab308] hover:bg-[#fde047] text-black font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(234,179,8,0.4)] flex items-center justify-center gap-1.5 cursor-pointer"><span>ACTIVATE PREMIUM PLAN</span><ChevronRight size={14} className="stroke-[3]" /></button>
-              </div>
-
-              {/* DC3 VIP Plan */}
-              <div className="bg-[#110217] border-2 border-[#d946ef] rounded-3xl p-6 flex flex-col justify-between shadow-[0_0_25px_rgba(217,70,239,0.12)]">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="bg-[#d946ef] text-black font-extrabold text-[11px] px-2.5 py-0.5 rounded-md">DC3</span>
-                    <span className="bg-[#380742] text-[#f0abfc] text-[9px] font-extrabold tracking-widest uppercase px-2.5 py-1 rounded-md">DIAMOND TIER</span>
-                  </div>
-                  <h3 className="text-base font-extrabold text-white tracking-wide">VIP PLAN</h3>
-                  <div>
-                    <span className="text-3xl font-black text-[#f0abfc] font-mono-finance">35%</span>
-                    <span className="text-[10px] text-[#f0abfc] uppercase font-extrabold tracking-wider ml-1.5">MONTHLY RETURN</span>
-                  </div>
-                  <p className="text-[11px] text-gray-300 leading-relaxed font-normal">35% Monthly Return with $1,001 to Unlimited Deposit range for 8 Months (240 Days).</p>
-                  <div className="bg-[#08010b] p-3.5 rounded-2xl space-y-2 text-xs border border-[#d946ef]/20">
-                    <div className="flex justify-between text-gray-300 font-bold text-[11px]"><span>DURATION:</span><span className="font-mono-finance text-white">8 Months (240 Days)</span></div>
-                    <div className="flex justify-between text-gray-300 font-bold text-[11px]"><span>DEPOSIT:</span><span className="font-mono-finance text-[#f0abfc] font-black">$1,001 - Unlimited</span></div>
-                  </div>
-                </div>
-                <button onClick={() => handleOpenDepositModal('DC3')} className="w-full mt-6 bg-[#d946ef] hover:bg-[#e879f9] text-black font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(217,70,239,0.4)] flex items-center justify-center gap-1.5"><span>ACTIVATE VIP PLAN</span><ChevronRight size={14} className="stroke-[3]" /></button>
-              </div>
-
-            </div>
-            <div className="flex flex-col sm:flex-row items-center justify-between border-t border-[#0c1e34] pt-4 text-xs text-gray-400 gap-2">
-              <div className="flex items-center gap-2"><ShieldCheck size={15} className="text-[#00e5ff]" /><span>Micro-yield streamed live to your balance with 26-decimal fixed-point precision.</span></div>
-              <span className="text-[#00ff88] font-bold flex items-center gap-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 px-3 py-0.5 rounded-full text-[11px]"><CheckCircle2 size={12} /> Instant Accrual</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: DEPOSIT PORTAL (BANK ONLY) ================= */}
-      {depositModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative max-h-[95vh] overflow-y-auto backdrop-blur-xl">
-            <button 
-              onClick={() => setDepositModalOpen(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-white bg-[#0a182a] hover:bg-[#0f243f] w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm transition-all border border-[#132c4e]"
-            >
-              <X size={16} />
-            </button>
-
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]">
-                <Landmark size={20} />
-              </div>
-              <div>
-                <h3 className="font-black text-base uppercase text-white tracking-wide">
-                  {selectedPlanType} - DEPOSIT PORTAL
-                </h3>
-                <span className="text-[10px] text-[#00ff88] font-bold uppercase tracking-widest block">
-                  SECURE DIRECT BANK TRANSFER & GATEWAY
+              {/* Full Language Names Buttons */}
+              <div className="flex flex-col gap-1 pt-1">
+                <span className="text-[8px] text-violet-400 font-bold text-center block uppercase tracking-wider">
+                  {selectedLanguage ? 'Language:' : 'Select Language:'}
                 </span>
-              </div>
-            </div>
-
-            {/* Gateway Selector (Bank Only active state) */}
-            <div className="space-y-2">
-              <span className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider block">SELECT DEPOSIT GATEWAY</span>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="p-3.5 rounded-2xl border border-[#00e5ff] bg-[#00e5ff]/10 text-white flex items-center justify-between">
-                  <div>
-                    <span className="font-extrabold text-xs block">BANK IBAN</span>
-                    <span className="text-[9px] text-gray-400 block">Mashreq Bank / Local</span>
-                  </div>
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#00e5ff]"></span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bank Details Card */}
-            <div className="bg-[#030810] border border-[#10243e] rounded-2xl p-4 space-y-3">
-              <div className="flex items-center justify-between border-b border-[#0f1d2e] pb-2.5">
-                <span className="text-[10px] text-gray-400 font-bold uppercase">Mashreq Bank</span>
-                <span className="text-xs font-black text-[#00ff88]">DIRECT BANK DEPOSIT</span>
-              </div>
-              <div className="flex items-center justify-between border-b border-[#0f1d2e] pb-2.5">
-                <span className="text-[10px] text-gray-400 font-bold uppercase">Account Title:</span>
-                <span className="text-xs font-black text-white">IRTAZA COMMUNICATION</span>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-gray-400 font-bold uppercase">IBAN:</span>
-                  <button 
-                    onClick={() => copyToClipboard('PK36MSHQ0000089200164395', 'IBAN')}
-                    className="text-[10px] text-[#00e5ff] font-extrabold uppercase hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <Copy size={11} /> Copy
+                <div className="grid grid-cols-3 gap-1">
+                  <button onClick={() => handleSelectLanguage('English')} disabled={isLoading} className={`py-1.5 px-1 rounded-lg border text-[9px] font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'English' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
+                    English
+                  </button>
+                  <button onClick={() => handleSelectLanguage('Urdu')} disabled={isLoading} className={`py-1.5 px-1 rounded-lg border text-[9px] font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'Urdu' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
+                    اردو
+                  </button>
+                  <button onClick={() => handleSelectLanguage('Spanish')} disabled={isLoading} className={`py-1.5 px-1 rounded-lg border text-[9px] font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'Spanish' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
+                    Español
                   </button>
                 </div>
-                <div className="bg-[#050e1c] border border-[#142946] p-2.5 rounded-xl font-mono-finance text-xs text-white tracking-wide">
-                  PK36MSHQ0000089200164395
-                </div>
               </div>
-            </div>
 
-            {/* Support Slip Instruction */}
-            <div className="bg-[#051122] border border-[#112d50] rounded-2xl p-3.5 flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5 text-gray-300">
-                <Mail size={18} className="text-[#00e5ff] shrink-0" />
-                <span>Please share your payment deposit slip directly via email to {withdrawalSupportEmail} for instant verification.</span>
-              </div>
-              <a 
-                href={getDepositGmailLink()}
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-[#00e5ff] hover:bg-[#33edff] text-black font-black text-[10px] px-3 py-2 rounded-xl uppercase tracking-wider whitespace-nowrap ml-2 shadow-md"
-              >
-                Email Slip
-              </a>
-            </div>
-
-            <button 
-              onClick={() => {
-                setDepositModalOpen(false);
-                showToast('Deposit request submitted successfully! Awaiting verification.');
-              }}
-              className="w-full bg-gradient-to-r from-[#00d0ff] to-emerald-400 hover:opacity-95 text-black font-black py-4 rounded-2xl text-xs uppercase tracking-wider shadow-xl shadow-cyan-500/20 transition-all cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span>CONFIRM & SUBMIT DEPOSIT REQUEST</span>
-              <ChevronRight size={15} className="stroke-[3]" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: WITHDRAWAL REQUEST ================= */}
-      {withdrawModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 relative max-h-[90vh] overflow-y-auto">
-            <button onClick={() => setWithdrawModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]"><ShieldCheck size={20} /></div>
-              <div><h3 className="font-extrabold text-base text-white">Withdrawal Request</h3><div className="flex items-center gap-1.5 text-[9px] text-[#00ff88] font-bold"><span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]"></span><span>Instant Daily Profit Settlement</span></div></div>
-            </div>
-            <div className="bg-[#030810] border border-[#00ff88]/30 rounded-xl p-3.5 flex items-center justify-between">
-              <div><span className="text-[9px] text-[#00ff88] font-extrabold uppercase tracking-widest block">AVAILABLE PROFIT BALANCE</span><div className="text-xl font-black text-[#00ff88] font-mono-finance tabular-nums">${liveEarned.toFixed(6)}</div></div>
-              <button type="button" onClick={() => setWithdrawInput(liveEarned.toFixed(2))} className="bg-[#00ff88] hover:bg-[#33ff9e] text-black text-[11px] font-extrabold px-3 py-1.5 rounded-lg uppercase">MAX</button>
-            </div>
-            <form onSubmit={handleWithdrawSubmit} className="space-y-3.5">
-              <div>
-                <div className="flex justify-between items-center mb-1"><label className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">WITHDRAWAL AMOUNT (USD)</label><span className="text-[9px] text-[#ffb700] font-extrabold uppercase bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">MIN $50.00 USD</span></div>
-                <div className="relative"><span className="absolute left-3.5 top-3 text-base font-mono-finance text-[#00ff88] font-black">$</span><input type="number" step="any" min="50" max={liveEarned} value={withdrawInput} onChange={(e) => setWithdrawInput(e.target.value)} placeholder="0.00" className="w-full bg-[#030810] border border-[#0f233d] rounded-xl pl-8 pr-4 py-3 text-white font-mono-finance text-lg font-black focus:outline-none focus:border-[#00e5ff]" required /></div>
-                {withdrawalValidation && (
-                  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold px-3 py-2 rounded-lg my-2">
-                    ⚠️ Please enter a valid withdrawal amount.
+              {/* Issue Options */}
+              {selectedLanguage && (
+                <div className="flex flex-col gap-1 pt-1.5 border-t border-white/10 mt-1">
+                  <div className="flex flex-col gap-1">
+                    <button onClick={() => handleSelectIssue('slip')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-violet-500/20 hover:bg-violet-500 hover:text-white border border-violet-500/40 text-violet-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
+                      <span>📄 Transaction Slip</span>
+                      <span>→</span>
+                    </button>
+                    <button onClick={() => handleSelectIssue('problem')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-400 hover:text-black border border-cyan-500/40 text-cyan-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
+                      <span>⚠️ Facing Problem</span>
+                      <span>→</span>
+                    </button>
+                    <button onClick={() => handleSelectIssue('blocked')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-400 hover:text-black border border-amber-500/40 text-amber-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
+                      <span>🔒 Account Blocked</span>
+                      <span>→</span>
+                    </button>
                   </div>
-                )}
-              </div>
-              <div>
-                <div className="flex justify-between items-center mb-1.5"><span className="text-[9px] text-gray-400 font-extrabold uppercase tracking-wider">PAYOUT BANK AND OTHER</span><span className="text-[9px] text-[#00e5ff] font-bold uppercase tracking-wider">SELECT GATEWAY</span></div>
-                <div className="grid grid-cols-3 gap-2">
-                  <button type="button" onClick={() => setPayoutMethod('bank')} className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all ${payoutMethod === 'bank' ? 'border-[#00e5ff] bg-[#00e5ff]/10 text-white' : 'border-[#0f233d] bg-[#030810] text-gray-400'}`}><Landmark size={16} className={payoutMethod === 'bank' ? 'text-[#00e5ff]' : 'text-gray-400'} /><span className="text-xs font-bold mt-1">Bank</span><span className="text-[7px] text-gray-500 uppercase">IBAN / Local</span></button>
-                  <button type="button" onClick={() => setPayoutMethod('easypaisa')} className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all ${payoutMethod === 'easypaisa' ? 'border-[#00ff88] bg-[#00ff88]/10 text-white' : 'border-[#0f233d] bg-[#030810] text-gray-400'}`}><div className="w-4 h-4 rounded-full bg-[#00ff88] text-black font-black text-[8px] flex items-center justify-center">eP</div><span className="text-xs font-bold mt-1">EasyPaisa</span><span className="text-[7px] text-gray-500 uppercase">Wallet</span></button>
-                  <button type="button" onClick={() => setPayoutMethod('jazzcash')} className={`p-2.5 rounded-xl border flex flex-col items-center justify-center text-center transition-all ${payoutMethod === 'jazzcash' ? 'border-red-500 bg-red-500/10 text-white' : 'border-[#0f233d] bg-[#030810] text-gray-400'}`}><div className="w-4 h-4 rounded-full bg-red-600 text-white font-black text-[8px] flex items-center justify-center">JC</div><span className="text-xs font-bold mt-1">JazzCash</span><span className="text-[7px] text-gray-500 uppercase">Wallet</span></button>
                 </div>
-              </div>
-              <div className="space-y-2.5">
-                <div><div className="flex justify-between items-center mb-1"><label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">ACCOUNT TITLE & BANK NAME</label><span className="text-[8px] text-[#00ff88] font-mono-finance">BOX 1</span></div><input type="text" value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} placeholder="e.g. Muhammad Ali (Meezan Bank)" className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]" required /></div>
-                <div><div className="flex justify-between items-center mb-1"><label className="text-[9px] text-gray-400 font-bold uppercase tracking-wider">{payoutMethod === 'bank' ? 'IBAN NUMBER' : 'MOBILE ACCOUNT NUMBER'}</label><span className="text-[8px] text-[#00ff88] font-mono-finance">BOX 2</span></div><input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder={payoutMethod === 'bank' ? 'e.g. PK36MEZN0001020304050607' : 'e.g. 03001234567'} className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-2.5 text-xs font-mono-finance text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]" required /></div>
-              </div>
-              <div className="flex gap-2.5 pt-2">
-                <button type="button" onClick={() => setWithdrawModalOpen(false)} className="w-1/3 bg-[#08182d] hover:bg-[#0c223e] text-gray-300 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider">CANCEL</button>
-                <button type="submit" disabled={!isValid} className={`w-2/3 font-bold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all ${isValid ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 cursor-pointer shadow-lg shadow-cyan-500/20' : 'bg-slate-700 text-slate-400 opacity-40 cursor-not-allowed'}`}>SUBMIT REQUEST</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: WITHDRAWAL CONFIRMATION ================= */}
-      {withdrawSuccessOpen && (
-        <div className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-lg rounded-3xl p-6 shadow-2xl relative">
-            <button onClick={() => setWithdrawSuccessOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
-            <div className="space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#00ff88]/10 border border-[#00ff88]/30 flex items-center justify-center text-[#00ff88]"><CheckCircle2 size={24} /></div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-[#00ff88] font-extrabold">Request received</div>
-                  <h3 className="font-extrabold text-2xl text-white mt-1">Withdrawal submitted</h3>
-                </div>
-              </div>
-
-              <div className="bg-[#030810] border border-[#0f233d] rounded-2xl p-4">
-                <p className="text-sm text-slate-200 leading-6">
-                  Your withdrawal details have been recorded successfully. Please send the request below to the official support email so our team can verify and process it.
-                </p>
-              </div>
-
-              <div className="bg-[#0a1526] border border-[#0f233d] rounded-2xl p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-bold">Support email</span>
-                  <span className="text-[9px] uppercase tracking-[0.18em] text-[#00e5ff] font-bold">Verified</span>
-                </div>
-                <a
-                  href={getWithdrawalGmailLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleWithdrawalEmailSupport}
-                  className="block w-full bg-gradient-to-r from-[#00d0ff] to-emerald-400 hover:opacity-95 text-black font-black py-3.5 rounded-xl text-sm text-center shadow-lg shadow-cyan-500/20 transition-all"
-                >
-                  {withdrawalSupportEmail}
-                </a>
-              </div>
-
-              <div className="flex gap-2">
-                <a
-                  href={getWithdrawalGmailLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleWithdrawalEmailSupport}
-                  className="flex-1 bg-[#0b1f33] border border-[#0f233d] hover:border-[#00e5ff]/60 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all text-center"
-                >
-                  Email support
-                </a>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(withdrawalRequestSummary || 'Withdrawal Request', 'Withdrawal details')}
-                  className="flex-1 bg-[#071321] border border-[#00e5ff]/30 hover:border-[#00e5ff] text-[#00e5ff] font-bold py-3 rounded-xl text-xs uppercase tracking-wider transition-all"
-                >
-                  Copy details
-                </button>
-              </div>
-
-              <div className="rounded-2xl border border-[#0f233d] bg-[#030810] p-3">
-                <div className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-bold mb-2">Withdrawal request details</div>
-                <pre className="whitespace-pre-wrap text-xs text-slate-200 font-mono leading-5">{withdrawalRequestSummary || 'No details available.'}</pre>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: IB PARTNER APPLICATION ================= */}
-      {isIbModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#00e5ff]/40 w-full max-w-lg rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5 relative">
-            <button
-              type="button"
-              onClick={() => setIsIbModalOpen(false)}
-              title="Close IB application"
-              className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs"
-            >
-              <X size={16} />
-            </button>
-
-            <div className="flex items-center gap-3 pr-8">
-              <div className="w-10 h-10 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff] text-lg">
-                🤝
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base text-white">Apply for IB Partnership ($7,000 Program)</h3>
-                <p className="text-[10px] text-gray-400 mt-1">Submit your details to activate institutional partner status</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleIbApplicationSubmit} className="space-y-4">
-              <div>
-                <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider block mb-1.5">First Name</label>
-                <input
-                  type="text"
-                  value={ibFirstName}
-                  onChange={(e) => setIbFirstName(e.target.value)}
-                  placeholder="e.g. Alexander"
-                  className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider block mb-1.5">Last Name</label>
-                <input
-                  type="text"
-                  value={ibLastName}
-                  onChange={(e) => setIbLastName(e.target.value)}
-                  placeholder="e.g. Morgan"
-                  className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-[10px] text-gray-400 font-extrabold uppercase tracking-wider block mb-1.5">Email Address</label>
-                <input
-                  type="email"
-                  value={ibEmail}
-                  onChange={(e) => setIbEmail(e.target.value)}
-                  placeholder="e.g. alex.morgan@globalvest.com"
-                  readOnly={false}
-                  disabled={false}
-                  className="w-full bg-[#030810] border border-[#0f233d] rounded-xl px-3.5 py-3 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-[#00e5ff]"
-                  required
-                />
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsIbModalOpen(false)}
-                  className="sm:w-1/3 bg-[#08182d] hover:bg-[#0c223e] text-gray-300 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider"
-                >
-                  CANCEL
-                </button>
-                <button
-                  type="submit"
-                  className="sm:w-2/3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-extrabold py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-cyan-500/20"
-                >
-                  SUBMIT APPLICATION &amp; CONNECT ON MESSENGER
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: CONTACT ================= */}
-      {contactModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative backdrop-blur-xl">
-            <button onClick={() => { setLegalDocument(null); setContactModalOpen(false); }} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
-            {legalDocument ? (
-              <section className="flex min-h-0 flex-col" aria-labelledby="legal-document-title">
-                <div className="flex items-center justify-between gap-4 border-b border-[#0b1b30] pb-4 pr-8">
-                  <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#00e5ff]">Dollar Craft Legal Center</p>
-                    <h3 id="legal-document-title" className="mt-1 text-lg font-extrabold uppercase tracking-tight text-white">{legalDocument.title}</h3>
-                    <p className="mt-1 text-[10px] text-gray-500">Effective August 28, 2018</p>
-                  </div>
-                  <button type="button" onClick={() => setLegalDocument(null)} className="shrink-0 rounded-lg border border-[#102b4d] bg-[#08182d] px-3 py-2 text-xs font-bold text-gray-300 transition-colors hover:text-white">BACK</button>
-                </div>
-                <div className="legal-document-scroll mt-5 max-h-[60vh] space-y-5 overflow-y-auto pr-3 text-xs leading-relaxed text-slate-300">
-                  {legalDocument.sections.map((section) => (
-                    <div key={section.heading} className="space-y-1.5">
-                      <h4 className="font-extrabold uppercase tracking-wide text-white">{section.heading}</h4>
-                      <p>{section.body}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-5 flex justify-end border-t border-[#0b1b30] pt-4">
-                  <button type="button" onClick={() => setLegalDocument(null)} className="rounded-lg bg-[#08182d] px-4 py-2 text-xs font-bold uppercase text-white transition-colors hover:bg-[#0c223e]">CLOSE DOCUMENT</button>
-                </div>
-              </section>
-            ) : (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]"><Mail size={18} /></div>
-                  <div><h3 className="font-extrabold text-base text-white uppercase tracking-tight">CONTACT DOLLAR CRAFT</h3><span className="text-[10px] text-gray-400 block font-medium">24/7 Global Institutional Support Desk</span></div>
-                </div>
-                <div className="bg-[#030810] border border-[#0f233d] rounded-xl p-3.5 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5"><div className="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 flex items-center justify-center"><Mail size={14} /></div><div><span className="text-[9px] text-gray-400 font-bold uppercase block">OFFICIAL SUPPORT EMAIL</span><span className="text-xs font-bold text-[#00e5ff] font-mono-finance">dollarcraft3@gmail.com</span></div></div>
-                  <button onClick={() => copyToClipboard('dollarcraft3@gmail.com', 'Support Email')} className="bg-[#08182d] border border-[#102b4d] text-gray-300 hover:text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1"><Copy size={12} /><span>Copy</span></button>
-                </div>
-                <div className="space-y-3 pt-1">
-                  <div className="flex items-center justify-between bg-[#030810] border border-[#0f233d] p-3 rounded-xl gap-3"><div className="text-left pl-1"><span className="text-[9px] text-gray-400 font-bold block uppercase">24/7 LIVE SUPPORT</span><span className="text-xs font-bold text-white">24/7 Email Support Desk</span></div><a href="mailto:dollarcraft3@gmail.com" className="bg-gradient-to-r from-[#00d0ff] to-emerald-400 text-black font-extrabold text-xs px-3.5 py-2 rounded-lg flex items-center gap-1 shadow-md whitespace-nowrap"><span>EMAIL SUPPORT 24/7</span><ExternalLink size={12} /></a></div>
-                </div>
-                <div className="pt-2 border-t border-[#0b1b30] text-left text-xs text-gray-400 space-y-0.5">
-                  <div className="flex items-center gap-1 text-[#ffb700] font-extrabold text-[10px] uppercase tracking-wider"><Building size={12} /><span>REGISTERED HQ</span></div>
-                  <p className="font-bold text-white text-xs">Dollar Craft Pte Ltd</p>
-                  <p className="text-[10px] text-gray-500">c/o Company Name<br/>70 Bendemeer Road, #03-02<br/>Luzerne, Singapore 339940</p>
-                </div>
-                <footer className="border-t border-[#0b1b30] pt-4 text-[10px] leading-relaxed text-slate-400">
-                  <div className="flex flex-col gap-2.5 md:flex-row md:items-center md:justify-between">
-                    <div className="space-y-1">
-                      <p>© 2018 Dollar Craft. All rights reserved.</p>
-                      <p>Headquartered and operating from Singapore through Dollar Craft Pte Ltd.</p>
-                    </div>
-                    <nav aria-label="Legal information" className="flex flex-wrap items-center gap-x-3 gap-y-1 md:justify-end">
-                      {[
-                        { label: 'Terms of Service', title: 'Terms of Service', sections: [
-                          { heading: 'Agreement and scope', body: 'These Terms of Service govern access to and use of Dollar Craft, including its website, account tools, support channels, and micro-yield investment products. Dollar Craft has operated since 2018 through Dollar Craft Pte Ltd, its Singapore headquarters. By creating an account or using the platform, you confirm that you have read, understood, and accepted these Terms.' },
-                          { heading: 'Eligibility and account security', body: 'You must be legally capable of entering a contract and provide accurate, current information. You are responsible for your credentials, device security, and all activity under your account. Do not share access, create duplicate accounts, misrepresent your identity, or use the platform for unlawful activity, fraud, money laundering, sanctions evasion, or market abuse.' },
-                          { heading: 'Services and transactions', body: 'Available products, rates, minimums, processing times, and eligibility requirements are displayed in the platform and may change. Account balances, yields, deposits, withdrawals, and other records are subject to verification and our operational controls. We may delay, reject, suspend, or reverse activity where required for security, compliance, technical integrity, or legal obligations.' },
-                          { heading: 'Singapore and global users', body: 'Dollar Craft serves users internationally and operates from Singapore through Dollar Craft Pte Ltd. Singapore users and international users are responsible for complying with the laws, tax obligations, exchange-control rules, payment-provider requirements, and identity-verification requests applicable to them. Access may be restricted where our services are not permitted.' },
-                          { heading: 'Acceptable use and termination', body: 'You may use the platform only for its stated purposes and must follow all instructions, disclosures, and verification requirements. We may suspend or terminate access for breach of these Terms, suspicious activity, non-payment, legal risk, or security concerns. Provisions concerning ownership, payment obligations, disclaimers, limitations, dispute handling, and records survive termination.' },
-                          { heading: 'Disclaimers and contact', body: 'The platform is provided subject to availability and may contain interruptions or errors. Nothing on the platform is legal, tax, accounting, or personalized investment advice. You should obtain independent advice before using any product. These Terms are read together with the Privacy Policy and Risk Disclosure. Questions may be directed to dollarcraft3@gmail.com.' }
-                        ] },
-                        { label: 'Privacy Policy', title: 'Privacy Policy', sections: [
-                          { heading: 'Information we collect', body: 'Dollar Craft may collect identity and contact details, account credentials, verification records, transaction and withdrawal information, device and browser data, approximate location, communications, and usage or diagnostic records. We collect information you provide, information generated through platform activity, and information from service providers used for verification, payments, fraud prevention, and security.' },
-                          { heading: 'How we use information', body: 'We use information to create and maintain accounts, provide products and support, process deposits and withdrawals, verify identity, prevent fraud and financial crime, protect the platform, comply with legal and regulatory duties, improve performance, resolve disputes, and communicate important service or security notices. We do not use personal information for purposes incompatible with this Policy without an appropriate legal basis or notice.' },
-                          { heading: 'Sharing and international transfers', body: 'We may share necessary information with affiliates, hosting and technology providers, payment and banking partners, professional advisers, auditors, regulators, law-enforcement authorities, or parties involved in a corporate transaction. Providers may process information in countries other than your own. We use contractual, technical, and organizational safeguards appropriate to the transfer and applicable law.' },
-                          { heading: 'Security and retention', body: 'We use access controls, encryption where appropriate, monitoring, authentication safeguards, backups, and least-privilege practices to protect information. No internet transmission or storage system is completely secure. We retain information only as long as reasonably necessary for the purposes described, legal and accounting requirements, dispute resolution, fraud prevention, and enforcement of agreements.' },
-                          { heading: 'Your choices and rights', body: 'Subject to applicable law, you may request access, correction, deletion, restriction, or a copy of your personal information, or object to certain processing. We may need to verify your identity and may retain information where legally required. To make a request or report a privacy concern, contact dollarcraft3@gmail.com. Singapore and other international users may also have rights under their local privacy and data-protection laws.' },
-                          { heading: 'Updates', body: 'We may update this Policy when our services, legal requirements, or security practices change. The effective date above identifies the current version. Continued use after an update means you acknowledge the revised Policy to the extent permitted by law.' }
-                        ] },
-                        { label: 'Risk Disclosure', title: 'Risk Disclosure', sections: [
-                          { heading: 'Important notice', body: 'Micro-yield investments and digital-asset-related products involve significant risk. They are not bank deposits, guaranteed savings, or risk-free investments. You may lose some or all of the funds committed, and you should never invest money you cannot afford to lose. Past performance, displayed yields, projections, and examples are not guarantees of future results.' },
-                          { heading: 'Market and product risks', body: 'Digital assets and related markets can be volatile, illiquid, and affected by technology, liquidity, counterparty, regulatory, economic, and geopolitical events. Yield rates, product terms, fees, minimums, settlement times, and availability may change. A displayed micro-yield accrual may be estimated, conditional, delayed, or subject to the applicable product terms and account verification.' },
-                          { heading: 'Operational and security risks', body: 'Service interruptions, maintenance, network congestion, cyberattacks, fraud, credential compromise, software defects, data loss, payment-provider failures, and events outside our control may delay or prevent access, deposits, calculations, or withdrawals. Keep your credentials private and review account activity promptly. Notify support of suspected unauthorized activity.' },
-                          { heading: 'Regulatory and tax considerations', body: 'Legal treatment of digital assets, investment products, payments, and yields differs by jurisdiction and can change. Dollar Craft serves global users and operates from Singapore through Dollar Craft Pte Ltd with regional compliance processes; this does not mean every product is authorized, suitable, or available in every jurisdiction. You are responsible for your own tax reporting, exchange-control obligations, and legal compliance.' },
-                          { heading: 'Suitability and acknowledgement', body: 'Assess your financial position, experience, objectives, liquidity needs, and risk tolerance before participating. Obtain independent financial, legal, and tax advice. By using the platform, you acknowledge these risks, the platform Terms of Service, verification requirements, variable product terms, and the possibility of loss. This disclosure does not replace the specific terms shown for an individual product.' }
-                        ] }
-                      ].map((document) => (
-                        <React.Fragment key={document.label}>
-                          <button type="button" onClick={() => setLegalDocument(document)} className="text-slate-400 transition-colors hover:text-[#00e5ff] hover:underline">{document.label}</button>
-                          {document.label !== 'Risk Disclosure' && <span className="text-[#29405d]" aria-hidden="true">|</span>}
-                        </React.Fragment>
-                      ))}
-                    </nav>
-                  </div>
-                </footer>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: ABOUT ================= */}
-      {aboutModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c]/95 border border-[#10243e] w-full max-w-5xl mx-auto px-4 md:px-8 py-6 sm:py-8 rounded-3xl shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto backdrop-blur-xl">
-            <button onClick={() => setAboutModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white bg-[#0a182a] w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs">✕</button>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#00e5ff]/10 border border-[#00e5ff]/30 flex items-center justify-center text-[#00e5ff]"><Landmark size={20} /></div>
-              <div><div className="flex items-center gap-2"><h3 className="font-black text-lg text-white uppercase tracking-tight">ABOUT DOLLAR CRAFT</h3><span className="bg-[#00e5ff]/10 text-[#00e5ff] border border-[#00e5ff]/30 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full uppercase">REGULATED ENTITY</span></div><span className="text-xs text-gray-400 font-medium">Registered & Operating across 7 Global Financial Hubs</span></div>
-            </div>
-            <div className="bg-[#030810] border border-[#0f233d] rounded-xl p-4 space-y-1.5"><span className="text-[10px] font-extrabold text-[#00e5ff] uppercase tracking-wider flex items-center gap-1"><ShieldCheck size={13} /> INSTITUTIONAL DIGITAL ASSET INFRASTRUCTURE</span><p className="text-xs text-gray-300 leading-relaxed font-normal">Dollar Craft is a premier institutional digital asset yield protocol and global investment provider. Built on sub-second precision calculation engines (26-decimal BigNumber) and multi-jurisdictional custody infrastructure, Dollar Craft serves individual and corporate clients across <strong>7 global financial hubs</strong>.</p></div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs"><span className="font-extrabold text-[#00e5ff] uppercase tracking-wider flex items-center gap-1 text-[11px]"><Globe size={13} /> REGISTERED & OPERATING JURISDICTIONS</span><span className="text-[9px] text-[#00ff88] font-bold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">7 Active Hubs</span></div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {GLOBAL_HUBS.map((hub) => (
-                  <div key={hub.country} className="bg-[#030810] border border-[#0f233d] p-3 rounded-xl text-center space-y-1 flex flex-col items-center justify-center">
-                    <img src={`https://flagcdn.com/w80/${hub.code}.png`} alt={hub.country} className="w-8 h-5 object-cover rounded shadow border border-[#10243e]" /><div className="font-bold text-xs text-white">{hub.country}</div><span className="text-[8px] text-[#00ff88] font-mono-finance block">REGULATED</span><span className="text-[8px] text-gray-500 font-mono-finance block truncate w-full">{hub.reg}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center justify-between pt-3 border-t border-[#0b1b30] text-xs">
-              <div className="flex items-center gap-1 text-gray-400 text-[11px]"><ShieldCheck size={13} className="text-[#00e5ff]" /><span>Quarterly audit compliance & verified proof of reserves.</span></div>
-              <button onClick={() => setAboutModalOpen(false)} className="bg-[#08182d] hover:bg-[#0c223e] text-white text-xs font-bold px-4 py-1.5 rounded-lg uppercase">CLOSE</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODAL: HISTORY ================= */}
-      {historyModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#050e1c] border border-[#10243e] w-full max-w-lg rounded-3xl p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-[#0b1b30] pb-3">
-              <h3 className="font-extrabold text-base text-white">Withdrawal Records</h3>
-              <button onClick={() => setHistoryModalOpen(false)} className="text-gray-400 hover:text-white font-bold text-xs">✕</button>
-            </div>
-            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-              {withdrawHistory.length === 0 ? (
-                <div className="text-center py-6 text-gray-500 text-xs font-bold">No withdrawal history recorded yet.</div>
-              ) : (
-                withdrawHistory.map((tx) => (
-                  <div key={tx.id} className="bg-[#030810] border border-[#0f233d] p-3.5 rounded-xl flex items-center justify-between text-xs">
-                    <div>
-                      <div className="font-black text-white font-mono-finance text-sm">${tx.amount} <span className="text-[9px] text-[#00e5ff] font-sans">({tx.gateway})</span></div>
-                      <div className="text-[9px] text-gray-500 font-mono-finance mt-0.5">{tx.date} • {tx.id}</div>
-                    </div>
-                    <span className={`text-[9px] px-2.5 py-0.5 rounded-full font-extrabold uppercase ${
-                      String(tx.status).toLowerCase() === 'approved'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
-                        : String(tx.status).toLowerCase() === 'rejected'
-                        ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                        : 'bg-amber-500/10 text-[#ffb700] border border-amber-500/30'
-                    }`}>
-                      {String(tx.status).toLowerCase() === 'approved'
-                        ? 'APPROVED'
-                        : String(tx.status).toLowerCase() === 'rejected'
-                          ? 'REJECTED'
-                          : 'PENDING APPROVAL'}
-                    </span>
-                  </div>
-                ))
               )}
+
+              <div ref={chatMessagesEndRef} />
             </div>
+
+            {/* Input & Attachment Footer */}
+            <form onSubmit={handleSendMessage} className="p-2 bg-slate-950 border-t border-white/10 space-y-1">
+              {attachedFile && (
+                <div className="flex justify-between items-center bg-white/5 px-2 py-0.5 rounded-lg text-[8px] border border-white/10">
+                  <span className="truncate text-violet-300">📎 {attachedFile.name}</span>
+                  <button type="button" onClick={() => setAttachedFile(null)} className="text-gray-400 hover:text-red-400">✕</button>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <label className="cursor-pointer p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-violet-300 text-xs transition-all" title="Attach">
+                  📎
+                  <input 
+                    type="file" 
+                    accept="image/*,.pdf" 
+                    disabled={isLoading}
+                    onChange={(e) => setAttachedFile(e.target.files[0])}
+                    className="hidden"
+                  />
+                </label>
+
+                <input 
+                  type="text" 
+                  placeholder={!selectedLanguage ? "Select language first..." : "Type message..."} 
+                  value={inputMessage} 
+                  disabled={!selectedLanguage || isLoading}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  className="flex-1 bg-black/70 border border-white/15 rounded-lg px-2.5 py-1 text-[9px] text-white focus:outline-none focus:border-violet-500 disabled:opacity-50"
+                />
+
+                <button 
+                  type="submit" 
+                  disabled={!selectedLanguage || isLoading}
+                  className="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-black text-[9px] shadow transition-all disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </div>
+            </form>
+
           </div>
-        </div>
-      )}
+        )}
+
+        {/* ARY Digital Style Pro 3D Multi-Axis Tumbling Logo Button */}
+        <button 
+          onClick={() => setChatOpen(!chatOpen)}
+          className="w-14 h-14 rounded-full bg-gradient-to-tr from-violet-600 via-teal-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_0_35px_rgba(139,92,246,0.9)] transform hover:scale-110 transition-all duration-300 active:scale-95 border-2 border-white/60 animate-ary-3d cursor-pointer"
+          title="Open Help Center"
+        >
+          {/* Professional Headset Support Icon */}
+          <svg className="w-7 h-7 text-white fill-current drop-shadow-lg" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.08L2.25 20.75c-.32.32.09.73.41.41l3.67-1.12C7.91 20.89 9.89 21.5 12 21.5c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 17.5c-1.84 0-3.52-.57-4.92-1.54l-.27-.19-2.28.7.7-2.28-.19-.27C4.07 14.72 3.5 13.04 3.5 11.2c0-4.69 3.81-8.5 8.5-8.5s8.5 3.81 8.5 8.5-3.81 8.5-8.5 8.5zm4.25-6.75c-.41 0-.75-.34-.75-.75 0-1.24-1.01-2.25-2.25-2.25-.41 0-.75-.34-.75-.75s.34-.75.75-7.5c2.07 0 3.75 1.68 3.75 3.75 0 .41-.34.75-.75.75z"/>
+          </svg>
+        </button>
+      </div>
 
     </div>
   );
