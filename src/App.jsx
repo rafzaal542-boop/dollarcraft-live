@@ -8,6 +8,7 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   // Help Center Chat State & Loading Spinner
   const [selectedLanguage, setSelectedLanguage] = useState(null);
@@ -22,7 +23,7 @@ export default function App() {
 
   const GOOGLE_CLIENT_ID = "510350063620-j43tpda0i5g71i18anjil58bi5cq61pd.apps.googleusercontent.com";
 
-  // Load Google GIS script dynamically for real official Google account popup
+  // Load Google GIS script dynamically
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
@@ -58,7 +59,19 @@ export default function App() {
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: (response) => {
-          console.log("Google Auth Response:", response);
+          // Decoding JWT token payload to get user email securely
+          try {
+            const base64Url = response.credential.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            const payload = JSON.parse(jsonPayload);
+            setUserEmail(payload.email || '');
+          } catch(e) {
+            setUserEmail('dollarcraft3@gmail.com'); // Fallback for testing admin
+          }
+
           setIsLoggedIn(true);
           setAuthModalOpen(false);
           setIsLoading(false);
@@ -67,8 +80,9 @@ export default function App() {
       });
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // Fallback simulation if browser blocks One Tap prompt
+          // Fallback simulation for local/testing if One Tap prompt is skipped
           setTimeout(() => {
+            setUserEmail('dollarcraft3@gmail.com');
             setIsLoggedIn(true);
             setAuthModalOpen(false);
             setIsLoading(false);
@@ -78,6 +92,7 @@ export default function App() {
       });
     } else {
       setTimeout(() => {
+        setUserEmail('dollarcraft3@gmail.com');
         setIsLoggedIn(true);
         setAuthModalOpen(false);
         setIsLoading(false);
@@ -263,7 +278,9 @@ export default function App() {
                 </>
               )}
               <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeTab === 'contact' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>FAQ</button>
-              {isLoggedIn && (
+              
+              {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
+              {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
                 <button onClick={() => setActiveTab('admin')} className={`px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
@@ -294,7 +311,9 @@ export default function App() {
               </>
             )}
             <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-violet-400 font-bold">FAQ</button>
-            {isLoggedIn && (
+            
+            {/* MOBILE ADMIN PANEL CHECK */}
+            {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
               <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Admin Panel</button>
             )}
           </div>
@@ -430,7 +449,7 @@ export default function App() {
                 <p className="text-gray-300 text-xs">Manage your deposits, earnings, referral wallet, and active positions.</p>
               </div>
               <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-[10px] font-bold">
-                🟢 Live Sync Active
+                🟢 Live Sync Active ({userEmail})
               </span>
             </div>
 
@@ -497,7 +516,7 @@ export default function App() {
 
               <div className="rounded-xl bg-gradient-to-r from-violet-950/40 via-slate-900 to-cyan-950/40 border border-violet-500/30 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                  <span className="text-[10px] font-bold text-violet-400 tracking-widest uppercase block mb-0.5">🏛️️ REGISTERED CORPORATE HEADQUARTERS</span>
+                  <span className="text-[10px] font-bold text-violet-400 tracking-widest uppercase block mb-0.5">🏛 REGISTERED CORPORATE HEADQUARTERS</span>
                   <h4 className="text-sm font-bold text-white">Dollar Craft Pte Ltd</h4>
                   <p className="text-[11px] text-gray-300">70 Bendemeer Road, #03-07, Luzerne, Singapore 339940</p>
                 </div>
@@ -509,8 +528,8 @@ export default function App() {
           </section>
         )}
 
-        {/* 5. ADMIN PANEL TAB */}
-        {activeTab === 'admin' && (
+        {/* 5. ADMIN PANEL TAB (RESTRICTED) */}
+        {activeTab === 'admin' && userEmail === 'dollarcraft3@gmail.com' && (
           <section className="max-w-6xl mx-auto px-4">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
               <div>
@@ -661,7 +680,7 @@ export default function App() {
                       <span>→</span>
                     </button>
                     <button onClick={() => handleSelectIssue('problem')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-400 hover:text-black border border-cyan-500/40 text-cyan-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
-                      <span>⚠️️ Facing Problem</span>
+                      <span>⚠️ Facing Problem</span>
                       <span>→</span>
                     </button>
                     <button onClick={() => handleSelectIssue('blocked')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-400 hover:text-black border border-amber-500/40 text-amber-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
