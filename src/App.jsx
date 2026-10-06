@@ -234,7 +234,7 @@ export default function App() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#090d23] via-[#050814] to-[#03050a] text-white font-sans text-xs sm:text-sm selection:bg-violet-500 selection:text-white relative overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#090d23] via-[#050814] to-[#03050a] text-white font-sans text-sm sm:text-base selection:bg-violet-500 selection:text-white relative overflow-x-hidden">
       {/* Pro ARY Style 3D Multi-Axis Tumbling Animation CSS */}
       <style>{`
         @keyframes aryChannel3d {
@@ -261,23 +261,23 @@ export default function App() {
       `}</style>
 
       {/* Background Ambient Glows */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-      <div className="absolute top-1/3 right-1/4 w-[500px] h-[500px] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+      <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[140px] pointer-events-none"></div>
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#090d23]/90 border-b border-violet-500/20 shadow-lg">
+      <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#090d23]/90 border-b border-violet-500/20 shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-2.5 cursor-pointer" onClick={() => setActiveTab('home')}>
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-sm shadow-md shadow-violet-500/30 text-white">
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-base shadow-md shadow-violet-500/30 text-white">
                 DC
               </div>
-              <span className="text-base font-extrabold tracking-wider bg-gradient-to-r from-white via-violet-200 to-cyan-400 bg-clip-text text-transparent">
+              <span className="text-lg sm:text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-violet-200 to-cyan-400 bg-clip-text text-transparent">
                 Dollar Craft
               </span>
             </div>
 
-            <div className="hidden md:flex items-center space-x-6 text-xs font-medium text-gray-300">
+            <div className="hidden md:flex items-center space-x-8 text-sm font-semibold text-gray-300">
               <button onClick={() => setActiveTab('home')} className={`transition-colors py-1 ${activeTab === 'home' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Home</button>
               {isLoggedIn && (
                 <>
@@ -289,19 +289,19 @@ export default function App() {
               
               {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
               {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
-                <button onClick={() => setActiveTab('admin')} className={`px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
+                <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
 
             <div className="hidden md:flex items-center space-x-3">
-              <button onClick={handleGetStartedClick} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-xs shadow-lg shadow-violet-500/30 transition-all">
+              <button onClick={handleGetStartedClick} className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all">
                 {isLoggedIn ? 'My Dashboard' : 'Get Started'}
               </button>
             </div>
 
             <div className="md:hidden flex items-center">
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-gray-300 p-1.5 rounded-lg bg-white/5 border border-white/10">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-gray-300 p-2 rounded-xl bg-white/5 border border-white/10">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {mobileMenuOpen ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />}
                 </svg>
               </button>
@@ -310,80 +310,80 @@ export default function App() {
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#090d23]/95 backdrop-blur-2xl border-b border-violet-500/20 px-4 pt-2 pb-4 space-y-2 text-xs">
-            <button onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Home</button>
+          <div className="md:hidden bg-[#090d23]/95 backdrop-blur-2xl border-b border-violet-500/20 px-6 pt-3 pb-6 space-y-3 text-sm font-semibold">
+            <button onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Home</button>
             {isLoggedIn && (
               <>
-                <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Dashboard</button>
-                <button onClick={() => { setActiveTab('plans'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Invest</button>
+                <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Dashboard</button>
+                <button onClick={() => { setActiveTab('plans'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Invest</button>
               </>
             )}
-            <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-violet-400 font-bold">FAQ</button>
+            <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-violet-400 font-bold">FAQ</button>
             
             {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
-              <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-3 py-1.5 rounded-md text-gray-200">Admin Panel</button>
+              <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
             )}
           </div>
         )}
       </nav>
 
       {/* Main Container */}
-      <main className="py-8 relative z-10">
+      <main className="py-12 relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* 1. HOME VIEW */}
         {activeTab === 'home' && (
-          <div className="space-y-10 max-w-6xl mx-auto px-4">
-            <section className="text-center pt-4">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-semibold mb-6 shadow-md">
-                <span className="w-2 h-2 rounded-full bg-violet-400 animate-ping"></span>
+          <div className="space-y-14">
+            <section className="text-center pt-6 max-w-4xl mx-auto">
+              <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-sm font-semibold mb-6 shadow-md">
+                <span className="w-2.5 h-2.5 rounded-full bg-violet-400 animate-ping"></span>
                 ⚡ Live Yield Protocol Active — Start Earning Today
               </div>
 
-              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white mb-4 leading-tight">
+              <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white mb-6 leading-tight">
                 Micro-Yields, <br />
                 <span className="bg-gradient-to-r from-violet-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
                   Earn Real Daily Money
                 </span>
               </h1>
 
-              <p className="max-w-xl mx-auto text-xs sm:text-sm text-gray-300 mb-8 leading-relaxed">
+              <p className="max-w-2xl mx-auto text-base sm:text-lg text-gray-300 mb-10 leading-relaxed">
                 Join thousands of users earning daily returns through our secure automated protocol. Boost your capital with our powerful 50% monthly compounding framework.
               </p>
 
               <div className="flex items-center justify-center">
-                <button onClick={handleGetStartedClick} className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/40 transition-all transform hover:scale-105">
+                <button onClick={handleGetStartedClick} className="px-10 py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-base shadow-2xl shadow-violet-500/40 transition-all transform hover:scale-105">
                   Get Started →
                 </button>
               </div>
             </section>
 
-            <section className="max-w-3xl mx-auto">
-              <div className="bg-gradient-to-r from-slate-900/90 via-violet-950/40 to-slate-900/90 border border-violet-500/30 rounded-2xl p-5 shadow-xl text-center relative overflow-hidden backdrop-blur-xl">
-                <span className="text-[10px] font-extrabold text-violet-400 uppercase tracking-widest block mb-1">
+            <section className="max-w-4xl mx-auto">
+              <div className="bg-gradient-to-r from-slate-900/90 via-violet-950/40 to-slate-900/90 border border-violet-500/30 rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden backdrop-blur-xl">
+                <span className="text-xs font-extrabold text-violet-400 uppercase tracking-widest block mb-2">
                   🟢 LIVE GLOBAL ACCRUAL TICKER (26-DECIMAL TICK)
                 </span>
-                <h2 className="text-2xl sm:text-4xl font-black text-cyan-400 font-mono tracking-tight">
+                <h2 className="text-3xl sm:text-5xl font-black text-cyan-400 font-mono tracking-tight">
                   ${liveProtocolTotal.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
                 </h2>
-                <p className="text-[11px] text-gray-300 mt-1">Compound capital flowing in real-time across active investor vaults.</p>
+                <p className="text-sm text-gray-300 mt-2">Compound capital flowing in real-time across active investor vaults.</p>
               </div>
             </section>
 
             <section className="max-w-6xl mx-auto">
-              <div className="bg-slate-900/80 backdrop-blur-xl border border-violet-500/20 rounded-2xl p-5 shadow-xl">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4 pb-4 border-b border-white/10">
+              <div className="bg-slate-900/80 backdrop-blur-xl border border-violet-500/20 rounded-3xl p-8 shadow-2xl">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-white/10">
                   <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">🏛 REGISTERED & OPERATING GLOBAL HUBS</h3>
-                    <p className="text-gray-300 text-xs">Fully compliant operations with Tier-1 local regulatory frameworks.</p>
+                    <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">🏛 REGISTERED & OPERATING GLOBAL HUBS</h3>
+                    <p className="text-gray-300 text-sm mt-0.5">Fully compliant operations with Tier-1 local regulatory frameworks.</p>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-[10px] font-bold">7 ACTIVE HUBS</span>
+                  <span className="px-3.5 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-bold">7 ACTIVE HUBS</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
                   {globalHubs.map((hub, idx) => (
-                    <div key={idx} className="bg-black/40 border border-white/10 rounded-xl p-3 text-center hover:border-violet-500/50 transition-all flex flex-col items-center">
-                      <img src={`https://flagcdn.com/96x72/${hub.code}.png`} alt={hub.name} className="w-10 h-7 object-cover rounded shadow mb-1.5 border border-white/20" />
-                      <h4 className="font-bold text-white text-xs">{hub.name}</h4>
-                      <span className="text-[9px] text-cyan-400 font-semibold uppercase block mt-0.5">COMPLIANT</span>
+                    <div key={idx} className="bg-black/40 border border-white/10 rounded-2xl p-4 text-center hover:border-violet-500/50 transition-all flex flex-col items-center">
+                      <img src={`https://flagcdn.com/96x72/${hub.code}.png`} alt={hub.name} className="w-12 h-9 object-cover rounded shadow mb-2.5 border border-white/20" />
+                      <h4 className="font-bold text-white text-sm">{hub.name}</h4>
+                      <span className="text-[10px] text-cyan-400 font-semibold uppercase block mt-1">COMPLIANT</span>
                     </div>
                   ))}
                 </div>
@@ -394,99 +394,99 @@ export default function App() {
 
         {/* 2. INVEST TAB */}
         {activeTab === 'plans' && (
-          <section className="max-w-3xl mx-auto px-4">
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-extrabold text-white mb-1">Exclusive Super DC Investment Plan</h2>
-              <p className="text-xs text-gray-300">Minimum $50, Maximum $10,000 — Daily Earning & 50% Monthly Return.</p>
+          <section className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-extrabold text-white mb-2">Exclusive Super DC Investment Plan</h2>
+              <p className="text-sm text-gray-300">Minimum $50, Maximum $10,000 — Daily Earning & 50% Monthly Return.</p>
             </div>
-            <div className="relative rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 p-6 shadow-xl">
-              <div className="absolute top-0 right-0 bg-gradient-to-l from-violet-600 to-cyan-400 text-white text-[10px] font-black px-3 py-1 rounded-bl-xl uppercase shadow">VIP Premium</div>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 border-b border-white/10 pb-6">
+            <div className="relative rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 p-8 sm:p-10 shadow-2xl">
+              <div className="absolute top-0 right-0 bg-gradient-to-l from-violet-600 to-cyan-400 text-white text-xs font-black px-4 py-1.5 rounded-bl-2xl uppercase shadow">VIP Premium</div>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/10 pb-8">
                 <div>
-                  <span className="text-violet-400 font-semibold text-xs uppercase">Flagship Protocol</span>
-                  <h3 className="text-xl font-black text-white mt-0.5">SUPER DC PLAN</h3>
+                  <span className="text-violet-400 font-semibold text-xs uppercase tracking-wider">Flagship Protocol</span>
+                  <h3 className="text-2xl font-black text-white mt-1">SUPER DC PLAN</h3>
                 </div>
                 <div className="text-left md:text-right">
-                  <span className="text-3xl font-extrabold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">50%</span>
-                  <span className="text-gray-300 block text-xs">Monthly Return (~1.66% Daily)</span>
+                  <span className="text-4xl font-extrabold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">50%</span>
+                  <span className="text-gray-300 block text-sm mt-0.5">Monthly Return (~1.66% Daily)</span>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                  <span className="text-gray-300 text-[10px] uppercase block mb-1">Minimum Investment</span>
-                  <span className="text-lg font-bold text-white">$50 USD</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                  <span className="text-gray-300 text-xs uppercase block mb-1.5 font-semibold">Minimum Investment</span>
+                  <span className="text-xl font-bold text-white">$50 USD</span>
                 </div>
-                <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                  <span className="text-gray-300 text-[10px] uppercase block mb-1">Maximum Investment</span>
-                  <span className="text-lg font-bold text-white">$10,000 USD</span>
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                  <span className="text-gray-300 text-xs uppercase block mb-1.5 font-semibold">Maximum Investment</span>
+                  <span className="text-xl font-bold text-white">$10,000 USD</span>
                 </div>
               </div>
-              <div className="bg-violet-950/20 border border-violet-500/30 rounded-xl p-4 mb-6">
-                <div className="flex justify-between items-center mb-3">
-                  <label className="text-xs font-semibold text-gray-200">Investment Amount ($):</label>
-                  <span className="text-cyan-400 font-bold text-sm">${investAmount}</span>
+              <div className="bg-violet-950/20 border border-violet-500/30 rounded-2xl p-6 mb-8">
+                <div className="flex justify-between items-center mb-4">
+                  <label className="text-sm font-semibold text-gray-200">Investment Amount ($):</label>
+                  <span className="text-cyan-400 font-bold text-lg font-mono">${investAmount}</span>
                 </div>
-                <input type="range" min="50" max="10000" step="50" value={investAmount} onChange={(e) => setInvestAmount(e.target.value)} className="w-full h-1.5 bg-slate-700 rounded-lg accent-cyan-400 mb-4 cursor-pointer" />
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-violet-500/20">
+                <input type="range" min="50" max="10000" step="50" value={investAmount} onChange={(e) => setInvestAmount(e.target.value)} className="w-full h-2 bg-slate-700 rounded-lg accent-cyan-400 mb-6 cursor-pointer" />
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-violet-500/20 text-sm">
                   <div>
-                    <span className="text-gray-300 text-[10px] block">Estimated Daily Profit</span>
-                    <span className="text-sm font-extrabold text-cyan-400">+${estimatedDailyProfit.toFixed(2)} / day</span>
+                    <span className="text-gray-300 text-xs block mb-1">Estimated Daily Profit</span>
+                    <span className="text-base font-extrabold text-cyan-400 font-mono">+${estimatedDailyProfit.toFixed(2)} / day</span>
                   </div>
                   <div>
-                    <span className="text-gray-300 text-[10px] block">Monthly Return (50%)</span>
-                    <span className="text-sm font-extrabold text-white">+${(investAmount * 0.50).toFixed(2)}</span>
+                    <span className="text-gray-300 text-xs block mb-1">Monthly Return (50%)</span>
+                    <span className="text-base font-extrabold text-white font-mono">+${(investAmount * 0.50).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
-              <button className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all">Confirm Super DC Investment</button>
+              <button className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-base shadow-xl shadow-violet-500/40 transition-all">Confirm Super DC Investment</button>
             </div>
           </section>
         )}
 
         {/* 3. CUSTOMER DASHBOARD TAB */}
         {activeTab === 'dashboard' && (
-          <section className="max-w-5xl mx-auto px-4 space-y-6">
-            <div className="flex justify-between items-center">
+          <section className="max-w-6xl mx-auto space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-2xl font-extrabold text-white">Customer Dashboard</h2>
-                <p className="text-gray-300 text-xs">Manage your deposits, earnings, referral wallet, and active positions.</p>
+                <h2 className="text-3xl font-extrabold text-white">Customer Dashboard</h2>
+                <p className="text-sm text-gray-300 mt-1">Manage your deposits, earnings, referral wallet, and active positions.</p>
               </div>
-              <span className="px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-[10px] font-bold">
+              <span className="px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-bold">
                 🟢 Live Sync Active ({userEmail || 'Active User'})
               </span>
             </div>
 
-            <div className="bg-gradient-to-r from-slate-900 via-violet-950/30 to-slate-900 border border-violet-500/30 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-gradient-to-r from-slate-900 via-violet-950/30 to-slate-900 border border-violet-500/30 rounded-3xl p-8 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
-                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-widest block mb-1">💰 Total Balance</span>
-                <h1 className="text-3xl font-black text-cyan-400 font-mono">$1,250.00</h1>
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-widest block mb-2">💰 TOTAL BALANCE</span>
+                <h1 className="text-4xl sm:text-5xl font-black text-cyan-400 font-mono">$1,250.00</h1>
               </div>
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-xs shadow-md shadow-violet-500/30 transition-all">
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/30 transition-all">
                   + Deposit
                 </button>
-                <button className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/15 transition-all">
+                <button className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
                   ↑ Withdraw
                 </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
-                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Deposit Wallet</span>
-                <h3 className="text-lg font-black text-white font-mono">$500.00</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Deposit Wallet</span>
+                <h3 className="text-2xl font-black text-white font-mono">$500.00</h3>
               </div>
-              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
-                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Earning Wallet</span>
-                <h3 className="text-lg font-black text-cyan-400 font-mono">+${liveEarnings.toFixed(4)}</h3>
+              <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Earning Wallet</span>
+                <h3 className="text-2xl font-black text-cyan-400 font-mono">+${liveEarnings.toFixed(4)}</h3>
               </div>
-              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
-                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Referral Wallet</span>
-                <h3 className="text-lg font-black text-white font-mono">$250.00</h3>
+              <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Referral Wallet</span>
+                <h3 className="text-2xl font-black text-white font-mono">$250.00</h3>
               </div>
-              <div className="bg-slate-900/80 border border-violet-500/20 rounded-xl p-4">
-                <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider block mb-1">Rewards Wallet</span>
-                <h3 className="text-lg font-black text-white font-mono">$100.00</h3>
+              <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Rewards Wallet</span>
+                <h3 className="text-2xl font-black text-white font-mono">$100.00</h3>
               </div>
             </div>
           </section>
@@ -494,36 +494,36 @@ export default function App() {
 
         {/* 4. FAQ TAB */}
         {activeTab === 'contact' && (
-          <section className="max-w-4xl mx-auto px-4">
-            <div className="bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 rounded-2xl p-6 sm:p-8 shadow-xl">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 pb-4 border-b border-white/10">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center text-white text-xl font-black shadow-md shadow-violet-500/30">
+          <section className="max-w-4xl mx-auto">
+            <div className="bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 rounded-3xl p-8 sm:p-10 shadow-2xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 pb-6 border-b border-white/10">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-violet-500/30">
                   ❓
                 </div>
                 <div>
-                  <span className="text-violet-400 text-[10px] font-bold uppercase tracking-widest">HELP & SUPPORT</span>
-                  <h2 className="text-2xl font-black text-white tracking-tight">Frequently Asked Questions</h2>
+                  <span className="text-violet-400 text-xs font-bold uppercase tracking-widest">HELP & SUPPORT</span>
+                  <h2 className="text-3xl font-black text-white tracking-tight mt-0.5">Frequently Asked Questions</h2>
                 </div>
               </div>
 
-              <div className="space-y-4 mb-6">
-                <div className="bg-black/50 border border-violet-500/20 rounded-xl p-4">
-                  <h4 className="text-sm font-bold text-white mb-1">How does the Super DC daily micro-yield work?</h4>
-                  <p className="text-xs text-gray-300 leading-relaxed">Our high-precision protocol automatically compounds daily capital growth, providing approximately 50% monthly returns calculated with 26-decimal sub-second precision.</p>
+              <div className="space-y-6 mb-8">
+                <div className="bg-black/50 border border-violet-500/20 rounded-2xl p-6">
+                  <h4 className="text-base font-bold text-white mb-2">How does the Super DC daily micro-yield work?</h4>
+                  <p className="text-sm text-gray-300 leading-relaxed">Our high-precision protocol automatically compounds daily capital growth, providing approximately 50% monthly returns calculated with 26-decimal sub-second precision.</p>
                 </div>
-                <div className="bg-black/50 border border-violet-500/20 rounded-xl p-4">
-                  <h4 className="text-sm font-bold text-white mb-1">What is the minimum and maximum investment?</h4>
-                  <p className="text-xs text-gray-300 leading-relaxed">The minimum investment amount is $50 USD, and the maximum cap per Super DC plan position is $10,000 USD.</p>
+                <div className="bg-black/50 border border-violet-500/20 rounded-2xl p-6">
+                  <h4 className="text-base font-bold text-white mb-2">What is the minimum and maximum investment?</h4>
+                  <p className="text-sm text-gray-300 leading-relaxed">The minimum investment amount is $50 USD, and the maximum cap per Super DC plan position is $10,000 USD.</p>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-gradient-to-r from-violet-950/40 via-slate-900 to-cyan-950/40 border border-violet-500/30 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="rounded-2xl bg-gradient-to-r from-violet-950/40 via-slate-900 to-cyan-950/40 border border-violet-500/30 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                  <span className="text-[10px] font-bold text-violet-400 tracking-widest uppercase block mb-0.5">🏛 REGISTERED CORPORATE HEADQUARTERS</span>
-                  <h4 className="text-sm font-bold text-white">Dollar Craft Pte Ltd</h4>
-                  <p className="text-[11px] text-gray-300">70 Bendemeer Road, #03-07, Luzerne, Singapore 339940</p>
+                  <span className="text-xs font-bold text-violet-400 tracking-widest uppercase block mb-1">🏛️ REGISTERED CORPORATE HEADQUARTERS</span>
+                  <h4 className="text-base font-bold text-white">Dollar Craft Pte Ltd</h4>
+                  <p className="text-xs text-gray-300 mt-0.5">70 Bendemeer Road, #03-07, Luzerne, Singapore 339940</p>
                 </div>
-                <span className="px-3 py-1 rounded-lg bg-violet-500/10 border border-violet-500/30 text-violet-300 text-[10px] font-bold">
+                <span className="px-4 py-2 rounded-xl bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-bold">
                   VERIFIED HQ
                 </span>
               </div>
@@ -533,84 +533,84 @@ export default function App() {
 
         {/* 5. BRAND NEW REFRESHED ADMIN PANEL TAB (dollarcraft3@gmail.com ONLY) */}
         {activeTab === 'admin' && userEmail === 'dollarcraft3@gmail.com' && (
-          <section className="max-w-6xl mx-auto px-4 space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-gradient-to-r from-violet-950/60 via-slate-900 to-cyan-950/60 p-6 rounded-2xl border border-violet-500/30 shadow-xl">
+          <section className="space-y-8">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-violet-950/60 via-slate-900 to-cyan-950/60 p-8 rounded-3xl border border-violet-500/30 shadow-2xl">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-[10px] font-extrabold uppercase">SUPER ADMIN SECURE</span>
-                  <span className="text-xs text-gray-400">({userEmail})</span>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-extrabold uppercase">SUPER ADMIN SECURE</span>
+                  <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-white">Admin Control Center v2.0</h2>
-                <p className="text-gray-300 text-xs mt-0.5">Fully refreshed high-performance control hub for global users, vaults & financial protocols.</p>
+                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0</h2>
+                <p className="text-gray-300 text-sm mt-1">Fully refreshed high-performance control hub for global users, vaults & financial protocols.</p>
               </div>
               
-              <div className="flex flex-wrap gap-1.5 bg-black/60 p-1.5 rounded-xl border border-violet-500/30">
-                <button onClick={() => setAdminSubTab('dashboard')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminSubTab === 'dashboard' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>📊 Dashboard</button>
-                <button onClick={() => setAdminSubTab('users')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminSubTab === 'users' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>👥 Users Management</button>
-                <button onClick={() => setAdminSubTab('finance')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminSubTab === 'finance' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>💳 Finance & Payouts</button>
-                <button onClick={() => setAdminSubTab('settings')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${adminSubTab === 'settings' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>⚙️ Settings</button>
+              <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
+                <button onClick={() => setAdminSubTab('dashboard')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'dashboard' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>📊 Dashboard</button>
+                <button onClick={() => setAdminSubTab('users')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'users' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>👥 Users Management</button>
+                <button onClick={() => setAdminSubTab('finance')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'finance' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>💳 Finance & Payouts</button>
+                <button onClick={() => setAdminSubTab('settings')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'settings' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>⚙️ Settings</button>
               </div>
             </div>
 
             {/* ADMIN SUB-TAB 1: DASHBOARD OVERVIEW */}
             {adminSubTab === 'dashboard' && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-5 shadow-lg">
-                    <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider block mb-1">TOTAL ACTIVE USERS</span>
-                    <h3 className="text-3xl font-black text-white font-mono">1,248</h3>
-                    <span className="text-[10px] text-emerald-400 font-semibold mt-1 block">↑ +14.2% this week</span>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">TOTAL ACTIVE USERS</span>
+                    <h3 className="text-4xl font-black text-white font-mono">1,248</h3>
+                    <span className="text-xs text-emerald-400 font-semibold mt-2 block">↑ +14.2% this week</span>
                   </div>
-                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-5 shadow-lg">
-                    <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider block mb-1">ACTIVE VAULT CAPITAL</span>
-                    <h3 className="text-3xl font-black text-cyan-400 font-mono">$45,200.00</h3>
-                    <span className="text-[10px] text-cyan-300 font-semibold mt-1 block">⚡ Real-time compounding</span>
+                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">ACTIVE VAULT CAPITAL</span>
+                    <h3 className="text-4xl font-black text-cyan-400 font-mono">$45,200.00</h3>
+                    <span className="text-xs text-cyan-300 font-semibold mt-2 block">⚡ Real-time compounding</span>
                   </div>
-                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-5 shadow-lg">
-                    <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider block mb-1">PENDING WITHDRAWALS</span>
-                    <h3 className="text-3xl font-black text-amber-400 font-mono">12 Requests</h3>
-                    <span className="text-[10px] text-amber-300 font-semibold mt-1 block">⚡ Requires approval</span>
+                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">PENDING WITHDRAWALS</span>
+                    <h3 className="text-4xl font-black text-amber-400 font-mono">12 Requests</h3>
+                    <span className="text-xs text-amber-300 font-semibold mt-2 block">⚡ Requires approval</span>
                   </div>
-                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-5 shadow-lg">
-                    <span className="text-gray-400 text-[10px] font-bold uppercase tracking-wider block mb-1">DAILY ROI PAYOUT POOL</span>
-                    <h3 className="text-3xl font-black text-teal-400 font-mono">$750.00</h3>
-                    <span className="text-[10px] text-teal-300 font-semibold mt-1 block">✓ Auto-dispatched</span>
+                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">DAILY ROI PAYOUT POOL</span>
+                    <h3 className="text-4xl font-black text-teal-400 font-mono">$750.00</h3>
+                    <span className="text-xs text-teal-300 font-semibold mt-2 block">✓ Auto-dispatched</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="lg:col-span-2 bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
-                    <h3 className="text-base font-extrabold text-white mb-4 flex items-center gap-2">📈 Protocol Performance & Yield Inflow</h3>
-                    <div className="h-48 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center p-4">
-                      <div className="w-full space-y-3">
-                        <div className="flex justify-between text-xs text-gray-300">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2 bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl">
+                    <h3 className="text-lg font-extrabold text-white mb-6 flex items-center gap-3">📈 Protocol Performance & Yield Inflow</h3>
+                    <div className="h-56 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-center p-6">
+                      <div className="w-full space-y-4">
+                        <div className="flex justify-between text-sm text-gray-300">
                           <span>Super DC Vault Liquidity</span>
                           <span className="text-cyan-400 font-bold">94.8% Capacity</span>
                         </div>
-                        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div className="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden">
                           <div className="bg-gradient-to-r from-violet-600 to-cyan-400 h-full w-[94.8%]"></div>
                         </div>
-                        <div className="flex justify-between text-xs text-gray-300 pt-2">
+                        <div className="flex justify-between text-sm text-gray-300 pt-3">
                           <span>Global Hub Sync Speed</span>
                           <span className="text-emerald-400 font-bold">0.024ms (Ultra-Low Latency)</span>
                         </div>
-                        <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div className="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden">
                           <div className="bg-gradient-to-r from-emerald-600 to-teal-400 h-full w-[98.2%]"></div>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl flex flex-col justify-between">
+                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl flex flex-col justify-between">
                     <div>
-                      <h3 className="text-base font-extrabold text-white mb-2">⚡ Quick Admin Actions</h3>
-                      <p className="text-gray-400 text-xs mb-4">Execute instant protocol adjustments or broadcast notifications.</p>
+                      <h3 className="text-lg font-extrabold text-white mb-3">⚡ Quick Admin Actions</h3>
+                      <p className="text-gray-400 text-sm mb-6">Execute instant protocol adjustments or broadcast notifications.</p>
                     </div>
-                    <div className="space-y-3">
-                      <button onClick={() => alert('Daily ROI payout cycle triggered successfully!')} className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs shadow transition-all">
+                    <div className="space-y-4">
+                      <button onClick={() => alert('Daily ROI payout cycle triggered successfully!')} className="w-full py-3.5 rounded-2xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-sm shadow transition-all">
                         Trigger Daily ROI Payout Now
                       </button>
-                      <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/15 transition-all">
+                      <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
                         Flush Server Cache & Sync Nodes
                       </button>
                     </div>
@@ -621,39 +621,39 @@ export default function App() {
 
             {/* ADMIN SUB-TAB 2: USERS MANAGEMENT */}
             {adminSubTab === 'users' && (
-              <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-base font-extrabold text-white">Registered Investors & Accounts</h3>
-                    <p className="text-gray-400 text-xs">Total active user base connected via secure Google OAuth.</p>
+                    <h3 className="text-lg font-extrabold text-white">Registered Investors & Accounts</h3>
+                    <p className="text-gray-400 text-sm mt-0.5">Total active user base connected via secure Google OAuth.</p>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-violet-500/20 text-violet-300 text-xs font-bold">4 Active Records</span>
+                  <span className="px-4 py-1.5 rounded-full bg-violet-500/20 text-violet-300 text-sm font-bold">4 Active Records</span>
                 </div>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-white/10 text-gray-400 text-[10px] uppercase tracking-wider">
-                        <th className="py-3 px-4">User Name</th>
-                        <th className="py-3 px-4">Email Address</th>
-                        <th className="py-3 px-4">Wallet Balance</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+                      <tr className="border-b border-white/10 text-gray-400 text-xs uppercase tracking-wider">
+                        <th className="py-4 px-5">User Name</th>
+                        <th className="py-4 px-5">Email Address</th>
+                        <th className="py-4 px-5">Wallet Balance</th>
+                        <th className="py-4 px-5">Status</th>
+                        <th className="py-4 px-5 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5 text-xs">
+                    <tbody className="divide-y divide-white/5 text-sm">
                       {usersList.map((u) => (
                         <tr key={u.id} className="hover:bg-white/5 transition-all">
-                          <td className="py-3 px-4 font-bold text-white">{u.name}</td>
-                          <td className="py-3 px-4 text-gray-300 font-mono">{u.email}</td>
-                          <td className="py-3 px-4 text-cyan-400 font-mono font-bold">{u.balance}</td>
-                          <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${u.status === 'Verified Admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
+                          <td className="py-4 px-5 font-bold text-white">{u.name}</td>
+                          <td className="py-4 px-5 text-gray-300 font-mono">{u.email}</td>
+                          <td className="py-4 px-5 text-cyan-400 font-mono font-bold">{u.balance}</td>
+                          <td className="py-4 px-5">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${u.status === 'Verified Admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
                               {u.status}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right">
-                            <button onClick={() => alert(`Managing user: ${u.email}`)} className="px-3 py-1 rounded-lg bg-violet-600/30 hover:bg-violet-600 text-violet-200 text-[11px] font-bold transition-all border border-violet-500/40">
+                          <td className="py-4 px-5 text-right">
+                            <button onClick={() => alert(`Managing user: ${u.email}`)} className="px-4 py-1.5 rounded-xl bg-violet-600/30 hover:bg-violet-600 text-violet-200 text-xs font-bold transition-all border border-violet-500/40">
                               Manage
                             </button>
                           </td>
@@ -667,36 +667,36 @@ export default function App() {
 
             {/* ADMIN SUB-TAB 3: FINANCE */}
             {adminSubTab === 'finance' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl space-y-4">
-                  <h3 className="text-base font-extrabold text-white flex items-center gap-2">💳 Withdrawal Approvals</h3>
-                  <p className="text-gray-400 text-xs">Review pending user withdrawal tickets and release USDT/USD funds.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6">
+                  <h3 className="text-lg font-extrabold text-white flex items-center gap-3">💳 Withdrawal Approvals</h3>
+                  <p className="text-gray-400 text-sm">Review pending user withdrawal tickets and release USDT/USD funds.</p>
                   
-                  <div className="bg-black/50 border border-white/10 rounded-xl p-4 space-y-2">
+                  <div className="bg-black/50 border border-white/10 rounded-2xl p-6 space-y-3">
                     <div className="flex justify-between">
-                      <span className="font-bold text-white">User: Rana Afzaal</span>
-                      <span className="text-cyan-400 font-mono font-bold">$450.00</span>
+                      <span className="font-bold text-white text-base">User: Rana Afzaal</span>
+                      <span className="text-cyan-400 font-mono font-bold text-base">$450.00</span>
                     </div>
-                    <p className="text-[11px] text-gray-400">Destination: Raast / Bank Transfer (Pakistan)</p>
-                    <div className="flex gap-2 pt-2">
-                      <button onClick={() => alert('Withdrawal Approved & Processed!')} className="flex-1 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow">Approve</button>
-                      <button onClick={() => alert('Withdrawal Rejected!')} className="flex-1 py-1.5 rounded-lg bg-red-600/30 hover:bg-red-600 text-red-200 font-bold text-xs border border-red-500/40">Reject</button>
+                    <p className="text-xs text-gray-400">Destination: Raast / Bank Transfer (Pakistan)</p>
+                    <div className="flex gap-3 pt-3">
+                      <button onClick={() => alert('Withdrawal Approved & Processed!')} className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow">Approve</button>
+                      <button onClick={() => alert('Withdrawal Rejected!')} className="flex-1 py-2.5 rounded-xl bg-red-600/30 hover:bg-red-600 text-red-200 font-bold text-sm border border-red-500/40">Reject</button>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl space-y-4">
-                  <h3 className="text-base font-extrabold text-white flex items-center gap-2">📊 Financial Ledger Summary</h3>
-                  <div className="space-y-3 text-xs">
-                    <div className="flex justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6">
+                  <h3 className="text-lg font-extrabold text-white flex items-center gap-3">📊 Financial Ledger Summary</h3>
+                  <div className="space-y-4 text-sm">
+                    <div className="flex justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
                       <span className="text-gray-300">Total Platform Deposits:</span>
                       <span className="font-bold text-white font-mono">$184,250.00</span>
                     </div>
-                    <div className="flex justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
                       <span className="text-gray-300">Total Payouts Released:</span>
                       <span className="font-bold text-cyan-400 font-mono">$139,050.00</span>
                     </div>
-                    <div className="flex justify-between p-3 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
                       <span className="text-gray-300">Net Reserve Capital:</span>
                       <span className="font-bold text-emerald-400 font-mono">$45,200.00</span>
                     </div>
@@ -707,34 +707,34 @@ export default function App() {
 
             {/* ADMIN SUB-TAB 4: SETTINGS */}
             {adminSubTab === 'settings' && (
-              <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl space-y-6 max-w-2xl">
+              <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-8 max-w-3xl">
                 <div>
-                  <h3 className="text-base font-extrabold text-white">⚙️ Protocol Configuration Settings</h3>
-                  <p className="text-gray-400 text-xs">Adjust global platform fees, daily compounding ROI rates, and security rules.</p>
+                  <h3 className="text-lg font-extrabold text-white">⚙️ Protocol Configuration Settings</h3>
+                  <p className="text-gray-400 text-sm mt-0.5">Adjust global platform fees, daily compounding ROI rates, and security rules.</p>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">Default Platform Fee (%)</label>
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">Default Platform Fee (%)</label>
                     <input 
                       type="text" 
                       value={platformFee} 
                       onChange={(e) => setPlatformFee(e.target.value)}
-                      className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-2 text-white text-xs focus:outline-none focus:border-violet-500" 
+                      className="w-full bg-black/60 border border-white/15 rounded-2xl px-5 py-3 text-white text-sm focus:outline-none focus:border-violet-500" 
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1">Base Monthly ROI Rate (%)</label>
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">Base Monthly ROI Rate (%)</label>
                     <input 
                       type="text" 
                       value={roiRate} 
                       onChange={(e) => setRoiRate(e.target.value)}
-                      className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-2 text-white text-xs focus:outline-none focus:border-violet-500" 
+                      className="w-full bg-black/60 border border-white/15 rounded-2xl px-5 py-3 text-white text-sm focus:outline-none focus:border-violet-500" 
                     />
                   </div>
 
-                  <button onClick={() => alert('Settings updated successfully across all global hubs!')} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-xs shadow-lg shadow-violet-500/30 transition-all">
+                  <button onClick={() => alert('Settings updated successfully across all global hubs!')} className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/30 transition-all">
                     Save Protocol Changes
                   </button>
                 </div>
@@ -748,27 +748,27 @@ export default function App() {
       {/* GOOGLE SIGN IN MODAL */}
       {authModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-sm bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-violet-500/40 rounded-2xl p-6 shadow-[0_15px_40px_rgba(0,0,0,0.9)] text-white relative">
+          <div className="w-full max-w-md bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-violet-500/40 rounded-3xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.9)] text-white relative">
             
-            <button onClick={() => setAuthModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs">
+            <button onClick={() => setAuthModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm">
               ✕
             </button>
 
-            <div className="text-center mb-6 pt-2">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-lg shadow-lg shadow-violet-500/30 text-white mx-auto mb-3">
+            <div className="text-center mb-8 pt-3">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-xl shadow-xl shadow-violet-500/30 text-white mx-auto mb-4">
                 DC
               </div>
-              <h3 className="text-lg font-black text-white">Welcome to Dollar Craft</h3>
-              <p className="text-xs text-gray-400 mt-1">Sign in with Google to access your account & start earning.</p>
+              <h3 className="text-2xl font-black text-white">Welcome to Dollar Craft</h3>
+              <p className="text-sm text-gray-400 mt-1">Sign in with Google to access your account & start earning.</p>
             </div>
 
             <button 
               onClick={handleGoogleSignInClick}
               disabled={isLoading}
-              className="w-full py-3 px-4 rounded-xl bg-white hover:bg-gray-100 text-gray-900 font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
+              className="w-full py-4 px-6 rounded-2xl bg-white hover:bg-gray-100 text-gray-900 font-extrabold text-sm shadow-xl transition-all flex items-center justify-center gap-4 disabled:opacity-50 cursor-pointer"
             >
               {/* Official Google Colored Logo SVG */}
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
                 <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.2v3.15C3.21 21.32 7.29 24 12 24z"/>
                 <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.2C.44 8.13 0 9.83 0 12s.44 3.87 1.2 5.39l4.07-3.15z"/>
@@ -777,7 +777,7 @@ export default function App() {
               {isLoading ? 'Connecting...' : 'Sign in with Google'}
             </button>
 
-            <p className="text-[10px] text-gray-500 text-center mt-5">
+            <p className="text-xs text-gray-500 text-center mt-6">
               By signing in, you agree to Dollar Craft Terms & Conditions and Privacy Policy.
             </p>
 
@@ -786,30 +786,30 @@ export default function App() {
       )}
 
       {/* FIXED BOTTOM-RIGHT HELP CENTER WITH PRO ARY STYLE 3D TUMBLING LOGO */}
-      <div className="fixed bottom-4 right-4 z-50 pointer-events-auto flex flex-col items-end">
+      <div className="fixed bottom-6 right-6 z-50 pointer-events-auto flex flex-col items-end">
         {chatOpen && (
-          <div className="mb-2 w-[280px] h-[360px] bg-gradient-to-b from-slate-900 via-[#0c1329] to-black backdrop-blur-3xl border border-violet-500/40 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden text-white relative">
+          <div className="mb-3 w-[320px] h-[400px] bg-gradient-to-b from-slate-900 via-[#0c1329] to-black backdrop-blur-3xl border border-violet-500/40 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden text-white relative">
             
             {/* Header: Help Center */}
-            <div className="bg-gradient-to-r from-violet-900/60 via-slate-900 to-cyan-950/60 px-3 py-2 border-b border-white/10 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-lg bg-gradient-to-tr from-violet-500 to-cyan-400 flex items-center justify-center font-black text-black shadow-md text-[9px]">
+            <div className="bg-gradient-to-r from-violet-900/60 via-slate-900 to-cyan-950/60 px-4 py-3 border-b border-white/10 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-violet-500 to-cyan-400 flex items-center justify-center font-black text-black shadow-md text-xs">
                   AI
                 </div>
                 <div>
-                  <h4 className="font-extrabold text-[11px] text-violet-300">Help Center</h4>
+                  <h4 className="font-extrabold text-sm text-violet-300">Help Center</h4>
                 </div>
               </div>
-              <button onClick={() => setChatOpen(false)} className="text-gray-400 hover:text-white px-1.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-[9px] transition-all">
+              <button onClick={() => setChatOpen(false)} className="text-gray-400 hover:text-white px-2 py-1 rounded-xl bg-white/5 border border-white/10 text-xs transition-all">
                 ✕
               </button>
             </div>
 
             {/* Chat Messages Area */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1.5 bg-black/50 text-[9px]">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-black/50 text-xs">
               {messages.map((msg, index) => (
                 <div key={index} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[90%] rounded-xl px-2.5 py-1.5 leading-tight ${msg.sender === 'user' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-semibold rounded-br-none shadow' : 'bg-white/10 text-gray-200 rounded-bl-none border border-white/10'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${msg.sender === 'user' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-semibold rounded-br-none shadow' : 'bg-white/10 text-gray-200 rounded-bl-none border border-white/10'}`}>
                     {msg.text}
                   </div>
                 </div>
@@ -817,29 +817,29 @@ export default function App() {
 
               {/* Smooth Loading Spinner */}
               {isLoading && (
-                <div className="flex justify-start items-center gap-1 py-0.5">
-                  <div className="bg-white/10 border border-white/10 rounded-xl px-2 py-1 flex items-center gap-1">
-                    <div className="w-1 h-1 bg-violet-400 rounded-full animate-bounce"></div>
-                    <div className="w-1 h-1 bg-violet-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                    <div className="w-1 h-1 bg-violet-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                    <span className="text-[8px] text-violet-300">Thinking...</span>
+                <div className="flex justify-start items-center gap-1.5 py-1">
+                  <div className="bg-white/10 border border-white/10 rounded-2xl px-3 py-1.5 flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                    <div className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                    <span className="text-xs text-violet-300">Thinking...</span>
                   </div>
                 </div>
               )}
 
               {/* Full Language Names Buttons */}
-              <div className="flex flex-col gap-1 pt-1">
-                <span className="text-[8px] text-violet-400 font-bold text-center block uppercase tracking-wider">
+              <div className="flex flex-col gap-1.5 pt-2">
+                <span className="text-[10px] text-violet-400 font-bold text-center block uppercase tracking-wider">
                   {selectedLanguage ? 'Language:' : 'Select Language:'}
                 </span>
-                <div className="grid grid-cols-3 gap-1">
-                  <button onClick={() => handleSelectLanguage('English')} disabled={isLoading} className={`py-1.5 px-1 rounded-lg border text-[9px] font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'English' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button onClick={() => handleSelectLanguage('English')} disabled={isLoading} className={`py-2 px-1.5 rounded-xl border text-xs font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'English' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
                     English
                   </button>
-                  <button onClick={() => handleSelectLanguage('Urdu')} disabled={isLoading} className={`py-1.5 px-1 rounded-lg border text-[9px] font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'Urdu' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
+                  <button onClick={() => handleSelectLanguage('Urdu')} disabled={isLoading} className={`py-2 px-1.5 rounded-xl border text-xs font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'Urdu' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
                     اردو
                   </button>
-                  <button onClick={() => handleSelectLanguage('Spanish')} disabled={isLoading} className={`py-1.5 px-1 rounded-lg border text-[9px] font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'Spanish' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
+                  <button onClick={() => handleSelectLanguage('Spanish')} disabled={isLoading} className={`py-2 px-1.5 rounded-xl border text-xs font-bold transition-all disabled:opacity-50 ${selectedLanguage === 'Spanish' ? 'bg-violet-600 text-white border-violet-400' : 'bg-violet-950/40 text-violet-300 border-violet-500/30 hover:bg-violet-900/60'}`}>
                     Español
                   </button>
                 </div>
@@ -847,17 +847,17 @@ export default function App() {
 
               {/* Issue Options */}
               {selectedLanguage && (
-                <div className="flex flex-col gap-1 pt-1.5 border-t border-white/10 mt-1">
-                  <div className="flex flex-col gap-1">
-                    <button onClick={() => handleSelectIssue('slip')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-violet-500/20 hover:bg-violet-500 hover:text-white border border-violet-500/40 text-violet-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
+                <div className="flex flex-col gap-1.5 pt-2 border-t border-white/10 mt-2">
+                  <div className="flex flex-col gap-1.5">
+                    <button onClick={() => handleSelectIssue('slip')} disabled={isLoading} className="py-2 px-3 rounded-xl bg-violet-500/20 hover:bg-violet-500 hover:text-white border border-violet-500/40 text-violet-300 font-bold text-xs text-left transition-all flex items-center justify-between disabled:opacity-50">
                       <span>📄 Transaction Slip</span>
                       <span>→</span>
                     </button>
-                    <button onClick={() => handleSelectIssue('problem')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-400 hover:text-black border border-cyan-500/40 text-cyan-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
+                    <button onClick={() => handleSelectIssue('problem')} disabled={isLoading} className="py-2 px-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-400 hover:text-black border border-cyan-500/40 text-cyan-300 font-bold text-xs text-left transition-all flex items-center justify-between disabled:opacity-50">
                       <span>⚠️ Facing Problem</span>
                       <span>→</span>
                     </button>
-                    <button onClick={() => handleSelectIssue('blocked')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-400 hover:text-black border border-amber-500/40 text-amber-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
+                    <button onClick={() => handleSelectIssue('blocked')} disabled={isLoading} className="py-2 px-3 rounded-xl bg-amber-500/20 hover:bg-amber-400 hover:text-black border border-amber-500/40 text-amber-300 font-bold text-xs text-left transition-all flex items-center justify-between disabled:opacity-50">
                       <span>🔒 Account Blocked</span>
                       <span>→</span>
                     </button>
@@ -869,15 +869,15 @@ export default function App() {
             </div>
 
             {/* Input & Attachment Footer */}
-            <form onSubmit={handleSendMessage} className="p-2 bg-slate-950 border-t border-white/10 space-y-1">
+            <form onSubmit={handleSendMessage} className="p-3 bg-slate-950 border-t border-white/10 space-y-2">
               {attachedFile && (
-                <div className="flex justify-between items-center bg-white/5 px-2 py-0.5 rounded-lg text-[8px] border border-white/10">
+                <div className="flex justify-between items-center bg-white/5 px-3 py-1 rounded-xl text-xs border border-white/10">
                   <span className="truncate text-violet-300">📎 {attachedFile.name}</span>
                   <button type="button" onClick={() => setAttachedFile(null)} className="text-gray-400 hover:text-red-400">✕</button>
                 </div>
               )}
-              <div className="flex items-center gap-1.5">
-                <label className="cursor-pointer p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-violet-300 text-xs transition-all" title="Attach">
+              <div className="flex items-center gap-2">
+                <label className="cursor-pointer p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-violet-300 text-sm transition-all" title="Attach">
                   📎
                   <input 
                     type="file" 
@@ -894,13 +894,13 @@ export default function App() {
                   value={inputMessage} 
                   disabled={!selectedLanguage || isLoading}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  className="flex-1 bg-black/70 border border-white/15 rounded-lg px-2.5 py-1 text-[9px] text-white focus:outline-none focus:border-violet-500 disabled:opacity-50"
+                  className="flex-1 bg-black/70 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-violet-500 disabled:opacity-50"
                 />
 
                 <button 
                   type="submit" 
                   disabled={!selectedLanguage || isLoading}
-                  className="px-3 py-1 rounded-lg bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-black text-[9px] shadow transition-all disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-black text-xs shadow transition-all disabled:opacity-50"
                 >
                   Send
                 </button>
@@ -913,11 +913,11 @@ export default function App() {
         {/* ARY Digital Style Pro 3D Multi-Axis Tumbling Logo Button */}
         <button 
           onClick={() => setChatOpen(!chatOpen)}
-          className="w-14 h-14 rounded-full bg-gradient-to-tr from-violet-600 via-teal-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_0_35px_rgba(139,92,246,0.9)] transform hover:scale-110 transition-all duration-300 active:scale-95 border-2 border-white/60 animate-ary-3d cursor-pointer"
+          className="w-16 h-16 rounded-full bg-gradient-to-tr from-violet-600 via-teal-500 to-cyan-400 text-white flex items-center justify-center shadow-[0_0_40px_rgba(139,92,246,0.9)] transform hover:scale-110 transition-all duration-300 active:scale-95 border-2 border-white/70 animate-ary-3d cursor-pointer"
           title="Open Help Center"
         >
           {/* Professional Headset Support Icon */}
-          <svg className="w-7 h-7 text-white fill-current drop-shadow-lg" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-white fill-current drop-shadow-xl" viewBox="0 0 24 24">
             <path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.37 5.08L2.25 20.75c-.32.32.09.73.41.41l3.67-1.12C7.91 20.89 9.89 21.5 12 21.5c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 17.5c-1.84 0-3.52-.57-4.92-1.54l-.27-.19-2.28.7.7-2.28-.19-.27C4.07 14.72 3.5 13.04 3.5 11.2c0-4.69 3.81-8.5 8.5-8.5s8.5 3.81 8.5 8.5-3.81 8.5-8.5 8.5zm4.25-6.75c-.41 0-.75-.34-.75-.75 0-1.24-1.01-2.25-2.25-2.25-.41 0-.75-.34-.75-.75s.34-.75.75-7.5c2.07 0 3.75 1.68 3.75 3.75 0 .41-.34.75-.75.75z"/>
           </svg>
         </button>
