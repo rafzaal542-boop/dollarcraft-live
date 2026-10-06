@@ -20,7 +20,7 @@ export default function App() {
   const [attachedFile, setAttachedFile] = useState(null);
   const chatMessagesEndRef = useRef(null);
 
-  const GOOGLE_CLIENT_ID = "510350063620-fbhcbnd8o83fu15md09dd48qvp1i3vai.apps.googleusercontent.com";
+  const GOOGLE_CLIENT_ID = "510350063620-j43tpda0i5g71i18anjil58bi5cq61pd.apps.googleusercontent.com";
 
   // Load Google GIS script dynamically for real official Google account popup
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function App() {
       });
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // Fallback to direct modal simulation if browser blocks One Tap prompt
+          // Fallback simulation if browser blocks One Tap prompt
           setTimeout(() => {
             setIsLoggedIn(true);
             setAuthModalOpen(false);
@@ -77,7 +77,6 @@ export default function App() {
         }
       });
     } else {
-      // Fallback simulation if script is still loading
       setTimeout(() => {
         setIsLoggedIn(true);
         setAuthModalOpen(false);
@@ -498,7 +497,7 @@ export default function App() {
 
               <div className="rounded-xl bg-gradient-to-r from-violet-950/40 via-slate-900 to-cyan-950/40 border border-violet-500/30 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                  <span className="text-[10px] font-bold text-violet-400 tracking-widest uppercase block mb-0.5">🏛️ REGISTERED CORPORATE HEADQUARTERS</span>
+                  <span className="text-[10px] font-bold text-violet-400 tracking-widest uppercase block mb-0.5">🏛️️ REGISTERED CORPORATE HEADQUARTERS</span>
                   <h4 className="text-sm font-bold text-white">Dollar Craft Pte Ltd</h4>
                   <p className="text-[11px] text-gray-300">70 Bendemeer Road, #03-07, Luzerne, Singapore 339940</p>
                 </div>
@@ -662,7 +661,7 @@ export default function App() {
                       <span>→</span>
                     </button>
                     <button onClick={() => handleSelectIssue('problem')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-cyan-500/20 hover:bg-cyan-400 hover:text-black border border-cyan-500/40 text-cyan-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
-                      <span>⚠️ Facing Problem</span>
+                      <span>⚠️️ Facing Problem</span>
                       <span>→</span>
                     </button>
                     <button onClick={() => handleSelectIssue('blocked')} disabled={isLoading} className="py-1.5 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-400 hover:text-black border border-amber-500/40 text-amber-300 font-bold text-[9px] text-left transition-all flex items-center justify-between disabled:opacity-50">
