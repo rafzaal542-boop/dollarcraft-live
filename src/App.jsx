@@ -10,9 +10,11 @@ export default function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [userEmail, setUserEmail] = useState('');
 
-  // Fresh & Clean Dynamic Admin State for Real Users Tracking
+  // 100% Fresh & Zeroed Admin State
   const [usersList, setUsersList] = useState([]);
-  const [totalVisitsToday, setTotalVisitsToday] = useState(1);
+  const [totalVisitsToday, setTotalVisitsToday] = useState(0);
+  const [activeVaultCapital, setActiveVaultCapital] = useState(0);
+  const [dailyRoiPool, setDailyRoiPool] = useState(0);
   const [platformFee, setPlatformFee] = useState('2.5');
   const [roiRate, setRoiRate] = useState('1.66');
 
@@ -123,7 +125,7 @@ export default function App() {
                   name: 'Rana Afzaal (Admin)',
                   email: loggedEmail,
                   time: new Date().toLocaleTimeString(),
-                  balance: '$1,250.00',
+                  balance: '$0.00',
                   status: 'Verified Admin'
                 }, ...prev];
               }
@@ -150,7 +152,7 @@ export default function App() {
               name: 'Rana Afzaal (Admin)',
               email: loggedEmail,
               time: new Date().toLocaleTimeString(),
-              balance: '$1,250.00',
+              balance: '$0.00',
               status: 'Verified Admin'
             }, ...prev];
           }
@@ -255,18 +257,18 @@ export default function App() {
     }, 800);
   };
 
-  const [liveProtocolTotal, setLiveProtocolTotal] = useState(680409813.2402);
+  const [liveProtocolTotal, setLiveProtocolTotal] = useState(0.0000);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setLiveProtocolTotal((prev) => prev + 0.1234);
+      setLiveProtocolTotal((prev) => prev + 0.0012);
     }, 800);
     return () => clearInterval(timer);
   }, []);
 
   const dailyReturnRate = 0.50 / 30;
   const estimatedDailyProfit = investAmount * dailyReturnRate;
-  const [liveEarnings, setLiveEarnings] = useState(0.0045);
+  const [liveEarnings, setLiveEarnings] = useState(0.0000);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -511,7 +513,7 @@ export default function App() {
             <div className="bg-gradient-to-r from-slate-900 via-violet-950/30 to-slate-900 border border-violet-500/30 rounded-3xl p-8 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-widest block mb-2">💰 TOTAL BALANCE</span>
-                <h1 className="text-4xl sm:text-5xl font-black text-cyan-400 font-mono">$1,250.00</h1>
+                <h1 className="text-4xl sm:text-5xl font-black text-cyan-400 font-mono">$0.00</h1>
               </div>
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/30 transition-all">
@@ -526,19 +528,19 @@ export default function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Deposit Wallet</span>
-                <h3 className="text-2xl font-black text-white font-mono">$500.00</h3>
+                <h3 className="text-2xl font-black text-white font-mono">$0.00</h3>
               </div>
               <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Earning Wallet</span>
-                <h3 className="text-2xl font-black text-cyan-400 font-mono">+${liveEarnings.toFixed(4)}</h3>
+                <h3 className="text-2xl font-black text-cyan-400 font-mono">$0.0000</h3>
               </div>
               <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Referral Wallet</span>
-                <h3 className="text-2xl font-black text-white font-mono">$250.00</h3>
+                <h3 className="text-2xl font-black text-white font-mono">$0.00</h3>
               </div>
               <div className="bg-slate-900/90 border border-violet-500/20 rounded-2xl p-6 shadow-xl">
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-wider block mb-2">Rewards Wallet</span>
-                <h3 className="text-2xl font-black text-white font-mono">$100.00</h3>
+                <h3 className="text-2xl font-black text-white font-mono">$0.00</h3>
               </div>
             </div>
           </section>
@@ -592,8 +594,8 @@ export default function App() {
                   <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-extrabold uppercase">SUPER ADMIN SECURE</span>
                   <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Fresh)</h2>
-                <p className="text-gray-300 text-sm mt-1">Real-time visitor tracking and live user sign-in history active.</p>
+                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Zero Fresh)</h2>
+                <p className="text-gray-300 text-sm mt-1">All metrics reset to 0. Real-time visitor tracking and live user sign-in history active.</p>
               </div>
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
@@ -615,8 +617,8 @@ export default function App() {
                   </div>
                   <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
                     <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">ACTIVE VAULT CAPITAL</span>
-                    <h3 className="text-4xl font-black text-cyan-400 font-mono">$45,200.00</h3>
-                    <span className="text-xs text-cyan-300 font-semibold mt-2 block">⚡ Real-time compounding</span>
+                    <h3 className="text-4xl font-black text-cyan-400 font-mono">${activeVaultCapital.toFixed(2)}</h3>
+                    <span className="text-xs text-cyan-300 font-semibold mt-2 block">⚡ Zeroed & Fresh</span>
                   </div>
                   <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
                     <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">PENDING WITHDRAWALS</span>
@@ -625,8 +627,8 @@ export default function App() {
                   </div>
                   <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
                     <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">DAILY ROI PAYOUT POOL</span>
-                    <h3 className="text-4xl font-black text-teal-400 font-mono">$750.00</h3>
-                    <span className="text-xs text-teal-300 font-semibold mt-2 block">✓ Auto-dispatched</span>
+                    <h3 className="text-4xl font-black text-teal-400 font-mono">${dailyRoiPool.toFixed(2)}</h3>
+                    <span className="text-xs text-teal-300 font-semibold mt-2 block">✓ Zeroed & Fresh</span>
                   </div>
                 </div>
 
@@ -637,10 +639,10 @@ export default function App() {
                       <div className="w-full space-y-4">
                         <div className="flex justify-between text-sm text-gray-300">
                           <span>Super DC Vault Liquidity</span>
-                          <span className="text-cyan-400 font-bold">100.0% Capacity (Fresh)</span>
+                          <span className="text-cyan-400 font-bold">0.0% (Zeroed & Fresh)</span>
                         </div>
                         <div className="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden">
-                          <div className="bg-gradient-to-r from-violet-600 to-cyan-400 h-full w-[100%]"></div>
+                          <div className="bg-gradient-to-r from-violet-600 to-cyan-400 h-full w-[0%]"></div>
                         </div>
                         <div className="flex justify-between text-sm text-gray-300 pt-3">
                           <span>Global Hub Sync Speed</span>
@@ -659,8 +661,8 @@ export default function App() {
                       <p className="text-gray-400 text-sm mb-6">Execute instant protocol adjustments or reset visitor logs.</p>
                     </div>
                     <div className="space-y-4">
-                      <button onClick={() => { setTotalVisitsToday(1); setUsersList([]); alert('Admin history reset successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
-                        Reset All User History & Stats
+                      <button onClick={() => { setTotalVisitsToday(0); setActiveVaultCapital(0); setDailyRoiPool(0); setUsersList([]); alert('All admin metrics & history reset to 0 successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
+                        Reset All Metrics to 0
                       </button>
                       <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
                         Flush Server Cache
@@ -697,7 +699,7 @@ export default function App() {
                       {usersList.length === 0 ? (
                         <tr>
                           <td colSpan="5" className="py-8 text-center text-gray-400">
-                            No new users signed in yet today. Hub is freshly reset.
+                            No users signed in yet. All counters are at 0.
                           </td>
                         </tr>
                       ) : (
@@ -729,7 +731,7 @@ export default function App() {
                   <p className="text-gray-400 text-sm">Review pending user withdrawal tickets and release USDT/USD funds.</p>
                   
                   <div className="bg-black/50 border border-white/10 rounded-2xl p-6 text-center text-gray-400 text-sm">
-                    No pending withdrawal requests. All ledgers are clean.
+                    No pending withdrawal requests. All ledgers are clean ($0.00).
                   </div>
                 </div>
 
@@ -738,7 +740,7 @@ export default function App() {
                   <div className="space-y-4 text-sm">
                     <div className="flex justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
                       <span className="text-gray-300">Total Platform Deposits:</span>
-                      <span className="font-bold text-white font-mono">$0.00 (Fresh)</span>
+                      <span className="font-bold text-white font-mono">$0.00</span>
                     </div>
                     <div className="flex justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
                       <span className="text-gray-300">Total Payouts Released:</span>
@@ -746,7 +748,7 @@ export default function App() {
                     </div>
                     <div className="flex justify-between p-4 rounded-2xl bg-white/5 border border-white/10">
                       <span className="text-gray-300">Net Reserve Capital:</span>
-                      <span className="font-bold text-emerald-400 font-mono">$45,200.00</span>
+                      <span className="font-bold text-emerald-400 font-mono">$0.00</span>
                     </div>
                   </div>
                 </div>
