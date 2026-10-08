@@ -26,7 +26,10 @@ export default function App() {
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [withdrawalError, setWithdrawalError] = useState('');
   const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
-  const [totalBalanceCents, setTotalBalanceCents] = useState(0);
+  const [internalTransferEmail, setInternalTransferEmail] = useState('');
+  const [internalTransferAmount, setInternalTransferAmount] = useState('');
+  const [internalTransferError, setInternalTransferError] = useState('');
+  const [internalTransferSuccess, setInternalTransferSuccess] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
@@ -49,7 +52,13 @@ export default function App() {
               typeof user.email === 'string' &&
               typeof user.password === 'string' &&
               typeof user.name === 'string'
-          )
+          ).map((user) => ({
+            ...user,
+            balanceCents:
+              Number.isSafeInteger(user.balanceCents) && user.balanceCents >= 0
+                ? user.balanceCents
+                : 0
+          }))
         : [];
     } catch (error) {
       console.error('Unable to load registered accounts.', error);
@@ -87,8 +96,22 @@ export default function App() {
     }
   });
 
+  const currentUser = registeredUsers.find(
+    (user) => user.email.toLowerCase() === userEmail.toLowerCase()
+  );
+  const totalBalanceCents = currentUser?.balanceCents ?? 0;
+  const persistUsers = (updatedUsers) => {
+    try {
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+      setRegisteredUsers(updatedUsers);
+      return true;
+    } catch (error) {
+      console.error('Unable to save registered accounts.', error);
+      return false;
+    }
+  };
+
   // Admin Metrics & History
-  const [usersList, setUsersList] = useState([]);
   const [totalVisitsToday, setTotalVisitsToday] = useState(0);
   const [activeVaultCapital, setActiveVaultCapital] = useState(0);
   const [dailyRoiPool, setDailyRoiPool] = useState(0);
@@ -135,7 +158,19 @@ export default function App() {
       return;
     }
 
-    if (!Number.isSafeInteger(amountCents) || amountCents > totalBalanceCents) {
+    if (!Number.isSafeInteger(amountCents) || Math.abs(amount * 100 - amountCents) > 1e-7) {
+      setWithdrawalError('Enter a valid amount in cents.');
+      setWithdrawalSuccess(false);
+      return;
+    }
+
+    if (!currentUser) {
+      setWithdrawalError('Unable to find your account. Please sign in again.');
+      setWithdrawalSuccess(false);
+      return;
+    }
+
+    if (amountCents > totalBalanceCents) {
       setWithdrawalError(
         `Insufficient balance. Available balance: $${(totalBalanceCents / 100).toFixed(2)} USD`
       );
@@ -143,9 +178,73 @@ export default function App() {
       return;
     }
 
-    setTotalBalanceCents((balance) => balance - amountCents);
+    const updatedUsers = registeredUsers.map((user) =>
+      user.email.toLowerCase() === currentUser.email.toLowerCase()
+        ? { ...user, balanceCents: user.balanceCents - amountCents }
+        : user
+    );
+    if (!persistUsers(updatedUsers)) {
+      setWithdrawalError('Unable to update your balance. Please try again.');
+      setWithdrawalSuccess(false);
+      return;
+    }
+
     setWithdrawalError('');
     setWithdrawalSuccess(true);
+  };
+
+  const handleInternalTransferSubmit = (e) => {
+    e.preventDefault();
+    setInternalTransferError('');
+    setInternalTransferSuccess('');
+
+    if (userEmail.toLowerCase() !== ADMIN_EMAIL) {
+      setInternalTransferError('Only the administrator can make internal transfers.');
+      return;
+    }
+
+    const recipientEmail = internalTransferEmail.trim().toLowerCase();
+    const amount = Number(internalTransferAmount);
+    const amountCents = Math.round(amount * 100);
+    const recipient = registeredUsers.find(
+      (user) => user.email.toLowerCase() === recipientEmail
+    );
+
+    if (!recipient) {
+      setInternalTransferError('Select or enter the email of a registered user.');
+      return;
+    }
+
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0 ||
+      !Number.isSafeInteger(amountCents) ||
+      Math.abs(amount * 100 - amountCents) > 1e-7
+    ) {
+      setInternalTransferError('Enter a valid transfer amount in cents.');
+      return;
+    }
+
+    const updatedBalanceCents = recipient.balanceCents + amountCents;
+    if (!Number.isSafeInteger(updatedBalanceCents)) {
+      setInternalTransferError('The resulting balance is too large to store accurately.');
+      return;
+    }
+
+    const updatedUsers = registeredUsers.map((user) =>
+      user.email.toLowerCase() === recipientEmail
+        ? { ...user, balanceCents: updatedBalanceCents }
+        : user
+    );
+    if (!persistUsers(updatedUsers)) {
+      setInternalTransferError('Unable to save the transfer. Please try again.');
+      return;
+    }
+
+    setInternalTransferSuccess(
+      `$${(amountCents / 100).toFixed(2)} USD transferred to ${recipient.email}.`
+    );
+    setInternalTransferAmount('');
   };
 
   const closeWithdrawalModal = () => {
@@ -189,27 +288,11 @@ export default function App() {
 
     if (authMode === 'login') {
       if (finalEmail === ADMIN_EMAIL) {
-        const adminAccount = account || {
-          email: finalEmail,
-          password: finalPassword,
-          name: 'Alexander Smith (Admin)',
-          firstName: 'Alexander'
-        };
-
         if (account && account.password !== finalPassword) {
           alert('Incorrect email or password. Please try again.');
           return;
         }
 
-        if (!account) {
-          const updatedUsers = [...registeredUsers, adminAccount];
-          try {
-            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-          } catch (error) {
-            console.error('Unable to save admin account.', error);
-          }
-          setRegisteredUsers(updatedUsers);
-        }
       } else if (!account) {
         alert('Account not found. Please register first.');
         return;
@@ -232,24 +315,42 @@ export default function App() {
           email: finalEmail,
           password: finalPassword,
           name: finalName,
-          firstName: signedInFirstName
+          firstName: signedInFirstName,
+          balanceCents: 0,
+          lastSignInAt: Date.now()
         };
         const updatedUsers = [...registeredUsers, newAccount];
-        try {
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-        } catch (error) {
-          console.error('Unable to save registered account.', error);
+        if (!persistUsers(updatedUsers)) {
           alert('Unable to save your account. Please check your browser storage and try again.');
           setIsLoading(false);
           return;
         }
-        setRegisteredUsers(updatedUsers);
       } else {
         const storedFirstName = account?.firstName || getFirstName(account?.name || '');
         signedInName = finalEmail === ADMIN_EMAIL
           ? 'Alexander Smith (Admin)'
           : account.name;
         signedInFirstName = finalEmail === ADMIN_EMAIL ? 'Alexander' : storedFirstName;
+        const signedInAccount = {
+          ...(account || {
+            email: finalEmail,
+            password: finalPassword,
+            name: signedInName,
+            firstName: signedInFirstName,
+            balanceCents: 0
+          }),
+          lastSignInAt: Date.now()
+        };
+        const updatedUsers = account
+          ? registeredUsers.map((user) =>
+              user.email.toLowerCase() === finalEmail ? signedInAccount : user
+            )
+          : [...registeredUsers, signedInAccount];
+        if (!persistUsers(updatedUsers)) {
+          alert('Unable to update your sign-in record. Please check your browser storage and try again.');
+          setIsLoading(false);
+          return;
+        }
       }
 
       setUserEmail(finalEmail);
@@ -260,21 +361,6 @@ export default function App() {
       setIsLoading(false);
       setActiveTab('dashboard');
 
-      // Record in Admin History
-      setUsersList((prev) => {
-        const exists = prev.find(u => u.email === finalEmail);
-        if (!exists) {
-          return [{
-            id: Date.now(),
-            name: signedInName,
-            email: finalEmail,
-            time: new Date().toLocaleTimeString(),
-            balance: '$0.00',
-            status: finalEmail === ADMIN_EMAIL ? 'Verified Admin' : 'Active'
-          }, ...prev];
-        }
-        return prev;
-      });
       setTotalVisitsToday((prev) => prev + 1);
     }, 800);
   };
@@ -639,6 +725,9 @@ export default function App() {
                 <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/30 transition-all">
                   + Deposit
                 </button>
+                <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-200 font-bold text-sm border border-cyan-400/25 transition-all">
+                  Invest
+                </button>
                 <button
                   onClick={() => setWithdrawalModalOpen(true)}
                   className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all"
@@ -784,7 +873,7 @@ export default function App() {
                       <p className="text-gray-400 text-sm mb-6">Execute instant protocol adjustments or reset visitor logs.</p>
                     </div>
                     <div className="space-y-4">
-                      <button onClick={() => { setTotalVisitsToday(0); setActiveVaultCapital(0); setDailyRoiPool(0); setUsersList([]); alert('All admin metrics & history reset successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
+                      <button onClick={() => { setTotalVisitsToday(0); setActiveVaultCapital(0); setDailyRoiPool(0); alert('All admin metrics & history reset successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
                         Reset All Metrics to 0
                       </button>
                       <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
@@ -801,10 +890,10 @@ export default function App() {
               <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-lg font-extrabold text-white">Live User Sign-In History</h3>
-                    <p className="text-gray-400 text-sm mt-0.5">Showing real-time users signing into the platform today.</p>
+                    <h3 className="text-lg font-extrabold text-white">Registered Users & Wallets</h3>
+                    <p className="text-gray-400 text-sm mt-0.5">Account sign-in times and current total wallet balances.</p>
                   </div>
-                  <span className="px-4 py-1.5 rounded-full bg-violet-500/20 text-violet-300 text-sm font-bold">{usersList.length} Users Recorded</span>
+                  <span className="px-4 py-1.5 rounded-full bg-violet-500/20 text-violet-300 text-sm font-bold">{registeredUsers.length} Registered Users</span>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -814,28 +903,28 @@ export default function App() {
                         <th className="py-4 px-5">User Name</th>
                         <th className="py-4 px-5">Email Address</th>
                         <th className="py-4 px-5">Sign-in Time</th>
-                        <th className="py-4 px-5">Wallet Balance</th>
-                        <th className="py-4 px-5">Status</th>
+                        <th className="py-4 px-5">Total Wallet Balance</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
-                      {usersList.length === 0 ? (
+                      {registeredUsers.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="py-8 text-center text-gray-400">
-                            No users signed in yet. All counters are at 0.
+                          <td colSpan="4" className="py-8 text-center text-gray-400">
+                            No registered users yet.
                           </td>
                         </tr>
                       ) : (
-                        usersList.map((u) => (
-                          <tr key={u.id} className="hover:bg-white/5 transition-all">
-                            <td className="py-4 px-5 font-bold text-white">{u.name}</td>
-                            <td className="py-4 px-5 text-gray-300 font-mono">{u.email}</td>
-                            <td className="py-4 px-5 text-cyan-400 font-mono">{u.time}</td>
-                            <td className="py-4 px-5 text-cyan-400 font-mono font-bold">{u.balance}</td>
-                            <td className="py-4 px-5">
-                              <span className={`px-3 py-1 rounded-full text-xs font-bold ${u.status === 'Verified Admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}`}>
-                                {u.status}
-                              </span>
+                        registeredUsers.map((user) => (
+                          <tr key={user.email} className="hover:bg-white/5 transition-all">
+                            <td className="py-4 px-5 font-bold text-white">{user.name}</td>
+                            <td className="py-4 px-5 text-gray-300 font-mono">{user.email}</td>
+                            <td className="py-4 px-5 text-cyan-400 font-mono">
+                              {Number.isFinite(user.lastSignInAt)
+                                ? new Date(user.lastSignInAt).toLocaleString()
+                                : 'No recorded sign-in'}
+                            </td>
+                            <td className="py-4 px-5 text-cyan-400 font-mono font-bold">
+                              ${(user.balanceCents / 100).toFixed(2)}
                             </td>
                           </tr>
                         ))
@@ -848,7 +937,7 @@ export default function App() {
 
             {/* ADMIN SUB-TAB 3: FINANCE */}
             {adminSubTab === 'finance' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6">
                   <h3 className="text-lg font-extrabold text-white flex items-center gap-3">💳 Withdrawal Approvals</h3>
                   <p className="text-gray-400 text-sm">Review pending user withdrawal tickets and release USDT/USD funds.</p>
@@ -875,7 +964,78 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-              </div>
+
+                <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6">
+                    <div>
+                      <h3 className="text-lg font-extrabold text-white flex items-center gap-3">↔️ Internal Transfer</h3>
+                      <p className="text-gray-400 text-sm mt-1">
+                        Credit funds directly to a registered user. Transfers have no minimum or maximum amount.
+                      </p>
+                    </div>
+                    <form onSubmit={handleInternalTransferSubmit} className="space-y-4">
+                      <div>
+                        <label htmlFor="internal-transfer-email" className="block text-sm font-semibold text-gray-200 mb-2">
+                          User email
+                        </label>
+                        <input
+                          id="internal-transfer-email"
+                          type="email"
+                          list="registered-user-emails"
+                          required
+                          value={internalTransferEmail}
+                          onChange={(e) => {
+                            setInternalTransferEmail(e.target.value);
+                            setInternalTransferError('');
+                            setInternalTransferSuccess('');
+                          }}
+                          className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                          placeholder="Select or enter a registered email"
+                        />
+                        <datalist id="registered-user-emails">
+                          {registeredUsers.map((user) => (
+                            <option key={user.email} value={user.email}>{user.name}</option>
+                          ))}
+                        </datalist>
+                      </div>
+                      <div>
+                        <label htmlFor="internal-transfer-amount" className="block text-sm font-semibold text-gray-200 mb-2">
+                          Transfer amount (USD)
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                          <input
+                            id="internal-transfer-amount"
+                            type="number"
+                            inputMode="decimal"
+                            min="0.01"
+                            step="0.01"
+                            required
+                            value={internalTransferAmount}
+                            onChange={(e) => {
+                              setInternalTransferAmount(e.target.value);
+                              setInternalTransferError('');
+                              setInternalTransferSuccess('');
+                            }}
+                            className="w-full bg-black/60 border border-white/15 rounded-xl pl-9 pr-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                      {internalTransferError && (
+                        <p role="alert" className="text-rose-300 text-sm">{internalTransferError}</p>
+                      )}
+                      {internalTransferSuccess && (
+                        <p role="status" className="text-emerald-300 text-sm">{internalTransferSuccess}</p>
+                      )}
+                      <button
+                        type="submit"
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm transition-all"
+                      >
+                        Transfer funds
+                      </button>
+                    </form>
+                  </div>
+                </div>
             )}
 
             {/* ADMIN SUB-TAB 4: SETTINGS */}
