@@ -95,6 +95,7 @@ export default function App() {
       return '';
     }
   });
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   const currentUser = usersList.find(
     (user) => user.email.toLowerCase() === userEmail.toLowerCase()
@@ -147,6 +148,11 @@ export default function App() {
     }
   };
 
+  const requestLogout = () => {
+    setMobileMenuOpen(false);
+    setLogoutConfirmationOpen(true);
+  };
+
   const handleLogout = () => {
     try {
       localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -172,6 +178,7 @@ export default function App() {
     setInternalTransferAmount('');
     setInternalTransferError('');
     setInternalTransferSuccess('');
+    setLogoutConfirmationOpen(false);
   };
 
   const handleWithdrawalSubmit = (e) => {
@@ -583,7 +590,7 @@ export default function App() {
                     My Dashboard
                   </button>
                   <button
-                    onClick={handleLogout}
+                    onClick={requestLogout}
                     className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border border-rose-400/30 hover:border-rose-300/50 font-bold text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -625,7 +632,7 @@ export default function App() {
             )}
             {isLoggedIn && (
               <button
-                onClick={handleLogout}
+                onClick={requestLogout}
                 className="block w-full text-left px-4 py-2 rounded-lg text-rose-200 hover:bg-rose-500/10 font-bold transition-colors"
               >
                 Logout
@@ -1143,6 +1150,44 @@ export default function App() {
         )}
 
       </main>
+
+      {logoutConfirmationOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="logout-confirmation-title"
+            aria-describedby="logout-confirmation-description"
+            className="w-full max-w-sm bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-rose-400/30 rounded-2xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.9)] text-white"
+          >
+            <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-400/30 text-rose-200 flex items-center justify-center mb-5">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5m0 0-5-5m5 5H3" />
+              </svg>
+            </div>
+            <h2 id="logout-confirmation-title" className="text-xl font-black">Confirm logout</h2>
+            <p id="logout-confirmation-description" className="text-sm text-gray-300 mt-2">
+              Are you sure you want to logout?
+            </p>
+            <div className="flex justify-end gap-3 mt-7">
+              <button
+                type="button"
+                onClick={() => setLogoutConfirmationOpen(false)}
+                className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/10 font-bold text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-rose-900/30 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+              >
+                Yes
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {withdrawalModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 animate-in fade-in duration-200">
