@@ -66,7 +66,7 @@ export default function App() {
     setIsLoading(true);
     setTimeout(() => {
       let finalEmail = emailInput.trim();
-      let finalName = authMode === 'register' ? `${firstName.trim()} ${lastName.trim()}` : (finalEmail === 'dollarcraft3@gmail.com' ? 'Rana Afzaal (Admin)' : 'Valued User');
+      let finalName = authMode === 'register' ? `${firstName.trim()} ${lastName.trim()}` : (finalEmail === 'dollarcraft3@gmail.com' ? 'Alexander Smith (Admin)' : 'Valued User');
 
       setUserEmail(finalEmail);
       setUserName(finalName);
@@ -772,7 +772,7 @@ export default function App() {
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">First Name</label>
                     <input 
                       type="text" 
-                      placeholder="Muhammad" 
+                      placeholder="Alexander"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required={authMode === 'register'}
@@ -783,7 +783,7 @@ export default function App() {
                     <label className="block text-xs font-semibold text-gray-300 mb-1.5">Last Name</label>
                     <input 
                       type="text" 
-                      placeholder="Afzaal" 
+                      placeholder="Smith"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       required={authMode === 'register'}
@@ -797,7 +797,7 @@ export default function App() {
                 <label className="block text-xs font-semibold text-gray-300 mb-1.5">Email Address</label>
                 <input 
                   type="email" 
-                  placeholder="dollarcraft3@gmail.com" 
+                  placeholder="alexander.smith@gmail.com"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   required
