@@ -17,7 +17,7 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
   
   // Form States for Manual Auth
   const [firstName, setFirstName] = useState('');
@@ -760,17 +760,17 @@ export default function App() {
             <div className="flex bg-black/50 p-1 rounded-xl border border-white/10 mb-4">
               <button 
                 type="button"
-                onClick={() => setAuthMode('login')}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'login' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
-              >
-                Sign In
-              </button>
-              <button 
-                type="button"
                 onClick={() => setAuthMode('register')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'register' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
               >
                 Register
+              </button>
+              <button 
+                type="button"
+                onClick={() => setAuthMode('login')}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'login' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+              >
+                Sign In
               </button>
             </div>
 
