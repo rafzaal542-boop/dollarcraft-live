@@ -8,9 +8,17 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  
+  // Form States for Manual Auth
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
 
-  // 100% Fresh & Zeroed Admin State
+  // Admin Metrics & History
   const [usersList, setUsersList] = useState([]);
   const [totalVisitsToday, setTotalVisitsToday] = useState(0);
   const [activeVaultCapital, setActiveVaultCapital] = useState(0);
@@ -28,20 +36,6 @@ export default function App() {
   const [inputMessage, setInputMessage] = useState('');
   const [attachedFile, setAttachedFile] = useState(null);
   const chatMessagesEndRef = useRef(null);
-
-  const GOOGLE_CLIENT_ID = "510350063620-j43tpda0i5g71i18anjil58bi5cq61pd.apps.googleusercontent.com";
-
-  // Load Google GIS script dynamically
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
 
   const scrollToBottom = () => {
     chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -61,106 +55,43 @@ export default function App() {
     }
   };
 
-  const handleGoogleSignInClick = () => {
-    setIsLoading(true);
-    if (window.google && window.google.accounts) {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          let loggedEmail = 'user@gmail.com';
-          let loggedName = 'New Investor';
-          try {
-            const base64Url = response.credential.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-              return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            const payload = JSON.parse(jsonPayload);
-            loggedEmail = payload.email || 'user@gmail.com';
-            loggedName = payload.name || 'New Investor';
-          } catch(e) {
-            loggedEmail = 'dollarcraft3@gmail.com';
-            loggedName = 'Rana Afzaal (Admin)';
-          }
-
-          setUserEmail(loggedEmail);
-          setIsLoggedIn(true);
-          setAuthModalOpen(false);
-          setIsLoading(false);
-          setActiveTab('dashboard');
-
-          // Add newly signed-in user to fresh tracking history
-          setUsersList((prev) => {
-            const exists = prev.find(u => u.email === loggedEmail);
-            if (!exists) {
-              return [{
-                id: Date.now(),
-                name: loggedName,
-                email: loggedEmail,
-                time: new Date().toLocaleTimeString(),
-                balance: '$0.00',
-                status: loggedEmail === 'dollarcraft3@gmail.com' ? 'Verified Admin' : 'Active'
-              }, ...prev];
-            }
-            return prev;
-          });
-          setTotalVisitsToday((prev) => prev + 1);
-        }
-      });
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          setTimeout(() => {
-            const loggedEmail = 'dollarcraft3@gmail.com';
-            setUserEmail(loggedEmail);
-            setIsLoggedIn(true);
-            setAuthModalOpen(false);
-            setIsLoading(false);
-            setActiveTab('dashboard');
-
-            setUsersList((prev) => {
-              const exists = prev.find(u => u.email === loggedEmail);
-              if (!exists) {
-                return [{
-                  id: Date.now(),
-                  name: 'Rana Afzaal (Admin)',
-                  email: loggedEmail,
-                  time: new Date().toLocaleTimeString(),
-                  balance: '$0.00',
-                  status: 'Verified Admin'
-                }, ...prev];
-              }
-              return prev;
-            });
-            setTotalVisitsToday((prev) => prev + 1);
-          }, 1000);
-        }
-      });
-    } else {
-      setTimeout(() => {
-        const loggedEmail = 'dollarcraft3@gmail.com';
-        setUserEmail(loggedEmail);
-        setIsLoggedIn(true);
-        setAuthModalOpen(false);
-        setIsLoading(false);
-        setActiveTab('dashboard');
-
-        setUsersList((prev) => {
-          const exists = prev.find(u => u.email === loggedEmail);
-          if (!exists) {
-            return [{
-              id: Date.now(),
-              name: 'Rana Afzaal (Admin)',
-              email: loggedEmail,
-              time: new Date().toLocaleTimeString(),
-              balance: '$0.00',
-              status: 'Verified Admin'
-            }, ...prev];
-          }
-          return prev;
-        });
-        setTotalVisitsToday((prev) => prev + 1);
-      }, 1200);
+  // Manual Authentication Handler
+  const handleAuthSubmit = (e) => {
+    e.preventDefault();
+    if (!emailInput || !passwordInput || (authMode === 'register' && (!firstName || !lastName))) {
+      alert('Baraye meharbani saari fields fill karein!');
+      return;
     }
+
+    setIsLoading(true);
+    setTimeout(() => {
+      let finalEmail = emailInput.trim();
+      let finalName = authMode === 'register' ? `${firstName.trim()} ${lastName.trim()}` : (finalEmail === 'dollarcraft3@gmail.com' ? 'Rana Afzaal (Admin)' : 'Valued User');
+
+      setUserEmail(finalEmail);
+      setUserName(finalName);
+      setIsLoggedIn(true);
+      setAuthModalOpen(false);
+      setIsLoading(false);
+      setActiveTab('dashboard');
+
+      // Record in Admin History
+      setUsersList((prev) => {
+        const exists = prev.find(u => u.email === finalEmail);
+        if (!exists) {
+          return [{
+            id: Date.now(),
+            name: finalName,
+            email: finalEmail,
+            time: new Date().toLocaleTimeString(),
+            balance: '$0.00',
+            status: finalEmail === 'dollarcraft3@gmail.com' ? 'Verified Admin' : 'Active'
+          }, ...prev];
+        }
+        return prev;
+      });
+      setTotalVisitsToday((prev) => prev + 1);
+    }, 800);
   };
 
   const handleSelectLanguage = (lang) => {
@@ -506,7 +437,7 @@ export default function App() {
                 <p className="text-sm text-gray-300 mt-1">Manage your deposits, earnings, referral wallet, and active positions.</p>
               </div>
               <span className="px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-bold">
-                🟢 Live Sync Active ({userEmail || 'Active User'})
+                🟢 Live Sync Active ({userName || userEmail || 'Active User'})
               </span>
             </div>
 
@@ -594,8 +525,8 @@ export default function App() {
                   <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-extrabold uppercase">SUPER ADMIN SECURE</span>
                   <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Zero Fresh)</h2>
-                <p className="text-gray-300 text-sm mt-1">All metrics reset to 0. Real-time visitor tracking and live user sign-in history active.</p>
+                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Manual Auth)</h2>
+                <p className="text-gray-300 text-sm mt-1">Manual Sign-In tracking and live user history active.</p>
               </div>
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
@@ -661,7 +592,7 @@ export default function App() {
                       <p className="text-gray-400 text-sm mb-6">Execute instant protocol adjustments or reset visitor logs.</p>
                     </div>
                     <div className="space-y-4">
-                      <button onClick={() => { setTotalVisitsToday(0); setActiveVaultCapital(0); setDailyRoiPool(0); setUsersList([]); alert('All admin metrics & history reset to 0 successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
+                      <button onClick={() => { setTotalVisitsToday(0); setActiveVaultCapital(0); setDailyRoiPool(0); setUsersList([]); alert('All admin metrics & history reset successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
                         Reset All Metrics to 0
                       </button>
                       <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
@@ -795,7 +726,7 @@ export default function App() {
 
       </main>
 
-      {/* GOOGLE SIGN IN MODAL */}
+      {/* PREMIUM MANUAL AUTHENTICATION MODAL (First Name, Last Name, Email, Password) */}
       {authModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-violet-500/40 rounded-3xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.9)] text-white relative">
@@ -804,31 +735,99 @@ export default function App() {
               ✕
             </button>
 
-            <div className="text-center mb-8 pt-3">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-xl shadow-xl shadow-violet-500/30 text-white mx-auto mb-4">
+            <div className="text-center mb-6 pt-2">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-xl shadow-xl shadow-violet-500/30 text-white mx-auto mb-3">
                 DC
               </div>
-              <h3 className="text-2xl font-black text-white">Welcome to Dollar Craft</h3>
-              <p className="text-sm text-gray-400 mt-1">Sign in with Google to access your account & start earning.</p>
+              <h3 className="text-2xl font-black text-white">
+                {authMode === 'register' ? 'Create Account' : 'Welcome Back'}
+              </h3>
+              <p className="text-sm text-gray-400 mt-1">
+                {authMode === 'register' ? 'Register with your details to start earning.' : 'Sign in to access your Dollar Craft account.'}
+              </p>
             </div>
 
-            <button 
-              onClick={handleGoogleSignInClick}
-              disabled={isLoading}
-              className="w-full py-4 px-6 rounded-2xl bg-white hover:bg-gray-100 text-gray-900 font-extrabold text-sm shadow-xl transition-all flex items-center justify-center gap-4 disabled:opacity-50 cursor-pointer"
-            >
-              {/* Official Google Colored Logo SVG */}
-              <svg className="w-6 h-6" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
-                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.2v3.15C3.21 21.32 7.29 24 12 24z"/>
-                <path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.2C.44 8.13 0 9.83 0 12s.44 3.87 1.2 5.39l4.07-3.15z"/>
-                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.29 0 3.21 2.68 1.2 6.61l4.07 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/>
-              </svg>
-              {isLoading ? 'Connecting...' : 'Sign in with Google'}
-            </button>
+            {/* Mode Switcher Tabs */}
+            <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/10 mb-6">
+              <button 
+                type="button"
+                onClick={() => setAuthMode('login')}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${authMode === 'login' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+              >
+                Sign In
+              </button>
+              <button 
+                type="button"
+                onClick={() => setAuthMode('register')}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${authMode === 'register' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+              >
+                Register
+              </button>
+            </div>
 
-            <p className="text-xs text-gray-500 text-center mt-6">
-              By signing in, you agree to Dollar Craft Terms & Conditions and Privacy Policy.
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authMode === 'register' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">First Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="Muhammad" 
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required={authMode === 'register'}
+                      className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">Last Name</label>
+                    <input 
+                      type="text" 
+                      placeholder="Afzaal" 
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required={authMode === 'register'}
+                      className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1.5">Email Address</label>
+                <input 
+                  type="email" 
+                  placeholder="dollarcraft3@gmail.com" 
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  required
+                  className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1.5">Password</label>
+                <input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  required
+                  className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <button 
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl transition-all disabled:opacity-50 mt-2"
+              >
+                {isLoading ? 'Processing...' : (authMode === 'register' ? 'Create Account & Sign In' : 'Sign In')}
+              </button>
+            </form>
+
+            <p className="text-xs text-gray-500 text-center mt-5">
+              Secure manual authentication protocol enabled.
             </p>
 
           </div>
