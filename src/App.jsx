@@ -2,13 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
-const GLOBAL_ACCRUAL_INTERVAL_MS = 800;
-const GLOBAL_ACCRUAL_INCREMENT = 0.0012;
+const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
-  (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / GLOBAL_ACCRUAL_INTERVAL_MS) *
-    GLOBAL_ACCRUAL_INCREMENT;
+  (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / 1000) *
+    GLOBAL_ACCRUAL_PER_SECOND;
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
