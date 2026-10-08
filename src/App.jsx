@@ -728,105 +728,105 @@ export default function App() {
 
       {/* PREMIUM MANUAL AUTHENTICATION MODAL (First Name, Last Name, Email, Password) */}
       {authModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-violet-500/40 rounded-3xl p-8 shadow-[0_20px_50px_rgba(0,0,0,0.9)] text-white relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm max-h-[calc(100dvh-1.5rem)] overflow-y-auto bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-violet-500/40 rounded-2xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.9)] text-white relative">
             
-            <button onClick={() => setAuthModalOpen(false)} className="absolute top-5 right-5 text-gray-400 hover:text-white px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm">
+            <button onClick={() => setAuthModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs">
               ✕
             </button>
 
-            <div className="text-center mb-6 pt-2">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-xl shadow-xl shadow-violet-500/30 text-white mx-auto mb-3">
+            <div className="text-center mb-4 pt-1">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 flex items-center justify-center font-black text-lg shadow-xl shadow-violet-500/30 text-white mx-auto mb-2">
                 DC
               </div>
-              <h3 className="text-2xl font-black text-white">
+              <h3 className="text-xl font-black text-white">
                 {authMode === 'register' ? 'Create Account' : 'Welcome Back'}
               </h3>
-              <p className="text-sm text-gray-400 mt-1">
+              <p className="text-xs text-gray-400 mt-1">
                 {authMode === 'register' ? 'Register with your details to start earning.' : 'Sign in to access your Dollar Craft account.'}
               </p>
             </div>
 
             {/* Mode Switcher Tabs */}
-            <div className="flex bg-black/50 p-1.5 rounded-2xl border border-white/10 mb-6">
+            <div className="flex bg-black/50 p-1 rounded-xl border border-white/10 mb-4">
               <button 
                 type="button"
                 onClick={() => setAuthMode('login')}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${authMode === 'login' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'login' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
               >
                 Sign In
               </button>
               <button 
                 type="button"
                 onClick={() => setAuthMode('register')}
-                className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all ${authMode === 'register' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'register' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
               >
                 Register
               </button>
             </div>
 
-            <form onSubmit={handleAuthSubmit} className="space-y-4">
+            <form onSubmit={handleAuthSubmit} className="space-y-3">
               {authMode === 'register' && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">First Name</label>
+                    <label className="block text-[11px] font-semibold text-gray-300 mb-1">First Name</label>
                     <input 
                       type="text" 
                       placeholder="Alexander"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required={authMode === 'register'}
-                      className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                      className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">Last Name</label>
+                    <label className="block text-[11px] font-semibold text-gray-300 mb-1">Last Name</label>
                     <input 
                       type="text" 
                       placeholder="Smith"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       required={authMode === 'register'}
-                      className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                      className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                     />
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1.5">Email Address</label>
+                <label className="block text-[11px] font-semibold text-gray-300 mb-1">Email Address</label>
                 <input 
                   type="email" 
                   placeholder="alexander.smith@gmail.com"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   required
-                  className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                  className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-1.5">Password</label>
+                <label className="block text-[11px] font-semibold text-gray-300 mb-1">Password</label>
                 <input 
                   type="password" 
                   placeholder="••••••••" 
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   required
-                  className="w-full bg-black/70 border border-white/15 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-violet-500"
+                  className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                 />
               </div>
 
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl transition-all disabled:opacity-50 mt-2"
+                className="w-full py-3 px-4 rounded-lg bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-xs shadow-xl transition-all disabled:opacity-50 mt-1"
               >
                 {isLoading ? 'Processing...' : (authMode === 'register' ? 'Create Account & Sign In' : 'Sign In')}
               </button>
             </form>
 
-            <p className="text-xs text-gray-500 text-center mt-5">
+            <p className="text-[11px] text-gray-500 text-center mt-4">
               Secure manual authentication protocol enabled.
             </p>
 
