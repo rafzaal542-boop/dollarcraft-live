@@ -26,6 +26,7 @@ export default function App() {
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [withdrawalError, setWithdrawalError] = useState('');
   const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
+  const [totalBalanceCents, setTotalBalanceCents] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
@@ -126,6 +127,7 @@ export default function App() {
   const handleWithdrawalSubmit = (e) => {
     e.preventDefault();
     const amount = Number(withdrawalAmount);
+    const amountCents = Math.round(amount * 100);
 
     if (!Number.isFinite(amount) || amount < 10) {
       setWithdrawalError('Minimum withdrawal amount is $10 USD');
@@ -133,6 +135,15 @@ export default function App() {
       return;
     }
 
+    if (!Number.isSafeInteger(amountCents) || amountCents > totalBalanceCents) {
+      setWithdrawalError(
+        `Insufficient balance. Available balance: $${(totalBalanceCents / 100).toFixed(2)} USD`
+      );
+      setWithdrawalSuccess(false);
+      return;
+    }
+
+    setTotalBalanceCents((balance) => balance - amountCents);
     setWithdrawalError('');
     setWithdrawalSuccess(true);
   };
@@ -620,7 +631,9 @@ export default function App() {
             <div className="bg-gradient-to-r from-slate-900 via-violet-950/30 to-slate-900 border border-violet-500/30 rounded-3xl p-8 shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div>
                 <span className="text-xs font-bold text-gray-300 uppercase tracking-widest block mb-2">💰 TOTAL BALANCE</span>
-                <h1 className="text-4xl sm:text-5xl font-black text-cyan-400 font-mono">$0.00</h1>
+                <h1 className="text-4xl sm:text-5xl font-black text-cyan-400 font-mono">
+                  ${(totalBalanceCents / 100).toFixed(2)}
+                </h1>
               </div>
               <div className="flex items-center gap-4 w-full md:w-auto">
                 <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/30 transition-all">
@@ -928,6 +941,15 @@ export default function App() {
               <p className="text-sm text-gray-400 mt-2">Enter the amount you would like to withdraw in USD.</p>
             </div>
 
+            <div className="mb-5 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Available total balance
+              </span>
+              <span className="mt-1 block font-mono text-xl font-bold text-cyan-300">
+                ${(totalBalanceCents / 100).toFixed(2)} USD
+              </span>
+            </div>
+
             {withdrawalSuccess ? (
               <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
                 <p className="font-bold text-emerald-300">Withdrawal request submitted successfully.</p>
@@ -954,7 +976,7 @@ export default function App() {
                       id="withdrawal-amount"
                       type="number"
                       inputMode="decimal"
-                      step="any"
+                      step="0.01"
                       required
                       autoFocus
                       value={withdrawalAmount}
