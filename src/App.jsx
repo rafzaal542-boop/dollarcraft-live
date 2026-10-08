@@ -875,7 +875,7 @@ export default function App() {
                     <div className="space-y-4">
                       <button
                         type="button"
-                        onClick={() => setAdminSubTab('finance')}
+                        onClick={() => document.getElementById('internal-transfer-card')?.scrollIntoView({ behavior: 'smooth' })}
                         className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all"
                       >
                         ↔️ Internal Transfer
@@ -888,6 +888,83 @@ export default function App() {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                <div
+                  id="internal-transfer-card"
+                  className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6 max-w-3xl"
+                >
+                  <div>
+                    <h3 className="text-lg font-extrabold text-white flex items-center gap-3">↔️ Internal Transfer</h3>
+                    <p className="text-gray-400 text-sm mt-1">
+                      Credit funds directly to a registered user. No maximum transfer amount.
+                    </p>
+                  </div>
+                  <form onSubmit={handleInternalTransferSubmit} className="space-y-4">
+                    <div>
+                      <label htmlFor="internal-transfer-email" className="block text-sm font-semibold text-gray-200 mb-2">
+                        User email
+                      </label>
+                      <select
+                        id="internal-transfer-email"
+                        required
+                        disabled={usersList.length === 0}
+                        value={internalTransferEmail}
+                        onChange={(e) => {
+                          setInternalTransferEmail(e.target.value);
+                          setInternalTransferError('');
+                          setInternalTransferSuccess('');
+                        }}
+                        className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500 disabled:opacity-50"
+                      >
+                        <option value="" disabled>
+                          {usersList.length === 0 ? 'No registered users available' : 'Select a registered user'}
+                        </option>
+                        {usersList.map((user) => (
+                          <option key={user.email} value={user.email}>
+                            {user.name} ({user.email})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="internal-transfer-amount" className="block text-sm font-semibold text-gray-200 mb-2">
+                        Transfer amount (USD)
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                        <input
+                          id="internal-transfer-amount"
+                          type="number"
+                          inputMode="decimal"
+                          min="0.01"
+                          step="0.01"
+                          required
+                          value={internalTransferAmount}
+                          onChange={(e) => {
+                            setInternalTransferAmount(e.target.value);
+                            setInternalTransferError('');
+                            setInternalTransferSuccess('');
+                          }}
+                          className="w-full bg-black/60 border border-white/15 rounded-xl pl-9 pr-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    {internalTransferError && (
+                      <p role="alert" className="text-rose-300 text-sm">{internalTransferError}</p>
+                    )}
+                    {internalTransferSuccess && (
+                      <p role="status" className="text-emerald-300 text-sm">{internalTransferSuccess}</p>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={usersList.length === 0}
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm transition-all disabled:opacity-50"
+                    >
+                      Transfer funds
+                    </button>
+                  </form>
                 </div>
               </div>
             )}
@@ -907,10 +984,10 @@ export default function App() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-white/10 text-gray-400 text-xs uppercase tracking-wider">
-                        <th className="py-4 px-5">User Name</th>
+                        <th className="py-4 px-5">Name</th>
                         <th className="py-4 px-5">Email Address</th>
                         <th className="py-4 px-5">Sign-in Time</th>
-                        <th className="py-4 px-5">Total Wallet Balance</th>
+                        <th className="py-4 px-5">Total Balance</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
@@ -972,76 +1049,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl space-y-6">
-                    <div>
-                      <h3 className="text-lg font-extrabold text-white flex items-center gap-3">↔️ Internal Transfer</h3>
-                      <p className="text-gray-400 text-sm mt-1">
-                        Credit funds directly to a registered user. No transfer cap; amounts are entered in USD cents.
-                      </p>
-                    </div>
-                    <form onSubmit={handleInternalTransferSubmit} className="space-y-4">
-                      <div>
-                        <label htmlFor="internal-transfer-email" className="block text-sm font-semibold text-gray-200 mb-2">
-                          User email
-                        </label>
-                        <input
-                          id="internal-transfer-email"
-                          type="email"
-                          list="registered-user-emails"
-                          required
-                          value={internalTransferEmail}
-                          onChange={(e) => {
-                            setInternalTransferEmail(e.target.value);
-                            setInternalTransferError('');
-                            setInternalTransferSuccess('');
-                          }}
-                          className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
-                          placeholder="Select or enter a registered email"
-                        />
-                        <datalist id="registered-user-emails">
-                          {usersList.map((user) => (
-                            <option key={user.email} value={user.email}>{user.name}</option>
-                          ))}
-                        </datalist>
-                      </div>
-                      <div>
-                        <label htmlFor="internal-transfer-amount" className="block text-sm font-semibold text-gray-200 mb-2">
-                          Transfer amount (USD)
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                          <input
-                            id="internal-transfer-amount"
-                            type="number"
-                            inputMode="decimal"
-                            step="0.01"
-                            required
-                            value={internalTransferAmount}
-                            onChange={(e) => {
-                              setInternalTransferAmount(e.target.value);
-                              setInternalTransferError('');
-                              setInternalTransferSuccess('');
-                            }}
-                            className="w-full bg-black/60 border border-white/15 rounded-xl pl-9 pr-4 py-3 text-white focus:outline-none focus:border-violet-500"
-                            placeholder="0.00"
-                          />
-                        </div>
-                      </div>
-                      {internalTransferError && (
-                        <p role="alert" className="text-rose-300 text-sm">{internalTransferError}</p>
-                      )}
-                      {internalTransferSuccess && (
-                        <p role="status" className="text-emerald-300 text-sm">{internalTransferSuccess}</p>
-                      )}
-                      <button
-                        type="submit"
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm transition-all"
-                      >
-                        Transfer funds
-                      </button>
-                    </form>
-                  </div>
-                </div>
+              </div>
             )}
 
             {/* ADMIN SUB-TAB 4: SETTINGS */}
