@@ -147,6 +147,33 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch (error) {
+      console.error('Unable to clear the saved session.', error);
+      alert('Unable to securely end your session. Please check your browser storage and try again.');
+      return;
+    }
+
+    setIsLoggedIn(false);
+    setUserEmail('');
+    setUserName('');
+    setUserFirstName('');
+    setActiveTab('home');
+    setAdminSubTab('dashboard');
+    setMobileMenuOpen(false);
+    setAuthModalOpen(false);
+    setWithdrawalModalOpen(false);
+    setWithdrawalAmount('');
+    setWithdrawalError('');
+    setWithdrawalSuccess(false);
+    setInternalTransferEmail('');
+    setInternalTransferAmount('');
+    setInternalTransferError('');
+    setInternalTransferSuccess('');
+  };
+
   const handleWithdrawalSubmit = (e) => {
     e.preventDefault();
     const amount = Number(withdrawalAmount);
@@ -550,9 +577,26 @@ export default function App() {
             </div>
 
             <div className="hidden md:flex items-center space-x-3">
-              <button onClick={handleGetStartedClick} className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all">
-                {isLoggedIn ? 'My Dashboard' : 'Get Started'}
-              </button>
+              {isLoggedIn ? (
+                <>
+                  <button onClick={handleGetStartedClick} className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all">
+                    My Dashboard
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border border-rose-400/30 hover:border-rose-300/50 font-bold text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5m0 0-5-5m5 5H3" />
+                    </svg>
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <button onClick={handleGetStartedClick} className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all">
+                  Get Started
+                </button>
+              )}
             </div>
 
             <div className="md:hidden flex items-center">
@@ -578,6 +622,14 @@ export default function App() {
             
             {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
               <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
+            )}
+            {isLoggedIn && (
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left px-4 py-2 rounded-lg text-rose-200 hover:bg-rose-500/10 font-bold transition-colors"
+              >
+                Logout
+              </button>
             )}
           </div>
         )}
