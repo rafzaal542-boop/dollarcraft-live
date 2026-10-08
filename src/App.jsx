@@ -12,6 +12,25 @@ const getFirstName = (fullName) => {
   return fullName.trim().split(/\s+/).filter(Boolean)[0] || '';
 };
 
+const parseStoredUsers = (savedUsers) => {
+  const parsedUsers = savedUsers ? JSON.parse(savedUsers) : [];
+  return Array.isArray(parsedUsers)
+    ? parsedUsers.filter(
+        (user) =>
+          user &&
+          typeof user.email === 'string' &&
+          typeof user.password === 'string' &&
+          typeof user.name === 'string'
+      ).map((user) => ({
+        ...user,
+        balanceCents:
+          Number.isSafeInteger(user.balanceCents) && user.balanceCents >= 0
+            ? user.balanceCents
+            : 0
+      }))
+    : [];
+};
+
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
   (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / 1000) *
@@ -43,23 +62,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
   const [usersList, setUsersList] = useState(() => {
     try {
-      const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      const parsedUsers = savedUsers ? JSON.parse(savedUsers) : [];
-      return Array.isArray(parsedUsers)
-        ? parsedUsers.filter(
-            (user) =>
-              user &&
-              typeof user.email === 'string' &&
-              typeof user.password === 'string' &&
-              typeof user.name === 'string'
-          ).map((user) => ({
-            ...user,
-            balanceCents:
-              Number.isSafeInteger(user.balanceCents) && user.balanceCents >= 0
-                ? user.balanceCents
-                : 0
-          }))
-        : [];
+      return parseStoredUsers(localStorage.getItem(USERS_STORAGE_KEY));
     } catch (error) {
       console.error('Unable to load registered accounts.', error);
       return [];
@@ -111,6 +114,21 @@ export default function App() {
       return false;
     }
   };
+
+  useEffect(() => {
+    const syncUsersFromStorage = (event) => {
+      if (event.key !== USERS_STORAGE_KEY && event.key !== null) return;
+
+      try {
+        setUsersList(parseStoredUsers(event.newValue));
+      } catch (error) {
+        console.error('Unable to sync registered accounts.', error);
+      }
+    };
+
+    window.addEventListener('storage', syncUsersFromStorage);
+    return () => window.removeEventListener('storage', syncUsersFromStorage);
+  }, []);
 
   // Admin Metrics & History
   const [totalVisitsToday, setTotalVisitsToday] = useState(0);
@@ -339,27 +357,28 @@ export default function App() {
       return;
     }
 
+    const registrationTime = authMode === 'register' ? Date.now() : null;
+    if (authMode === 'register') {
+      const newAccount = {
+        email: finalEmail,
+        password: finalPassword,
+        name: finalName,
+        firstName: getFirstName(finalName),
+        balanceCents: 0,
+        lastSignInAt: registrationTime
+      };
+      if (!persistUsers([...usersList, newAccount])) {
+        alert('Unable to save your account. Please check your browser storage and try again.');
+        return;
+      }
+    }
+
     setIsLoading(true);
     setTimeout(() => {
       let signedInName = finalName;
       let signedInFirstName = finalName ? getFirstName(finalName) : '';
 
-      if (authMode === 'register') {
-        const newAccount = {
-          email: finalEmail,
-          password: finalPassword,
-          name: finalName,
-          firstName: signedInFirstName,
-          balanceCents: 0,
-          lastSignInAt: Date.now()
-        };
-        const updatedUsers = [...usersList, newAccount];
-        if (!persistUsers(updatedUsers)) {
-          alert('Unable to save your account. Please check your browser storage and try again.');
-          setIsLoading(false);
-          return;
-        }
-      } else {
+      if (authMode === 'login') {
         const storedFirstName = account?.firstName || getFirstName(account?.name || '');
         signedInName = finalEmail === ADMIN_EMAIL
           ? 'Alexander Smith (Admin)'
@@ -1063,7 +1082,7 @@ export default function App() {
                             <td className="py-4 px-5 text-gray-300 font-mono">{user.email}</td>
                             <td className="py-4 px-5 text-cyan-400 font-mono">
                               {Number.isFinite(user.lastSignInAt)
-                                ? new Date(user.lastSignInAt).toLocaleString()
+                                ? new Date(user.lastSignInAt).toISOString()
                                 : 'No recorded sign-in'}
                             </td>
                             <td className="py-4 px-5 text-cyan-400 font-mono font-bold">
