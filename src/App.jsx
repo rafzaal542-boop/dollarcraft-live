@@ -1,5 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 
+const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
+const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
+const GLOBAL_ACCRUAL_INTERVAL_MS = 800;
+const GLOBAL_ACCRUAL_INCREMENT = 0.0012;
+
+const getGlobalAccrualTotal = (now = Date.now()) =>
+  GLOBAL_ACCRUAL_BASE +
+  (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / GLOBAL_ACCRUAL_INTERVAL_MS) *
+    GLOBAL_ACCRUAL_INCREMENT;
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [adminSubTab, setAdminSubTab] = useState('dashboard');
@@ -188,12 +198,12 @@ export default function App() {
     }, 800);
   };
 
-  const [liveProtocolTotal, setLiveProtocolTotal] = useState(0.0000);
+  const [liveProtocolTotal, setLiveProtocolTotal] = useState(getGlobalAccrualTotal);
 
   useEffect(() => {
     const timer = setInterval(() => {
-      setLiveProtocolTotal((prev) => prev + 0.0012);
-    }, 800);
+      setLiveProtocolTotal(getGlobalAccrualTotal());
+    }, 100);
     return () => clearInterval(timer);
   }, []);
 
@@ -345,12 +355,12 @@ export default function App() {
             <section className="max-w-4xl mx-auto">
               <div className="bg-gradient-to-r from-slate-900/90 via-violet-950/40 to-slate-900/90 border border-violet-500/30 rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden backdrop-blur-xl">
                 <span className="text-xs font-extrabold text-violet-400 uppercase tracking-widest block mb-2">
-                  🟢 LIVE GLOBAL ACCRUAL TICKER (26-DECIMAL TICK)
+                  🟢 SIMULATED GLOBAL ACCRUAL TICKER
                 </span>
                 <h2 className="text-3xl sm:text-5xl font-black text-cyan-400 font-mono tracking-tight">
-                  ${liveProtocolTotal.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+                  ${liveProtocolTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h2>
-                <p className="text-sm text-gray-300 mt-2">Compound capital flowing in real-time across active investor vaults.</p>
+                <p className="text-sm text-gray-300 mt-2">Illustrative ticker calculated from a shared timestamp; not a live account balance.</p>
               </div>
             </section>
 
