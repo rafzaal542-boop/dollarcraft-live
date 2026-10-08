@@ -3,6 +3,14 @@ import React, { useState, useEffect, useRef } from 'react';
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
+const USERS_STORAGE_KEY = 'dollarcraft-users';
+const SESSION_STORAGE_KEY = 'dollarcraft-session';
+const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
+
+const getFirstName = (fullName) => {
+  if (!fullName || typeof fullName !== 'string') return '';
+  return fullName.trim().split(/\s+/).filter(Boolean)[0] || '';
+};
 
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
@@ -15,17 +23,64 @@ export default function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [investAmount, setInvestAmount] = useState(100);
   const [chatOpen, setChatOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    try {
+      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
+      return Boolean(savedSession.userEmail);
+    } catch {
+      return false;
+    }
+  });
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
+  const [registeredUsers, setRegisteredUsers] = useState(() => {
+    try {
+      const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
+      const parsedUsers = savedUsers ? JSON.parse(savedUsers) : [];
+      return Array.isArray(parsedUsers)
+        ? parsedUsers.filter(
+            (user) =>
+              user &&
+              typeof user.email === 'string' &&
+              typeof user.password === 'string' &&
+              typeof user.name === 'string'
+          )
+        : [];
+    } catch (error) {
+      console.error('Unable to load registered accounts.', error);
+      return [];
+    }
+  });
   
   // Form States for Manual Auth
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState(() => {
+    try {
+      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
+      return savedSession.userEmail || '';
+    } catch {
+      return '';
+    }
+  });
+  const [userName, setUserName] = useState(() => {
+    try {
+      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
+      return savedSession.userName || '';
+    } catch {
+      return '';
+    }
+  });
+  const [userFirstName, setUserFirstName] = useState(() => {
+    try {
+      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
+      return savedSession.userFirstName || '';
+    } catch {
+      return '';
+    }
+  });
 
   // Admin Metrics & History
   const [usersList, setUsersList] = useState([]);
@@ -64,21 +119,106 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    if (!isLoggedIn) {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      return;
+    }
+
+    const sessionPayload = {
+      userEmail,
+      userName,
+      userFirstName,
+      loggedInAt: Date.now()
+    };
+
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
+  }, [isLoggedIn, userEmail, userName, userFirstName]);
+
   // Manual Authentication Handler
   const handleAuthSubmit = (e) => {
     e.preventDefault();
-    if (!emailInput || !passwordInput || (authMode === 'register' && (!firstName || !lastName))) {
-      alert('Baraye meharbani saari fields fill karein!');
+    const finalEmail = emailInput.trim().toLowerCase();
+    const finalPassword = passwordInput;
+    const finalName = `${firstName.trim()} ${lastName.trim()}`.trim();
+
+    if (!finalEmail || !finalPassword || (authMode === 'register' && (!firstName.trim() || !lastName.trim()))) {
+      alert('Please fill in all required fields.');
+      return;
+    }
+
+    const account = registeredUsers.find(
+      (user) => user.email.toLowerCase() === finalEmail
+    );
+
+    if (authMode === 'login') {
+      if (finalEmail === ADMIN_EMAIL) {
+        const adminAccount = account || {
+          email: finalEmail,
+          password: finalPassword,
+          name: 'Alexander Smith (Admin)',
+          firstName: 'Alexander'
+        };
+
+        if (account && account.password !== finalPassword) {
+          alert('Incorrect email or password. Please try again.');
+          return;
+        }
+
+        if (!account) {
+          const updatedUsers = [...registeredUsers, adminAccount];
+          try {
+            localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+          } catch (error) {
+            console.error('Unable to save admin account.', error);
+          }
+          setRegisteredUsers(updatedUsers);
+        }
+      } else if (!account) {
+        alert('Account not found. Please register first.');
+        return;
+      } else if (account.password !== finalPassword) {
+        alert('Incorrect email or password. Please try again.');
+        return;
+      }
+    } else if (account) {
+      alert('An account with this email already exists. Please sign in.');
       return;
     }
 
     setIsLoading(true);
     setTimeout(() => {
-      let finalEmail = emailInput.trim();
-      let finalName = authMode === 'register' ? `${firstName.trim()} ${lastName.trim()}` : (finalEmail === 'dollarcraft3@gmail.com' ? 'Alexander Smith (Admin)' : 'Valued User');
+      let signedInName = finalName;
+      let signedInFirstName = finalName ? getFirstName(finalName) : '';
+
+      if (authMode === 'register') {
+        const newAccount = {
+          email: finalEmail,
+          password: finalPassword,
+          name: finalName,
+          firstName: signedInFirstName
+        };
+        const updatedUsers = [...registeredUsers, newAccount];
+        try {
+          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
+        } catch (error) {
+          console.error('Unable to save registered account.', error);
+          alert('Unable to save your account. Please check your browser storage and try again.');
+          setIsLoading(false);
+          return;
+        }
+        setRegisteredUsers(updatedUsers);
+      } else {
+        const storedFirstName = account?.firstName || getFirstName(account?.name || '');
+        signedInName = finalEmail === ADMIN_EMAIL
+          ? 'Alexander Smith (Admin)'
+          : account.name;
+        signedInFirstName = finalEmail === ADMIN_EMAIL ? 'Alexander' : storedFirstName;
+      }
 
       setUserEmail(finalEmail);
-      setUserName(finalName);
+      setUserName(signedInName);
+      setUserFirstName(signedInFirstName);
       setIsLoggedIn(true);
       setAuthModalOpen(false);
       setIsLoading(false);
@@ -90,11 +230,11 @@ export default function App() {
         if (!exists) {
           return [{
             id: Date.now(),
-            name: finalName,
+            name: signedInName,
             email: finalEmail,
             time: new Date().toLocaleTimeString(),
             balance: '$0.00',
-            status: finalEmail === 'dollarcraft3@gmail.com' ? 'Verified Admin' : 'Active'
+            status: finalEmail === ADMIN_EMAIL ? 'Verified Admin' : 'Active'
           }, ...prev];
         }
         return prev;
@@ -442,11 +582,13 @@ export default function App() {
           <section className="max-w-6xl mx-auto space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <h2 className="text-3xl font-extrabold text-white">Customer Dashboard</h2>
+                <h2 className="text-3xl font-extrabold text-white">
+                  {userFirstName ? `Welcome, ${userFirstName}!` : 'Customer Dashboard'}
+                </h2>
                 <p className="text-sm text-gray-300 mt-1">Manage your deposits, earnings, referral wallet, and active positions.</p>
               </div>
               <span className="px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-bold">
-                🟢 Live Sync Active ({userName || userEmail || 'Active User'})
+                🟢 Live Sync Active ({userFirstName || userName || userEmail || 'Active User'})
               </span>
             </div>
 
