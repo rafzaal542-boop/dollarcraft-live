@@ -22,6 +22,10 @@ export default function App() {
   const [adminSubTab, setAdminSubTab] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [investAmount, setInvestAmount] = useState(100);
+  const [withdrawalModalOpen, setWithdrawalModalOpen] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [withdrawalError, setWithdrawalError] = useState('');
+  const [withdrawalSuccess, setWithdrawalSuccess] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     try {
@@ -117,6 +121,27 @@ export default function App() {
     } else {
       setActiveTab('dashboard');
     }
+  };
+
+  const handleWithdrawalSubmit = (e) => {
+    e.preventDefault();
+    const amount = Number(withdrawalAmount);
+
+    if (!Number.isFinite(amount) || amount < 10) {
+      setWithdrawalError('Minimum withdrawal amount is $10 USD');
+      setWithdrawalSuccess(false);
+      return;
+    }
+
+    setWithdrawalError('');
+    setWithdrawalSuccess(true);
+  };
+
+  const closeWithdrawalModal = () => {
+    setWithdrawalModalOpen(false);
+    setWithdrawalAmount('');
+    setWithdrawalError('');
+    setWithdrawalSuccess(false);
   };
 
   useEffect(() => {
@@ -601,7 +626,10 @@ export default function App() {
                 <button onClick={() => setActiveTab('plans')} className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-xl shadow-violet-500/30 transition-all">
                   + Deposit
                 </button>
-                <button className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
+                <button
+                  onClick={() => setWithdrawalModalOpen(true)}
+                  className="flex-1 md:flex-none px-8 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all"
+                >
                   ↑ Withdraw
                 </button>
               </div>
@@ -876,6 +904,91 @@ export default function App() {
         )}
 
       </main>
+
+      {withdrawalModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 animate-in fade-in duration-200">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="withdrawal-modal-title"
+            className="w-full max-w-md max-h-[calc(100dvh-1.5rem)] overflow-y-auto bg-gradient-to-b from-slate-900 via-[#0c1329] to-black border border-violet-500/40 rounded-2xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.9)] text-white relative"
+          >
+            <button
+              type="button"
+              onClick={closeWithdrawalModal}
+              aria-label="Close withdrawal dialog"
+              className="absolute top-4 right-4 text-gray-400 hover:text-white px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-xs"
+            >
+              ✕
+            </button>
+
+            <div className="mb-6">
+              <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">Customer wallet</span>
+              <h2 id="withdrawal-modal-title" className="text-2xl font-black mt-1">Request a withdrawal</h2>
+              <p className="text-sm text-gray-400 mt-2">Enter the amount you would like to withdraw in USD.</p>
+            </div>
+
+            {withdrawalSuccess ? (
+              <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                <p className="font-bold text-emerald-300">Withdrawal request submitted successfully.</p>
+                <p className="text-sm text-gray-300 mt-1">
+                  Requested amount: ${Number(withdrawalAmount).toFixed(2)} USD
+                </p>
+                <button
+                  type="button"
+                  onClick={closeWithdrawalModal}
+                  className="w-full mt-5 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm transition-all"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleWithdrawalSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="withdrawal-amount" className="block text-sm font-semibold text-gray-200 mb-2">
+                    Withdrawal amount (USD)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                    <input
+                      id="withdrawal-amount"
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      required
+                      autoFocus
+                      value={withdrawalAmount}
+                      onChange={(e) => {
+                        setWithdrawalAmount(e.target.value);
+                        setWithdrawalError('');
+                      }}
+                      aria-invalid={Boolean(withdrawalError)}
+                      aria-describedby={withdrawalError ? 'withdrawal-amount-error' : 'withdrawal-amount-help'}
+                      className="w-full bg-black/60 border border-white/15 rounded-xl pl-9 pr-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                      placeholder="10.00"
+                    />
+                  </div>
+                  {withdrawalError ? (
+                    <p id="withdrawal-amount-error" role="alert" className="text-rose-300 text-xs mt-2">
+                      {withdrawalError}
+                    </p>
+                  ) : (
+                    <p id="withdrawal-amount-help" className="text-gray-400 text-xs mt-2">
+                      Minimum withdrawal: $10 USD. No maximum limit.
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg transition-all"
+                >
+                  Submit withdrawal request
+                </button>
+              </form>
+            )}
+          </section>
+        </div>
+      )}
 
       {/* PREMIUM MANUAL AUTHENTICATION MODAL (First Name, Last Name, Email, Password) */}
       {authModalOpen && (
