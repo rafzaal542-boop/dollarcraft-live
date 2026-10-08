@@ -41,7 +41,7 @@ export default function App() {
   });
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
-  const [registeredUsers, setRegisteredUsers] = useState(() => {
+  const [usersList, setUsersList] = useState(() => {
     try {
       const savedUsers = localStorage.getItem(USERS_STORAGE_KEY);
       const parsedUsers = savedUsers ? JSON.parse(savedUsers) : [];
@@ -96,14 +96,14 @@ export default function App() {
     }
   });
 
-  const currentUser = registeredUsers.find(
+  const currentUser = usersList.find(
     (user) => user.email.toLowerCase() === userEmail.toLowerCase()
   );
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
   const persistUsers = (updatedUsers) => {
     try {
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-      setRegisteredUsers(updatedUsers);
+      setUsersList(updatedUsers);
       return true;
     } catch (error) {
       console.error('Unable to save registered accounts.', error);
@@ -178,7 +178,7 @@ export default function App() {
       return;
     }
 
-    const updatedUsers = registeredUsers.map((user) =>
+    const updatedUsers = usersList.map((user) =>
       user.email.toLowerCase() === currentUser.email.toLowerCase()
         ? { ...user, balanceCents: user.balanceCents - amountCents }
         : user
@@ -206,7 +206,7 @@ export default function App() {
     const recipientEmail = internalTransferEmail.trim().toLowerCase();
     const amount = Number(internalTransferAmount);
     const amountCents = Math.round(amount * 100);
-    const recipient = registeredUsers.find(
+    const recipient = usersList.find(
       (user) => user.email.toLowerCase() === recipientEmail
     );
 
@@ -231,7 +231,7 @@ export default function App() {
       return;
     }
 
-    const updatedUsers = registeredUsers.map((user) =>
+    const updatedUsers = usersList.map((user) =>
       user.email.toLowerCase() === recipientEmail
         ? { ...user, balanceCents: updatedBalanceCents }
         : user
@@ -282,7 +282,7 @@ export default function App() {
       return;
     }
 
-    const account = registeredUsers.find(
+    const account = usersList.find(
       (user) => user.email.toLowerCase() === finalEmail
     );
 
@@ -319,7 +319,7 @@ export default function App() {
           balanceCents: 0,
           lastSignInAt: Date.now()
         };
-        const updatedUsers = [...registeredUsers, newAccount];
+        const updatedUsers = [...usersList, newAccount];
         if (!persistUsers(updatedUsers)) {
           alert('Unable to save your account. Please check your browser storage and try again.');
           setIsLoading(false);
@@ -342,10 +342,10 @@ export default function App() {
           lastSignInAt: Date.now()
         };
         const updatedUsers = account
-          ? registeredUsers.map((user) =>
+          ? usersList.map((user) =>
               user.email.toLowerCase() === finalEmail ? signedInAccount : user
             )
-          : [...registeredUsers, signedInAccount];
+          : [...usersList, signedInAccount];
         if (!persistUsers(updatedUsers)) {
           alert('Unable to update your sign-in record. Please check your browser storage and try again.');
           setIsLoading(false);
@@ -870,9 +870,16 @@ export default function App() {
                   <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl flex flex-col justify-between">
                     <div>
                       <h3 className="text-lg font-extrabold text-white mb-3">⚡ Quick Admin Actions</h3>
-                      <p className="text-gray-400 text-sm mb-6">Execute instant protocol adjustments or reset visitor logs.</p>
+                      <p className="text-gray-400 text-sm mb-6">Manage customer balances and platform metrics.</p>
                     </div>
                     <div className="space-y-4">
+                      <button
+                        type="button"
+                        onClick={() => setAdminSubTab('finance')}
+                        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all"
+                      >
+                        ↔️ Internal Transfer
+                      </button>
                       <button onClick={() => { setTotalVisitsToday(0); setActiveVaultCapital(0); setDailyRoiPool(0); alert('All admin metrics & history reset successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
                         Reset All Metrics to 0
                       </button>
@@ -893,7 +900,7 @@ export default function App() {
                     <h3 className="text-lg font-extrabold text-white">Registered Users & Wallets</h3>
                     <p className="text-gray-400 text-sm mt-0.5">Account sign-in times and current total wallet balances.</p>
                   </div>
-                  <span className="px-4 py-1.5 rounded-full bg-violet-500/20 text-violet-300 text-sm font-bold">{registeredUsers.length} Registered Users</span>
+                  <span className="px-4 py-1.5 rounded-full bg-violet-500/20 text-violet-300 text-sm font-bold">{usersList.length} Registered Users</span>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -907,14 +914,14 @@ export default function App() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
-                      {registeredUsers.length === 0 ? (
+                      {usersList.length === 0 ? (
                         <tr>
                           <td colSpan="4" className="py-8 text-center text-gray-400">
                             No registered users yet.
                           </td>
                         </tr>
                       ) : (
-                        registeredUsers.map((user) => (
+                        usersList.map((user) => (
                           <tr key={user.email} className="hover:bg-white/5 transition-all">
                             <td className="py-4 px-5 font-bold text-white">{user.name}</td>
                             <td className="py-4 px-5 text-gray-300 font-mono">{user.email}</td>
@@ -969,7 +976,7 @@ export default function App() {
                     <div>
                       <h3 className="text-lg font-extrabold text-white flex items-center gap-3">↔️ Internal Transfer</h3>
                       <p className="text-gray-400 text-sm mt-1">
-                        Credit funds directly to a registered user. Transfers have no minimum or maximum amount.
+                        Credit funds directly to a registered user. No transfer cap; amounts are entered in USD cents.
                       </p>
                     </div>
                     <form onSubmit={handleInternalTransferSubmit} className="space-y-4">
@@ -992,7 +999,7 @@ export default function App() {
                           placeholder="Select or enter a registered email"
                         />
                         <datalist id="registered-user-emails">
-                          {registeredUsers.map((user) => (
+                          {usersList.map((user) => (
                             <option key={user.email} value={user.email}>{user.name}</option>
                           ))}
                         </datalist>
@@ -1007,7 +1014,6 @@ export default function App() {
                             id="internal-transfer-amount"
                             type="number"
                             inputMode="decimal"
-                            min="0.01"
                             step="0.01"
                             required
                             value={internalTransferAmount}
