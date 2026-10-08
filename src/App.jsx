@@ -115,6 +115,14 @@ export default function App() {
     }
   };
 
+  const refreshUsersFromStorage = () => {
+    try {
+      setUsersList(parseStoredUsers(localStorage.getItem(USERS_STORAGE_KEY)));
+    } catch (error) {
+      console.error('Unable to refresh registered accounts.', error);
+    }
+  };
+
   useEffect(() => {
     const syncUsersFromStorage = (event) => {
       if (event.key !== USERS_STORAGE_KEY && event.key !== null) return;
@@ -598,7 +606,7 @@ export default function App() {
               
               {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
               {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
-                <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
+                <button onClick={() => { refreshUsersFromStorage(); setActiveTab('admin'); }} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
 
@@ -647,7 +655,7 @@ export default function App() {
             <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-violet-400 font-bold">FAQ</button>
             
             {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
-              <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
+              <button onClick={() => { refreshUsersFromStorage(); setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
             )}
             {isLoggedIn && (
               <button
@@ -890,7 +898,7 @@ export default function App() {
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
                 <button onClick={() => setAdminSubTab('dashboard')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'dashboard' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>📊 Dashboard</button>
-                <button onClick={() => setAdminSubTab('users')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'users' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>👥 Users History</button>
+                <button onClick={() => { refreshUsersFromStorage(); setAdminSubTab('users'); }} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'users' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>👥 Users History</button>
                 <button onClick={() => setAdminSubTab('finance')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'finance' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>💳 Finance & Payouts</button>
                 <button onClick={() => setAdminSubTab('settings')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'settings' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>⚙️ Settings</button>
               </div>
