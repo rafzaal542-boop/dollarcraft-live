@@ -1,3 +1,46 @@
+const getResponseError = (payload, response, responseText) => {
+  if (payload && typeof payload === 'object' && typeof payload.error === 'string') {
+    return payload.error;
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  const bodyPreview = responseText.trim();
+  if (bodyPreview && !/html/i.test(contentType) && !/^<!doctype html|^<html/i.test(bodyPreview)) {
+    return bodyPreview.slice(0, 300);
+  }
+
+  return `The server returned an unexpected response (HTTP ${response.status}).`;
+};
+
+export const parseApiResponse = async (response) => {
+  const responseText = await response.text();
+  let payload = null;
+  let validJson = false;
+
+  if (responseText.trim()) {
+    try {
+      payload = JSON.parse(responseText);
+      validJson = true;
+    } catch {
+      validJson = false;
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(getResponseError(payload, response, responseText));
+  }
+
+  if (!validJson) {
+    throw new Error(
+      responseText.trim()
+        ? 'The server returned an invalid response. Please try again.'
+        : 'The server returned an empty response. Please try again.'
+    );
+  }
+
+  return payload;
+};
+
 const request = async (endpoint, options = {}) => {
   const response = await fetch(endpoint, {
     credentials: 'same-origin',
@@ -7,11 +50,7 @@ const request = async (endpoint, options = {}) => {
       ...options.headers
     }
   });
-  const result = await response.json();
-  if (!response.ok) {
-    throw new Error(result.error || 'The request could not be completed.');
-  }
-  return result;
+  return parseApiResponse(response);
 };
 
 const post = (endpoint, body = {}) =>
