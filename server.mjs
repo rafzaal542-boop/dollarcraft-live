@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { connectMongoUserRepository } from './mongo-repository.mjs';
 
 const scryptAsync = promisify(scrypt);
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
@@ -61,7 +62,8 @@ const getCookie = (request, name) => {
 
 export function createApiServer({
   dataDir = process.env.USER_DATA_DIR || DEFAULT_DATA_DIR,
-  adminPassword = process.env.ADMIN_PASSWORD || ''
+  adminPassword = process.env.ADMIN_PASSWORD || '',
+  repository
 } = {}) {
   const usersPath = path.join(dataDir, 'users.json');
   const sessions = new Map();
@@ -71,7 +73,7 @@ export function createApiServer({
     : null;
   let writeQueue = Promise.resolve();
 
-  const readUsers = async () => {
+  const readJsonUsers = async () => {
     try {
       const contents = await fs.readFile(usersPath, 'utf8');
       const users = JSON.parse(contents);
@@ -85,7 +87,7 @@ export function createApiServer({
     }
   };
 
-  const saveUsers = async (users) => {
+  const saveJsonUsers = async (users) => {
     await fs.mkdir(dataDir, { recursive: true });
     const temporaryPath = `${usersPath}.${randomUUID()}.tmp`;
     const file = await fs.open(temporaryPath, 'wx', 0o600);
@@ -98,15 +100,38 @@ export function createApiServer({
     await fs.rename(temporaryPath, usersPath);
   };
 
-  const updateUsers = async (update) => {
+  const updateJsonUsers = async (update) => {
     const operation = writeQueue.then(async () => {
-      const users = await readUsers();
+      const users = await readJsonUsers();
       const result = await update(users);
-      if (result?.save) await saveUsers(users);
+      if (result?.save) await saveJsonUsers(users);
       return result?.value;
     });
     writeQueue = operation.catch(() => {});
     return operation;
+  };
+  const userRepository = repository || {
+    listUsers: readJsonUsers,
+    findById: async (id) => (await readJsonUsers()).find((user) => user.id === id) || null,
+    findByEmail: async (email) =>
+      (await readJsonUsers()).find((user) => user.email.toLowerCase() === email.toLowerCase()) || null,
+    createUser: (user) => updateJsonUsers((users) => {
+      if (users.some((item) => item.email.toLowerCase() === user.email.toLowerCase())) {
+        throw Object.assign(new Error('An account with this email already exists.'), { statusCode: 409 });
+      }
+      users.push(user);
+      return { save: true, value: user };
+    }),
+    changeBalance: (id, changeInCents) => updateJsonUsers((users) => {
+      const user = users.find((item) => item.id === id);
+      if (!user) throw Object.assign(new Error('User account not found.'), { statusCode: 404 });
+      const nextBalance = user.balanceCents + changeInCents;
+      if (!Number.isSafeInteger(nextBalance) || nextBalance < 0) {
+        throw Object.assign(new Error('The wallet balance is insufficient or too large.'), { statusCode: 400 });
+      }
+      user.balanceCents = nextBalance;
+      return { save: true, value: user };
+    })
   };
 
   const getSession = (request) => {
@@ -131,27 +156,37 @@ export function createApiServer({
       'X-Content-Type-Options': 'nosniff'
     });
     response.write('retry: 3000\n\n');
-    const stream = { response, isAdmin: session.isAdmin, userId };
+    const stream = { response, isAdmin: session.isAdmin, userId, initializing: true, pendingUsers: [] };
     streams.add(stream);
     response.on('close', () => streams.delete(stream));
 
-    const users = await readUsers();
+    const users = await userRepository.listUsers();
     const initialData = session.isAdmin
       ? users.map(publicProfile)
       : users.filter((user) => user.id === session.userId).map(publicProfile);
     response.write(`data: ${JSON.stringify(initialData)}\n\n`);
+    stream.initializing = false;
+    for (const user of stream.pendingUsers) {
+      if (!response.destroyed && (stream.isAdmin || stream.userId === user.id)) {
+        response.write(`data: ${JSON.stringify({ type: 'upsert', user: publicProfile(user) })}\n\n`);
+      }
+    }
+    stream.pendingUsers = [];
   };
 
-  const publishUsers = (users) => {
+  const publishUser = (user) => {
+    const payload = `data: ${JSON.stringify({ type: 'upsert', user: publicProfile(user) })}\n\n`;
     for (const stream of streams) {
-      const visibleUsers = stream.isAdmin
-        ? users
-        : users.filter((user) => user.id === stream.userId);
-      if (!stream.response.destroyed) {
-        stream.response.write(`data: ${JSON.stringify(visibleUsers.map(publicProfile))}\n\n`);
+      if (stream.initializing) {
+        stream.pendingUsers.push(user);
+        continue;
+      }
+      if ((stream.isAdmin || stream.userId === user.id) && !stream.response.destroyed) {
+        stream.response.write(payload);
       }
     }
   };
+  userRepository.subscribe?.(publishUser);
 
   const handler = async (request, response) => {
     const url = new URL(request.url, 'http://localhost');
@@ -167,8 +202,7 @@ export function createApiServer({
           isAdmin: true
         });
       }
-      const users = await readUsers();
-      const user = users.find((item) => item.id === session.userId);
+      const user = await userRepository.findById(session.userId);
       if (!user) return json(response, 401, { error: 'This account no longer exists.' });
       return json(response, 200, { user: publicProfile(user), isAdmin: false });
     }
@@ -197,19 +231,18 @@ export function createApiServer({
         firstName,
         lastName,
         name: `${firstName} ${lastName}`.trim(),
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
         balanceCents: 0,
         passwordSalt: salt,
         passwordHash: hash
       };
-      const createdUser = await updateUsers((users) => {
-        if (users.some((item) => item.email.toLowerCase() === email)) {
-          return { save: false, value: null };
-        }
-        users.push(user);
-        return { save: true, value: publicProfile(user) };
-      });
-      if (!createdUser) return json(response, 409, { error: 'An account with this email already exists.' });
+      let createdUser;
+      try {
+        createdUser = await userRepository.createUser(user);
+      } catch (error) {
+        if (error.statusCode === 409) return json(response, 409, { error: error.message });
+        throw error;
+      }
 
       const token = randomBytes(32).toString('base64url');
       sessions.set(token, {
@@ -217,8 +250,8 @@ export function createApiServer({
         isAdmin: false,
         expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000
       });
-      publishUsers(await readUsers());
-      return json(response, 201, { user: createdUser, isAdmin: false }, {
+      publishUser(createdUser);
+      return json(response, 201, { user: publicProfile(createdUser), isAdmin: false }, {
         'Set-Cookie': sessionCookie(token, secure)
       });
     }
@@ -246,8 +279,7 @@ export function createApiServer({
           expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000
         };
       } else {
-        const users = await readUsers();
-        const user = users.find((item) => item.email.toLowerCase() === email);
+        const user = await userRepository.findByEmail(email);
         if (!user) return json(response, 401, { error: 'Incorrect email or password.' });
         const submittedDigest = await passwordHash(password, user.passwordSalt);
         const storedDigest = Buffer.from(user.passwordHash, 'hex');
@@ -267,7 +299,7 @@ export function createApiServer({
       return json(response, 200, {
         user: authenticatedSession.isAdmin
           ? { id: 'admin', email: ADMIN_EMAIL, firstName: 'Admin', lastName: '' }
-          : publicProfile((await readUsers()).find((user) => user.id === authenticatedSession.userId)),
+          : publicProfile(await userRepository.findById(authenticatedSession.userId)),
         isAdmin: authenticatedSession.isAdmin
       }, { 'Set-Cookie': sessionCookie(token, secure) });
     }
@@ -306,18 +338,9 @@ export function createApiServer({
       }
 
       try {
-        const changedUser = await updateUsers((users) => {
-          const user = users.find((item) => item.id === userId);
-          if (!user) throw Object.assign(new Error('User account not found.'), { statusCode: 404 });
-          const nextBalance = user.balanceCents + changeInCents;
-          if (!Number.isSafeInteger(nextBalance) || nextBalance < 0) {
-            throw Object.assign(new Error('The wallet balance is insufficient or too large.'), { statusCode: 400 });
-          }
-          user.balanceCents = nextBalance;
-          return { save: true, value: publicProfile(user) };
-        });
-        publishUsers(await readUsers());
-        return json(response, 200, { user: changedUser });
+        const changedUser = await userRepository.changeBalance(userId, changeInCents);
+        publishUser(changedUser);
+        return json(response, 200, { user: publicProfile(changedUser) });
       } catch (error) {
         if (error.statusCode) return json(response, error.statusCode, { error: error.message });
         throw error;
@@ -327,7 +350,7 @@ export function createApiServer({
     return json(response, 404, { error: 'Not found.' });
   };
 
-  return http.createServer((request, response) => {
+  const server = http.createServer((request, response) => {
     handler(request, response).catch((error) => {
       console.error('API request failed:', error);
       if (!response.headersSent) {
@@ -339,16 +362,30 @@ export function createApiServer({
       }
     });
   });
+  return server;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const server = createApiServer();
-  const port = Number(process.env.PORT || 3001);
-  const host = process.env.HOST || '0.0.0.0';
-  server.listen(port, host, () => {
-    console.log(`Dollar Craft API listening on ${host}:${port}`);
-    if (!process.env.ADMIN_PASSWORD) {
-      console.warn('Admin login is disabled until ADMIN_PASSWORD is configured in the server environment.');
-    }
+  const start = async () => {
+    const repository = await connectMongoUserRepository();
+    const server = createApiServer({ repository });
+    const port = Number(process.env.PORT || 3001);
+    const host = process.env.HOST || '0.0.0.0';
+    server.listen(port, host, () => {
+      console.log(`Dollar Craft API listening on ${host}:${port}`);
+      if (!process.env.ADMIN_PASSWORD) {
+        console.warn('Admin login is disabled until ADMIN_PASSWORD is configured in the server environment.');
+      }
+    });
+    const shutdown = async () => {
+      server.close();
+      await repository.close();
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
+  };
+  start().catch((error) => {
+    console.error('Unable to start the API server:', error);
+    process.exitCode = 1;
   });
 }

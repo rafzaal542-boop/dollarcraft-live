@@ -38,16 +38,22 @@ export const logOutUser = () => post('/api/auth/logout');
 
 export const observeAllUserProfiles = (onUsers, onError) => {
   const source = new EventSource('/api/users/events');
+  let users = [];
   source.onmessage = (event) => {
     try {
-      onUsers(JSON.parse(event.data));
+      const update = JSON.parse(event.data);
+      if (Array.isArray(update)) {
+        users = update;
+      } else if (update.type === 'upsert' && update.user?.id) {
+        users = [...users.filter((user) => user.id !== update.user.id), update.user];
+      }
+      onUsers(users);
     } catch (error) {
       onError(error);
     }
   };
   source.onerror = () => {
-    source.close();
-    onError(new Error('The live registered-users connection was interrupted.'));
+    onError(new Error('The live registered-users connection was interrupted; reconnecting.'));
   };
   return () => source.close();
 };
@@ -56,15 +62,18 @@ export const observeUserProfile = (userId, onUser, onError) => {
   const source = new EventSource(`/api/users/${encodeURIComponent(userId)}/events`);
   source.onmessage = (event) => {
     try {
-      const users = JSON.parse(event.data);
-      onUser(users[0] || null);
+      const update = JSON.parse(event.data);
+      if (Array.isArray(update)) {
+        onUser(update[0] || null);
+      } else if (update.type === 'upsert' && update.user?.id === userId) {
+        onUser(update.user);
+      }
     } catch (error) {
       onError(error);
     }
   };
   source.onerror = () => {
-    source.close();
-    onError(new Error('The live account connection was interrupted.'));
+    onError(new Error('The live account connection was interrupted; reconnecting.'));
   };
   return () => source.close();
 };

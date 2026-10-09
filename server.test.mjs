@@ -50,6 +50,9 @@ test('registers accounts with hashed passwords and returns no credential hashes'
 
   assert.equal(response.status, 201);
   assert.equal(payload.user.email, 'reader@example.com');
+  assert.equal(payload.user.firstName, 'Ada');
+  assert.equal(payload.user.lastName, 'Lovelace');
+  assert.equal(typeof payload.user.createdAt, 'string');
   assert.equal(payload.user.balanceCents, 0);
   assert.equal('passwordHash' in payload.user, false);
   assert.equal(savedUsers.length, 1);
@@ -107,6 +110,44 @@ test('requires the configured admin email and password and protects the admin st
   assert.equal(login.user.email, ADMIN_EMAIL);
   assert.equal(profileStream.status, 200);
   await profileStream.body.cancel();
+});
+
+test('pushes new Mongo-style profile data to an already connected admin stream immediately', async () => {
+  const adminLogin = await post('/api/auth/login', {
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD
+  });
+  const response = await fetch(`${origin}/api/users/events`, {
+    headers: { Cookie: sessionCookie(adminLogin) }
+  });
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let streamText = '';
+
+  const readUntil = async (predicate) => {
+    while (!predicate(streamText)) {
+      const { value, done } = await reader.read();
+      assert.equal(done, false);
+      streamText += decoder.decode(value, { stream: true });
+    }
+  };
+
+  await readUntil((text) => text.includes('data: []'));
+  const registration = await post('/api/auth/register', {
+    email: 'realtime@example.com',
+    firstName: 'Real',
+    lastName: 'Time',
+    password: 'account-password-123'
+  });
+  assert.equal(registration.status, 201);
+  await readUntil((text) => text.includes('"email":"realtime@example.com"'));
+
+  assert.match(streamText, /"type":"upsert"/);
+  assert.match(streamText, /"firstName":"Real"/);
+  assert.match(streamText, /"lastName":"Time"/);
+  assert.match(streamText, /"balanceCents":0/);
+  assert.doesNotMatch(streamText, /passwordHash|passwordSalt|account-password-123/);
+  await reader.cancel();
 });
 
 test('blocks user balance credits and persists authorized wallet changes', async () => {
