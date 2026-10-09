@@ -1,40 +1,50 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  auth,
+  changeUserBalance,
+  createAccount,
+  getUserProfile,
+  logOutUser,
+  observeAllUserProfiles,
+  observeAuthState,
+  observeUserProfile,
+  signInWithPassword
+} from './firebase';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
-const USERS_STORAGE_KEY = 'dollarcraft-users';
-const SESSION_STORAGE_KEY = 'dollarcraft-session';
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
-
-const getFirstName = (fullName) => {
-  if (!fullName || typeof fullName !== 'string') return '';
-  return fullName.trim().split(/\s+/).filter(Boolean)[0] || '';
-};
-
-const parseStoredUsers = (savedUsers) => {
-  const parsedUsers = savedUsers ? JSON.parse(savedUsers) : [];
-  return Array.isArray(parsedUsers)
-    ? parsedUsers.filter(
-        (user) =>
-          user &&
-          typeof user.email === 'string' &&
-          typeof user.password === 'string' &&
-          typeof user.name === 'string'
-      ).map((user) => ({
-        ...user,
-        balanceCents:
-          Number.isSafeInteger(user.balanceCents) && user.balanceCents >= 0
-            ? user.balanceCents
-            : 0
-      }))
-    : [];
-};
 
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
   (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / 1000) *
     GLOBAL_ACCRUAL_PER_SECOND;
+
+const formatSignupTimestamp = (createdAt) => {
+  const timestamp =
+    typeof createdAt?.toDate === 'function'
+      ? createdAt.toDate()
+      : typeof createdAt === 'number'
+        ? new Date(createdAt)
+        : null;
+  return timestamp && Number.isFinite(timestamp.getTime())
+    ? timestamp.toISOString()
+    : 'Timestamp pending';
+};
+
+const normalizeUserProfile = (data, id) => {
+  const nameParts = (data.name || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    ...data,
+    id,
+    firstName: data.firstName || nameParts[0] || '',
+    lastName: data.lastName || nameParts.slice(1).join(' '),
+    balanceCents: Number.isSafeInteger(data.balanceCents) && data.balanceCents >= 0
+      ? data.balanceCents
+      : 0
+  };
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -50,93 +60,76 @@ export default function App() {
   const [internalTransferError, setInternalTransferError] = useState('');
   const [internalTransferSuccess, setInternalTransferSuccess] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    try {
-      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
-      return Boolean(savedSession.userEmail);
-    } catch {
-      return false;
-    }
-  });
+  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(auth.currentUser));
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
-  const [usersList, setUsersList] = useState(() => {
-    try {
-      return parseStoredUsers(localStorage.getItem(USERS_STORAGE_KEY));
-    } catch (error) {
-      console.error('Unable to load registered accounts.', error);
-      return [];
-    }
-  });
+  const [usersList, setUsersList] = useState([]);
+  const [usersLoadError, setUsersLoadError] = useState('');
+  const [userUid, setUserUid] = useState(auth.currentUser?.uid || '');
   
-  // Form States for Manual Auth
+  // Authentication form state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [userEmail, setUserEmail] = useState(() => {
-    try {
-      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
-      return savedSession.userEmail || '';
-    } catch {
-      return '';
-    }
-  });
-  const [userName, setUserName] = useState(() => {
-    try {
-      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
-      return savedSession.userName || '';
-    } catch {
-      return '';
-    }
-  });
-  const [userFirstName, setUserFirstName] = useState(() => {
-    try {
-      const savedSession = JSON.parse(localStorage.getItem(SESSION_STORAGE_KEY) || '{}');
-      return savedSession.userFirstName || '';
-    } catch {
-      return '';
-    }
-  });
+  const [userEmail, setUserEmail] = useState(auth.currentUser?.email || '');
+  const [userName, setUserName] = useState(auth.currentUser?.displayName || '');
+  const [userFirstName, setUserFirstName] = useState(
+    auth.currentUser?.displayName?.trim().split(/\s+/)[0] || ''
+  );
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   const currentUser = usersList.find(
-    (user) => user.email.toLowerCase() === userEmail.toLowerCase()
+    (user) => user.id === userUid
   );
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
-  const persistUsers = (updatedUsers) => {
-    try {
-      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers));
-      setUsersList(updatedUsers);
-      return true;
-    } catch (error) {
-      console.error('Unable to save registered accounts.', error);
-      return false;
-    }
-  };
-
-  const refreshUsersFromStorage = () => {
-    try {
-      setUsersList(parseStoredUsers(localStorage.getItem(USERS_STORAGE_KEY)));
-    } catch (error) {
-      console.error('Unable to refresh registered accounts.', error);
-    }
-  };
 
   useEffect(() => {
-    const syncUsersFromStorage = (event) => {
-      if (event.key !== USERS_STORAGE_KEY && event.key !== null) return;
+    const unsubscribe = observeAuthState((firebaseUser) => {
+      setIsLoggedIn(Boolean(firebaseUser));
+      setUserUid(firebaseUser?.uid || '');
+      setUserEmail(firebaseUser?.email || '');
+      setUserName(firebaseUser?.displayName || '');
+      setUserFirstName(firebaseUser?.displayName?.trim().split(/\s+/)[0] || '');
+      setUsersList([]);
+      setUsersLoadError('');
+    });
+    return unsubscribe;
+  }, []);
 
-      try {
-        setUsersList(parseStoredUsers(event.newValue));
-      } catch (error) {
-        console.error('Unable to sync registered accounts.', error);
+  useEffect(() => {
+    try {
+      localStorage.removeItem('dollarcraft-users');
+      localStorage.removeItem('dollarcraft-session');
+    } catch (error) {
+      console.error('Unable to clear legacy browser-stored credentials.', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLoggedIn || !userUid) {
+      return undefined;
+    }
+
+    const onError = (error) => {
+      console.error('Unable to load registered user profiles from Firestore.', error);
+      setUsersLoadError('Unable to load registered users. Check Firestore access and try again.');
+    };
+    const onUsers = (users) => {
+      const normalizedUsers = users.map((user) => normalizeUserProfile(user, user.id));
+      setUsersList(normalizedUsers);
+      const profile = normalizedUsers.find((user) => user.id === userUid);
+      if (profile) {
+        setUserName(profile.name || '');
+        setUserFirstName(profile.firstName || '');
       }
+      setUsersLoadError('');
     };
 
-    window.addEventListener('storage', syncUsersFromStorage);
-    return () => window.removeEventListener('storage', syncUsersFromStorage);
-  }, []);
+    return userEmail.toLowerCase() === ADMIN_EMAIL
+      ? observeAllUserProfiles(onUsers, onError)
+      : observeUserProfile(userUid, (user) => onUsers(user ? [user] : []), onError);
+  }, [isLoggedIn, userEmail, userUid]);
 
   // Admin Metrics & History
   const [totalVisitsToday, setTotalVisitsToday] = useState(0);
@@ -179,19 +172,15 @@ export default function App() {
     setLogoutConfirmationOpen(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     try {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
+      await logOutUser();
     } catch (error) {
-      console.error('Unable to clear the saved session.', error);
-      alert('Unable to securely end your session. Please check your browser storage and try again.');
+      console.error('Unable to sign out.', error);
+      alert('Unable to sign out. Please try again.');
       return;
     }
 
-    setIsLoggedIn(false);
-    setUserEmail('');
-    setUserName('');
-    setUserFirstName('');
     setActiveTab('home');
     setAdminSubTab('dashboard');
     setMobileMenuOpen(false);
@@ -207,7 +196,7 @@ export default function App() {
     setLogoutConfirmationOpen(false);
   };
 
-  const handleWithdrawalSubmit = (e) => {
+  const handleWithdrawalSubmit = async (e) => {
     e.preventDefault();
     const amount = Number(withdrawalAmount);
     const amountCents = Math.round(amount * 100);
@@ -230,21 +219,15 @@ export default function App() {
       return;
     }
 
-    if (amountCents > totalBalanceCents) {
+    try {
+      await changeUserBalance(currentUser.id, -amountCents);
+    } catch (error) {
+      console.error('Unable to persist the withdrawal balance change.', error);
       setWithdrawalError(
-        `Insufficient balance. Available balance: $${(totalBalanceCents / 100).toFixed(2)} USD`
+        error.message.includes('insufficient')
+          ? `Insufficient balance. Available balance: $${(totalBalanceCents / 100).toFixed(2)} USD`
+          : 'Unable to update your balance. Please try again.'
       );
-      setWithdrawalSuccess(false);
-      return;
-    }
-
-    const updatedUsers = usersList.map((user) =>
-      user.email.toLowerCase() === currentUser.email.toLowerCase()
-        ? { ...user, balanceCents: user.balanceCents - amountCents }
-        : user
-    );
-    if (!persistUsers(updatedUsers)) {
-      setWithdrawalError('Unable to update your balance. Please try again.');
       setWithdrawalSuccess(false);
       return;
     }
@@ -253,7 +236,7 @@ export default function App() {
     setWithdrawalSuccess(true);
   };
 
-  const handleInternalTransferSubmit = (e) => {
+  const handleInternalTransferSubmit = async (e) => {
     e.preventDefault();
     setInternalTransferError('');
     setInternalTransferSuccess('');
@@ -285,19 +268,15 @@ export default function App() {
       return;
     }
 
-    const updatedBalanceCents = recipient.balanceCents + amountCents;
-    if (!Number.isSafeInteger(updatedBalanceCents)) {
-      setInternalTransferError('The resulting balance is too large to store accurately.');
-      return;
-    }
-
-    const updatedUsers = usersList.map((user) =>
-      user.email.toLowerCase() === recipientEmail
-        ? { ...user, balanceCents: updatedBalanceCents }
-        : user
-    );
-    if (!persistUsers(updatedUsers)) {
-      setInternalTransferError('Unable to save the transfer. Please try again.');
+    try {
+      await changeUserBalance(recipient.id, amountCents);
+    } catch (error) {
+      console.error('Unable to persist the admin wallet transfer.', error);
+      setInternalTransferError(
+        error.message.includes('too large')
+          ? 'The resulting balance is too large to store accurately.'
+          : 'Unable to save the transfer. Please try again.'
+      );
       return;
     }
 
@@ -314,116 +293,44 @@ export default function App() {
     setWithdrawalSuccess(false);
   };
 
-  useEffect(() => {
-    if (!isLoggedIn) {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-      return;
-    }
-
-    const sessionPayload = {
-      userEmail,
-      userName,
-      userFirstName,
-      loggedInAt: Date.now()
-    };
-
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionPayload));
-  }, [isLoggedIn, userEmail, userName, userFirstName]);
-
-  // Manual Authentication Handler
-  const handleAuthSubmit = (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
     const finalEmail = emailInput.trim().toLowerCase();
     const finalPassword = passwordInput;
-    const finalName = `${firstName.trim()} ${lastName.trim()}`.trim();
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
 
-    if (!finalEmail || !finalPassword || (authMode === 'register' && (!firstName.trim() || !lastName.trim()))) {
+    if (!finalEmail || !finalPassword || (authMode === 'register' && (!trimmedFirstName || !trimmedLastName))) {
       alert('Please fill in all required fields.');
       return;
     }
 
-    const account = usersList.find(
-      (user) => user.email.toLowerCase() === finalEmail
-    );
-
-    if (authMode === 'login') {
-      if (finalEmail === ADMIN_EMAIL) {
-        if (account && account.password !== finalPassword) {
-          alert('Incorrect email or password. Please try again.');
-          return;
-        }
-
-      } else if (!account) {
-        alert('Account not found. Please register first.');
-        return;
-      } else if (account.password !== finalPassword) {
-        alert('Incorrect email or password. Please try again.');
-        return;
-      }
-    } else if (account) {
-      alert('An account with this email already exists. Please sign in.');
-      return;
-    }
-
-    const registrationTime = authMode === 'register' ? Date.now() : null;
-    if (authMode === 'register') {
-      const newAccount = {
-        email: finalEmail,
-        password: finalPassword,
-        name: finalName,
-        firstName: getFirstName(finalName),
-        balanceCents: 0,
-        lastSignInAt: registrationTime
-      };
-      if (!persistUsers([...usersList, newAccount])) {
-        alert('Unable to save your account. Please check your browser storage and try again.');
-        return;
-      }
-    }
-
     setIsLoading(true);
-    setTimeout(() => {
-      let signedInName = finalName;
-      let signedInFirstName = finalName ? getFirstName(finalName) : '';
-
-      if (authMode === 'login') {
-        const storedFirstName = account?.firstName || getFirstName(account?.name || '');
-        signedInName = finalEmail === ADMIN_EMAIL
-          ? 'Alexander Smith (Admin)'
-          : account.name;
-        signedInFirstName = finalEmail === ADMIN_EMAIL ? 'Alexander' : storedFirstName;
-        const signedInAccount = {
-          ...(account || {
-            email: finalEmail,
-            password: finalPassword,
-            name: signedInName,
-            firstName: signedInFirstName,
-            balanceCents: 0
-          }),
-          lastSignInAt: Date.now()
-        };
-        const updatedUsers = account
-          ? usersList.map((user) =>
-              user.email.toLowerCase() === finalEmail ? signedInAccount : user
-            )
-          : [...usersList, signedInAccount];
-        if (!persistUsers(updatedUsers)) {
-          alert('Unable to update your sign-in record. Please check your browser storage and try again.');
-          setIsLoading(false);
-          return;
+    try {
+      if (authMode === 'register') {
+        await createAccount(finalEmail, finalPassword, {
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName
+        });
+      } else {
+        const credential = await signInWithPassword(finalEmail, finalPassword);
+        const profile = await getUserProfile(credential.user.uid);
+        if (!profile && finalEmail !== ADMIN_EMAIL) {
+          await logOutUser();
+          throw new Error('Your account profile is missing. Contact support before trying again.');
         }
       }
 
-      setUserEmail(finalEmail);
-      setUserName(signedInName);
-      setUserFirstName(signedInFirstName);
-      setIsLoggedIn(true);
       setAuthModalOpen(false);
-      setIsLoading(false);
       setActiveTab('dashboard');
-
       setTotalVisitsToday((prev) => prev + 1);
-    }, 800);
+      setPasswordInput('');
+    } catch (error) {
+      console.error('Authentication failed.', error);
+      alert(error.message || 'Unable to complete authentication. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSelectLanguage = (lang) => {
@@ -606,7 +513,7 @@ export default function App() {
               
               {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
               {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
-                <button onClick={() => { refreshUsersFromStorage(); setActiveTab('admin'); }} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
+                <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
 
@@ -655,7 +562,7 @@ export default function App() {
             <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-violet-400 font-bold">FAQ</button>
             
             {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
-              <button onClick={() => { refreshUsersFromStorage(); setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
+              <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
             )}
             {isLoggedIn && (
               <button
@@ -892,13 +799,13 @@ export default function App() {
                   <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-extrabold uppercase">SUPER ADMIN SECURE</span>
                   <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Manual Auth)</h2>
+                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Firebase)</h2>
                 <p className="text-gray-300 text-sm mt-1">Manual Sign-In tracking and live user history active.</p>
               </div>
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
                 <button onClick={() => setAdminSubTab('dashboard')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'dashboard' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>📊 Dashboard</button>
-                <button onClick={() => { refreshUsersFromStorage(); setAdminSubTab('users'); }} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'users' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>👥 Users History</button>
+                <button onClick={() => setAdminSubTab('users')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'users' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>👥 Users History</button>
                 <button onClick={() => setAdminSubTab('finance')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'finance' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>💳 Finance & Payouts</button>
                 <button onClick={() => setAdminSubTab('settings')} className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${adminSubTab === 'settings' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow-md' : 'text-gray-300 hover:text-white'}`}>⚙️ Settings</button>
               </div>
@@ -1061,37 +968,41 @@ export default function App() {
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-lg font-extrabold text-white">Registered Users & Wallets</h3>
-                    <p className="text-gray-400 text-sm mt-0.5">Account sign-in times and current total wallet balances.</p>
+                    <p className="text-gray-400 text-sm mt-0.5">Live account registration times and current total wallet balances.</p>
                   </div>
                   <span className="px-4 py-1.5 rounded-full bg-violet-500/20 text-violet-300 text-sm font-bold">{usersList.length} Registered Users</span>
                 </div>
+
+                {usersLoadError && (
+                  <p role="alert" className="text-rose-300 text-sm">{usersLoadError}</p>
+                )}
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-white/10 text-gray-400 text-xs uppercase tracking-wider">
-                        <th className="py-4 px-5">Name</th>
+                        <th className="py-4 px-5">First Name</th>
+                        <th className="py-4 px-5">Last Name</th>
                         <th className="py-4 px-5">Email Address</th>
-                        <th className="py-4 px-5">Sign-in Time</th>
+                        <th className="py-4 px-5">Sign-up Time</th>
                         <th className="py-4 px-5">Total Balance</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/5 text-sm">
                       {usersList.length === 0 ? (
                         <tr>
-                          <td colSpan="4" className="py-8 text-center text-gray-400">
+                          <td colSpan="5" className="py-8 text-center text-gray-400">
                             No registered users yet.
                           </td>
                         </tr>
                       ) : (
                         usersList.map((user) => (
-                          <tr key={user.email} className="hover:bg-white/5 transition-all">
-                            <td className="py-4 px-5 font-bold text-white">{user.name}</td>
+                          <tr key={user.id} className="hover:bg-white/5 transition-all">
+                            <td className="py-4 px-5 font-bold text-white">{user.firstName}</td>
+                            <td className="py-4 px-5 font-bold text-white">{user.lastName}</td>
                             <td className="py-4 px-5 text-gray-300 font-mono">{user.email}</td>
                             <td className="py-4 px-5 text-cyan-400 font-mono">
-                              {Number.isFinite(user.lastSignInAt)
-                                ? new Date(user.lastSignInAt).toISOString()
-                                : 'No recorded sign-in'}
+                              {formatSignupTimestamp(user.createdAt)}
                             </td>
                             <td className="py-4 px-5 text-cyan-400 font-mono font-bold">
                               ${(user.balanceCents / 100).toFixed(2)}
@@ -1411,7 +1322,7 @@ export default function App() {
             </form>
 
             <p className="text-[11px] text-gray-500 text-center mt-4">
-              Secure manual authentication protocol enabled.
+              Passwords are securely handled by Firebase Authentication.
             </p>
 
           </div>
