@@ -327,6 +327,13 @@ export default function App() {
       }
 
       const { user, isAdmin: adminAccess } = result;
+      if (authMode === 'register') {
+        const newProfile = normalizeUserProfile(user, user.id);
+        setUsersList((currentUsers) => [
+          ...currentUsers.filter((currentUser) => currentUser.id !== newProfile.id),
+          newProfile
+        ]);
+      }
       const authorizedAdmin = hasAdminCredentials(user.email, adminAccess);
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
