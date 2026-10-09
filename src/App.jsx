@@ -4,6 +4,7 @@ import {
   changeUserBalance,
   createAccount,
   getUserProfile,
+  hasAdminAccess,
   logOutUser,
   observeAllUserProfiles,
   observeAuthState,
@@ -61,6 +62,7 @@ export default function App() {
   const [internalTransferSuccess, setInternalTransferSuccess] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(Boolean(auth.currentUser));
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
   const [usersList, setUsersList] = useState([]);
@@ -85,14 +87,25 @@ export default function App() {
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
 
   useEffect(() => {
-    const unsubscribe = observeAuthState((firebaseUser) => {
+    const unsubscribe = observeAuthState(async (firebaseUser) => {
       setIsLoggedIn(Boolean(firebaseUser));
+      setIsAdmin(false);
       setUserUid(firebaseUser?.uid || '');
       setUserEmail(firebaseUser?.email || '');
       setUserName(firebaseUser?.displayName || '');
       setUserFirstName(firebaseUser?.displayName?.trim().split(/\s+/)[0] || '');
       setUsersList([]);
       setUsersLoadError('');
+      if (firebaseUser) {
+        try {
+          const adminAccess = await hasAdminAccess(firebaseUser);
+          if (auth.currentUser?.uid === firebaseUser.uid) {
+            setIsAdmin(adminAccess);
+          }
+        } catch (error) {
+          console.error('Unable to verify administrator credentials.', error);
+        }
+      }
     });
     return unsubscribe;
   }, []);
@@ -126,10 +139,10 @@ export default function App() {
       setUsersLoadError('');
     };
 
-    return userEmail.toLowerCase() === ADMIN_EMAIL
+    return isAdmin
       ? observeAllUserProfiles(onUsers, onError)
       : observeUserProfile(userUid, (user) => onUsers(user ? [user] : []), onError);
-  }, [isLoggedIn, userEmail, userUid]);
+  }, [isAdmin, isLoggedIn, userEmail, userUid]);
 
   // Admin Metrics & History
   const [totalVisitsToday, setTotalVisitsToday] = useState(0);
@@ -241,7 +254,7 @@ export default function App() {
     setInternalTransferError('');
     setInternalTransferSuccess('');
 
-    if (userEmail.toLowerCase() !== ADMIN_EMAIL) {
+    if (!isAdmin) {
       setInternalTransferError('Only the administrator can make internal transfers.');
       return;
     }
@@ -308,6 +321,9 @@ export default function App() {
     setIsLoading(true);
     try {
       if (authMode === 'register') {
+        if (finalEmail === ADMIN_EMAIL) {
+          throw new Error('The administrator account must be provisioned outside the application.');
+        }
         await createAccount(finalEmail, finalPassword, {
           firstName: trimmedFirstName,
           lastName: trimmedLastName
@@ -512,7 +528,7 @@ export default function App() {
               <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeTab === 'contact' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>FAQ</button>
               
               {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
-              {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
+              {isAdmin && (
                 <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
@@ -561,7 +577,7 @@ export default function App() {
             )}
             <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-violet-400 font-bold">FAQ</button>
             
-            {isLoggedIn && userEmail === 'dollarcraft3@gmail.com' && (
+            {isAdmin && (
               <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
             )}
             {isLoggedIn && (
@@ -791,7 +807,7 @@ export default function App() {
         )}
 
         {/* 5. BRAND NEW REFRESHED ADMIN PANEL TAB (dollarcraft3@gmail.com ONLY) */}
-        {activeTab === 'admin' && userEmail === 'dollarcraft3@gmail.com' && (
+        {activeTab === 'admin' && isAdmin && (
           <section className="space-y-8">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-violet-950/60 via-slate-900 to-cyan-950/60 p-8 rounded-3xl border border-violet-500/30 shadow-2xl">
               <div>
@@ -800,7 +816,7 @@ export default function App() {
                   <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Firebase)</h2>
-                <p className="text-gray-300 text-sm mt-1">Manual Sign-In tracking and live user history active.</p>
+                <p className="text-gray-300 text-sm mt-1">Firebase sign-in tracking and live user history active.</p>
               </div>
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">

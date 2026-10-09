@@ -3,6 +3,7 @@ import {
   createUserWithEmailAndPassword,
   deleteUser,
   getAuth,
+  getIdTokenResult,
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -101,6 +102,15 @@ export const signInWithPassword = (email, password) =>
   signInWithEmailAndPassword(auth, email, password);
 
 export const observeAuthState = (callback) => onAuthStateChanged(auth, callback);
+
+export const hasAdminAccess = async (user) => {
+  if (user?.email?.toLowerCase() !== "dollarcraft3@gmail.com") {
+    return false;
+  }
+
+  const token = await getIdTokenResult(user);
+  return token.signInProvider === "password" && token.claims.email_verified === true;
+};
 
 export const observeAllUserProfiles = (onUsers, onError) =>
   onSnapshot(

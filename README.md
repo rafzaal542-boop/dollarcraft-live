@@ -13,9 +13,13 @@ Before deploying:
 
 1. Enable **Email/Password** in Firebase Authentication and create the Firestore
    database for the project configured in `src/firebase.js`.
-2. Provision `dollarcraft3@gmail.com` as an admin in Firebase Authentication and
-   verify its email before release. The Firestore rules grant admin access only
-   to that verified identity; do not expose an unverified admin account.
+2. Provision `dollarcraft3@gmail.com` as a dedicated Email/Password account in
+   Firebase Authentication, set its password to the admin password supplied by
+   the project owner, and verify its email before release. The admin account
+   cannot be registered through the application. The UI and Firestore rules
+   require this exact email, a verified address, and a password-based Firebase
+   sign-in. Do not place the password in frontend code; Firebase Authentication
+   validates it against the provisioned account.
 3. Publish the included rules with `firebase deploy --only firestore:rules`.
    The admin UI is not a security boundary by itself; the Firestore rules are
    required to protect user profiles and wallet balances.
