@@ -1,38 +1,51 @@
 # Dollar Craft
 
-## Firebase user storage
+## Self-hosted authentication and user data
 
-Registration uses Firebase Authentication for email/password credentials and
-Firestore for user profiles. Passwords are never copied to Firestore or
-`localStorage`. Profiles contain first and last name, email, a Firestore
-server-generated `createdAt` timestamp, and wallet balance in integer cents.
-The admin users table subscribes to Firestore snapshots so profile and balance
-changes appear as they are committed.
+The application no longer uses Firebase or any Firebase API key. Authentication
+and account data are handled by `server.mjs`:
 
-Before deploying:
+- New accounts are stored in `data/users.json`, with per-account scrypt password
+  hashes rather than plaintext passwords.
+- Browser sessions use an HTTP-only, SameSite cookie; credentials and session
+  tokens are not stored in localStorage.
+- User records and wallet balances are persisted on the server. Admin user-list
+  updates are streamed to the panel over server-sent events.
+- The admin identity is `dollarcraft3@gmail.com`. Set `ADMIN_PASSWORD` privately
+  in the server environment to the admin password. It is never bundled into
+  client code or committed to the repository.
 
-1. Enable **Email/Password** in Firebase Authentication and create the Firestore
-   database for the project configured in `src/firebase.js`.
-2. Provision `dollarcraft3@gmail.com` as a dedicated Email/Password account in
-   Firebase Authentication, set its password to the admin password supplied by
-   the project owner, and verify its email before release. The admin account
-   cannot be registered through the application. The UI and Firestore rules
-   require this exact email, a verified address, and a password-based Firebase
-   sign-in. Do not place the password in frontend code; Firebase Authentication
-   validates it against the provisioned account.
-3. Publish the included rules with `firebase deploy --only firestore:rules`.
-   The admin UI is not a security boundary by itself; the Firestore rules are
-   required to protect user profiles and wallet balances.
-4. Build and deploy the application with `npm run build`.
+### Local development
 
-The old manual accounts existed only in each browser's local storage and cannot
-be safely migrated into Firebase Authentication from the client. On first load,
-the app removes those legacy local records (which included plaintext passwords);
-users must create a Firebase account. Existing Firebase Authentication users
-must also have a corresponding `users/{uid}` Firestore profile, except for the
-provisioned admin account.
+1. Copy `.env.example` values into your shell environment (or your deployment
+   secret manager). Set `ADMIN_PASSWORD` privately; do not commit a `.env` file.
+2. Start the API in one terminal:
 
-Firestore and Firebase Authentication provide shared persistent storage, but
-availability, quotas, backup/retention, and billing depend on the Firebase
-project configuration. Configure production backups and capacity monitoring
-for the expected workload.
+   ```powershell
+   $env:ADMIN_PASSWORD = '<private admin password>'
+   npm run server
+   ```
+
+3. Start the Vite app in another terminal with `npm run dev`. Vite proxies
+   `/api` requests to the local API server on port 3001.
+
+The admin account cannot register through the public registration form. Sign in
+with its configured email and password. New user passwords must be at least 8
+characters; only their scrypt hashes are written to the JSON data file.
+
+### Production deployment and persistence
+
+Run the Node API as a persistent service, set `ADMIN_PASSWORD` and optionally
+`USER_DATA_DIR` in the service environment, and configure the production web
+server to proxy `/api/*` to that same-origin API. Use HTTPS so the server marks
+session cookies Secure. Back up the data directory and restrict filesystem
+access to the service account.
+
+This JSON-file backend is intended for a single API process with durable local
+storage. It serializes writes and atomically replaces the data file, but it is
+not a distributed database: do not run multiple API instances against the same
+JSON file or use ephemeral serverless storage. For larger multi-instance
+deployments, move the same API operations to a transactional database.
+
+Existing accounts that were saved only in browser localStorage or Firebase are
+not migrated automatically. Users must register again on this backend.

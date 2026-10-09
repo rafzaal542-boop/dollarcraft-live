@@ -1,16 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  auth,
   changeUserBalance,
   createAccount,
-  getUserProfile,
-  hasAdminAccess,
+  getCurrentSession,
   logOutUser,
   observeAllUserProfiles,
-  observeAuthState,
   observeUserProfile,
   signInWithPassword
-} from './firebase';
+} from './api';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
@@ -28,6 +25,8 @@ const formatSignupTimestamp = (createdAt) => {
       ? createdAt.toDate()
       : typeof createdAt === 'number'
         ? new Date(createdAt)
+        : typeof createdAt === 'string'
+          ? new Date(createdAt)
         : null;
   return timestamp && Number.isFinite(timestamp.getTime())
     ? timestamp.toISOString()
@@ -61,24 +60,22 @@ export default function App() {
   const [internalTransferError, setInternalTransferError] = useState('');
   const [internalTransferSuccess, setInternalTransferSuccess] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(Boolean(auth.currentUser));
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
   const [usersList, setUsersList] = useState([]);
   const [usersLoadError, setUsersLoadError] = useState('');
-  const [userUid, setUserUid] = useState(auth.currentUser?.uid || '');
+  const [userUid, setUserUid] = useState('');
   
   // Authentication form state
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [userEmail, setUserEmail] = useState(auth.currentUser?.email || '');
-  const [userName, setUserName] = useState(auth.currentUser?.displayName || '');
-  const [userFirstName, setUserFirstName] = useState(
-    auth.currentUser?.displayName?.trim().split(/\s+/)[0] || ''
-  );
+  const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
+  const [userFirstName, setUserFirstName] = useState('');
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   const currentUser = usersList.find(
@@ -87,36 +84,23 @@ export default function App() {
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
 
   useEffect(() => {
-    const unsubscribe = observeAuthState(async (firebaseUser) => {
-      setIsLoggedIn(Boolean(firebaseUser));
-      setIsAdmin(false);
-      setUserUid(firebaseUser?.uid || '');
-      setUserEmail(firebaseUser?.email || '');
-      setUserName(firebaseUser?.displayName || '');
-      setUserFirstName(firebaseUser?.displayName?.trim().split(/\s+/)[0] || '');
-      setUsersList([]);
-      setUsersLoadError('');
-      if (firebaseUser) {
-        try {
-          const adminAccess = await hasAdminAccess(firebaseUser);
-          if (auth.currentUser?.uid === firebaseUser.uid) {
-            setIsAdmin(adminAccess);
-          }
-        } catch (error) {
-          console.error('Unable to verify administrator credentials.', error);
-        }
-      }
+    let active = true;
+    getCurrentSession().then((result) => {
+      if (!active || !result) return;
+      const { user, isAdmin: adminAccess } = result;
+      setIsLoggedIn(true);
+      setIsAdmin(adminAccess);
+      setUserUid(user.id);
+      setUserEmail(user.email);
+      setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
+      setUserFirstName(user.firstName || '');
+    }).catch((error) => {
+      console.error('Unable to restore the saved sign-in session.', error);
+      if (active) setUsersLoadError('Unable to connect to the account server.');
     });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.removeItem('dollarcraft-users');
-      localStorage.removeItem('dollarcraft-session');
-    } catch (error) {
-      console.error('Unable to clear legacy browser-stored credentials.', error);
-    }
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -125,8 +109,8 @@ export default function App() {
     }
 
     const onError = (error) => {
-      console.error('Unable to load registered user profiles from Firestore.', error);
-      setUsersLoadError('Unable to load registered users. Check Firestore access and try again.');
+      console.error('Unable to load registered user profiles from the account server.', error);
+      setUsersLoadError('Unable to load registered users. Check the account server and try again.');
     };
     const onUsers = (users) => {
       const normalizedUsers = users.map((user) => normalizeUserProfile(user, user.id));
@@ -194,6 +178,13 @@ export default function App() {
       return;
     }
 
+    setIsLoggedIn(false);
+    setIsAdmin(false);
+    setUserUid('');
+    setUserEmail('');
+    setUserName('');
+    setUserFirstName('');
+    setUsersList([]);
     setActiveTab('home');
     setAdminSubTab('dashboard');
     setMobileMenuOpen(false);
@@ -320,23 +311,26 @@ export default function App() {
 
     setIsLoading(true);
     try {
+      let result;
       if (authMode === 'register') {
         if (finalEmail === ADMIN_EMAIL) {
-          throw new Error('The administrator account must be provisioned outside the application.');
+          throw new Error('This administrator account cannot be registered.');
         }
-        await createAccount(finalEmail, finalPassword, {
+        result = await createAccount(finalEmail, finalPassword, {
           firstName: trimmedFirstName,
           lastName: trimmedLastName
         });
       } else {
-        const credential = await signInWithPassword(finalEmail, finalPassword);
-        const profile = await getUserProfile(credential.user.uid);
-        if (!profile && finalEmail !== ADMIN_EMAIL) {
-          await logOutUser();
-          throw new Error('Your account profile is missing. Contact support before trying again.');
-        }
+        result = await signInWithPassword(finalEmail, finalPassword);
       }
 
+      const { user, isAdmin: adminAccess } = result;
+      setIsLoggedIn(true);
+      setIsAdmin(adminAccess);
+      setUserUid(user.id);
+      setUserEmail(user.email);
+      setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
+      setUserFirstName(user.firstName || '');
       setAuthModalOpen(false);
       setActiveTab('dashboard');
       setTotalVisitsToday((prev) => prev + 1);
@@ -815,8 +809,8 @@ export default function App() {
                   <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-extrabold uppercase">SUPER ADMIN SECURE</span>
                   <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
-                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0 (Firebase)</h2>
-                <p className="text-gray-300 text-sm mt-1">Firebase sign-in tracking and live user history active.</p>
+                <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0</h2>
+                <p className="text-gray-300 text-sm mt-1">Secure server sign-in and live user history active.</p>
               </div>
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
@@ -1338,7 +1332,7 @@ export default function App() {
             </form>
 
             <p className="text-[11px] text-gray-500 text-center mt-4">
-              Passwords are securely handled by Firebase Authentication.
+              Passwords are securely verified by the account server.
             </p>
 
           </div>
