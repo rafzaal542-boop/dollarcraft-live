@@ -1,167 +1,141 @@
 import assert from 'node:assert/strict';
-import { beforeEach, test } from 'node:test';
+import { afterEach, test } from 'node:test';
 import {
   changeUserBalance,
   createAccount,
   getCurrentSession,
-  isEmailRegistered,
   logOutUser,
   observeAllUserProfiles,
   signInWithPassword
 } from './src/localStore.js';
 
-const USERS_KEY = 'dollarcraft-local-users-v1';
-const SESSION_KEY = 'dollarcraft-local-session-v1';
-const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
-const LEGACY_USERS_KEY = 'dollarcraft-users';
-const LEGACY_SESSION_KEY = 'dollarcraft-session';
+const originalFetch = globalThis.fetch;
 
-beforeEach(() => {
-  const values = new Map();
-  globalThis.window = {
-    localStorage: {
-      getItem: (key) => values.get(key) ?? null,
-      setItem: (key, value) => values.set(key, String(value)),
-      removeItem: (key) => values.delete(key)
-    },
-    addEventListener() {},
-    removeEventListener() {}
-  };
+afterEach(() => {
+  globalThis.fetch = originalFetch;
 });
 
-test('migrates legacy plaintext passwords to PBKDF2 hashes and removes old keys', async () => {
-  const validLegacyUsers = [{
-    email: 'legacy@example.com',
-    password: 'legacy-password-123',
-    name: 'Legacy User',
-    balanceCents: 415
-  }];
-  window.localStorage.setItem(LEGACY_USERS_KEY, JSON.stringify([{
-    email: 'incomplete@example.com',
-    name: 'Incomplete User'
-  }]));
-  await assert.rejects(getCurrentSession(), {
-    message: 'A legacy account is incomplete; saved data was left unchanged.'
+const mockJsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
   });
-  assert.equal(window.localStorage.getItem(USERS_KEY), null);
-  assert.notEqual(window.localStorage.getItem(LEGACY_USERS_KEY), null);
 
-  window.localStorage.setItem(LEGACY_USERS_KEY, JSON.stringify(validLegacyUsers));
-  const setItem = window.localStorage.setItem;
-  window.localStorage.setItem = (key, value) => {
-    if (key === USERS_KEY) throw new Error('Storage quota exceeded.');
-    setItem(key, value);
+test('registration sends account details to the backend and returns its profile', async () => {
+  let request;
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return mockJsonResponse({
+      user: {
+        id: 'user-1',
+        email: 'new@example.com',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        balanceCents: 0
+      },
+      isAdmin: false
+    }, 201);
   };
-  await assert.rejects(getCurrentSession(), { message: 'Storage quota exceeded.' });
-  assert.equal(window.localStorage.getItem(USERS_KEY), null);
-  assert.notEqual(window.localStorage.getItem(LEGACY_USERS_KEY), null);
 
-  window.localStorage.setItem = setItem;
-  window.localStorage.setItem(LEGACY_USERS_KEY, JSON.stringify(validLegacyUsers));
-  window.localStorage.setItem(LEGACY_SESSION_KEY, JSON.stringify({
-    userEmail: 'legacy@example.com'
-  }));
-
-  const session = await getCurrentSession();
-  const savedUsers = JSON.parse(window.localStorage.getItem(USERS_KEY));
-
-  assert.equal(session.user.email, 'legacy@example.com');
-  assert.equal(savedUsers[0].balanceCents, 415);
-  assert.notEqual(savedUsers[0].passwordHash, 'legacy-password-123');
-  assert.equal('password' in savedUsers[0], false);
-  assert.equal(window.localStorage.getItem(LEGACY_USERS_KEY), null);
-  assert.equal(window.localStorage.getItem(LEGACY_SESSION_KEY), null);
-});
-
-test('registration persists the profile locally and returns no password material', async () => {
-  const result = await createAccount('new@example.com', 'local-password-123', {
+  const result = await createAccount('new@example.com', 'secure-password-123', {
     firstName: 'Ada',
     lastName: 'Lovelace'
   });
-  const storedUsers = JSON.parse(window.localStorage.getItem(USERS_KEY));
 
-  assert.equal(result.user.firstName, 'Ada');
-  assert.equal(result.user.lastName, 'Lovelace');
-  assert.equal(result.user.email, 'new@example.com');
-  assert.equal(result.user.balanceCents, 0);
-  assert.equal(typeof result.user.createdAt, 'string');
-  assert.equal('passwordHash' in result.user, false);
-  assert.equal(storedUsers[0].passwordHash.includes('local-password-123'), false);
-  assert.equal(window.localStorage.getItem(SESSION_KEY), JSON.stringify({ userId: result.user.id }));
+  assert.equal(request.url, '/api/auth/register');
+  assert.equal(request.options.credentials, 'same-origin');
+  assert.deepEqual(JSON.parse(request.options.body), {
+    email: 'new@example.com',
+    password: 'secure-password-123',
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
+  assert.equal(result.user.id, 'user-1');
+  assert.equal('password' in result.user, false);
 });
 
-test('registration immediately publishes profile changes to admin subscribers', async () => {
-  let latestUsers = [];
-  const unsubscribe = observeAllUserProfiles((users) => {
-    latestUsers = users;
-  }, (error) => {
+test('sign-in, session restoration, and sign-out use the shared API', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    if (url === '/api/auth/session') {
+      return mockJsonResponse({ user: null, isAdmin: false });
+    }
+    if (url === '/api/auth/logout') {
+      return new Response(null, { status: 204 });
+    }
+    return mockJsonResponse({
+      user: { id: 'user-1', email: 'user@example.com' },
+      isAdmin: false
+    });
+  };
+
+  const login = await signInWithPassword('user@example.com', 'secure-password-123');
+  const session = await getCurrentSession();
+  await logOutUser();
+
+  assert.equal(login.user.id, 'user-1');
+  assert.equal(session.user, null);
+  assert.deepEqual(calls.map(({ url }) => url), [
+    '/api/auth/login',
+    '/api/auth/session',
+    '/api/auth/logout'
+  ]);
+});
+
+test('admin user observation immediately loads the API and refreshes every five seconds', async () => {
+  let intervalCallback;
+  let intervalDelay;
+  let clearedInterval;
+  const published = [];
+  globalThis.window = {
+    setInterval(callback, delay) {
+      intervalCallback = callback;
+      intervalDelay = delay;
+      return 17;
+    },
+    clearInterval(id) {
+      clearedInterval = id;
+    }
+  };
+  globalThis.fetch = async () => mockJsonResponse({
+    users: [{ id: 'user-1', email: 'user@example.com' }]
+  });
+
+  const unsubscribe = observeAllUserProfiles((users) => published.push(users), (error) => {
     throw error;
   });
-
-  await createAccount('instant@example.com', 'local-password-123', {
-    firstName: 'Instant',
-    lastName: 'User'
-  });
-
-  assert.equal(latestUsers.length, 1);
-  assert.equal(latestUsers[0].email, 'instant@example.com');
+  await new Promise((resolve) => setImmediate(resolve));
+  intervalCallback();
+  await new Promise((resolve) => setImmediate(resolve));
   unsubscribe();
+
+  assert.equal(intervalDelay, 5000);
+  assert.equal(published.length, 2);
+  assert.equal(published[0][0].email, 'user@example.com');
+  assert.equal(clearedInterval, 17);
 });
 
-test('registered email lookup is case-insensitive and checks local user storage', async () => {
-  await createAccount('lookup@example.com', 'local-password-123', {
-    firstName: 'Lookup',
-    lastName: 'User'
-  });
-
-  assert.equal(await isEmailRegistered('LOOKUP@example.com'), true);
-  assert.equal(await isEmailRegistered('missing@example.com'), false);
-});
-
-test('local sign-in verifies the password and grants the admin role only to the admin email', async () => {
-  await createAccount(ADMIN_EMAIL, 'admin-local-password-123', {
-    firstName: 'Admin',
-    lastName: 'User'
-  });
-  await logOutUser();
+test('API failures are surfaced to callers', async () => {
+  globalThis.fetch = async () => mockJsonResponse({
+    error: 'Incorrect email or password.'
+  }, 401);
 
   await assert.rejects(
-    signInWithPassword(ADMIN_EMAIL, 'wrong-password'),
+    signInWithPassword('user@example.com', 'incorrect-password'),
     { message: 'Incorrect email or password.' }
   );
-  const admin = await signInWithPassword(ADMIN_EMAIL, 'admin-local-password-123');
-  assert.equal(admin.isAdmin, true);
-
-  const customer = await createAccount('customer@example.com', 'customer-password-123', {
-    firstName: 'Casey',
-    lastName: 'Customer'
-  });
-  assert.equal(customer.isAdmin, false);
 });
 
-test('restores local sessions and persists wallet updates to subscribers', async () => {
-  const { user } = await createAccount('wallet@example.com', 'local-password-123', {
-    firstName: 'Wallet',
-    lastName: 'User'
-  });
-  const session = await getCurrentSession();
-  assert.equal(session.user.id, user.id);
+test('wallet changes are submitted to the server for authorization and persistence', async () => {
+  let request;
+  globalThis.fetch = async (url, options) => {
+    request = { url, options };
+    return mockJsonResponse({ user: { id: 'user-1', balanceCents: 500 } });
+  };
 
-  let latestUsers;
-  const unsubscribe = observeAllUserProfiles((users) => {
-    latestUsers = users;
-  }, (error) => {
-    throw error;
-  });
-  await changeUserBalance(user.id, 250);
+  await changeUserBalance('user-1', -1000);
 
-  assert.equal(latestUsers[0].balanceCents, 250);
-  assert.equal(JSON.parse(window.localStorage.getItem(USERS_KEY))[0].balanceCents, 250);
-  await assert.rejects(changeUserBalance(user.id, -300), {
-    message: 'The wallet balance is insufficient or too large.'
-  });
-  unsubscribe();
-
-  await logOutUser();
-  assert.equal(await getCurrentSession(), null);
+  assert.equal(request.url, '/api/users/user-1/balance');
+  assert.deepEqual(JSON.parse(request.options.body), { changeInCents: -1000 });
 });

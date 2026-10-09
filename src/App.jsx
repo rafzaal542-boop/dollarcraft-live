@@ -3,7 +3,6 @@ import {
   changeUserBalance,
   createAccount,
   getCurrentSession,
-  isEmailRegistered,
   logOutUser,
   observeAllUserProfiles,
   observeUserProfile,
@@ -13,10 +12,8 @@ import {
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
-const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
-
-const hasAdminCredentials = (email, locallyVerifiedAdmin) =>
-  locallyVerifiedAdmin === true && email?.trim().toLowerCase() === ADMIN_EMAIL;
+const hasAdminCredentials = (email, serverVerifiedAdmin) =>
+  serverVerifiedAdmin === true && Boolean(email?.trim());
 
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
@@ -92,7 +89,7 @@ export default function App() {
   useEffect(() => {
     let active = true;
     getCurrentSession().then((result) => {
-      if (!active || !result) return;
+      if (!active || !result?.user) return;
       const { user, isAdmin: adminAccess } = result;
       setIsLoggedIn(true);
       setIsAdmin(hasAdminCredentials(user.email, adminAccess));
@@ -101,8 +98,8 @@ export default function App() {
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
       setUserFirstName(user.firstName || '');
     }).catch((error) => {
-      console.error('Unable to restore the local sign-in session.', error);
-      if (active) setUsersLoadError('Unable to read local account storage.');
+      console.error('Unable to restore the account session.', error);
+      if (active) setUsersLoadError('Unable to connect to the account service.');
     });
     return () => {
       active = false;
@@ -115,8 +112,8 @@ export default function App() {
     }
 
     const onError = (error) => {
-      console.error('Unable to load registered user profiles from local storage.', error);
-      setUsersLoadError('Unable to load registered users. Check this browser’s local storage.');
+      console.error('Unable to load registered user profiles from the account service.', error);
+      setUsersLoadError('Unable to load registered users. Check the account service connection.');
     };
     const onUsers = (users) => {
       const normalizedUsers = users.map((user) => normalizeUserProfile(user, user.id));
@@ -230,7 +227,10 @@ export default function App() {
     }
 
     try {
-      await changeUserBalance(currentUser.id, -amountCents);
+      const updatedUser = await changeUserBalance(currentUser.id, -amountCents);
+      setUsersList((users) => users.map((user) =>
+        user.id === updatedUser.id ? normalizeUserProfile(updatedUser, updatedUser.id) : user
+      ));
     } catch (error) {
       console.error('Unable to persist the withdrawal balance change.', error);
       setWithdrawalError(
@@ -279,7 +279,10 @@ export default function App() {
     }
 
     try {
-      await changeUserBalance(recipient.id, amountCents);
+      const updatedUser = await changeUserBalance(recipient.id, amountCents);
+      setUsersList((users) => users.map((user) =>
+        user.id === updatedUser.id ? normalizeUserProfile(updatedUser, updatedUser.id) : user
+      ));
     } catch (error) {
       console.error('Unable to persist the admin wallet transfer.', error);
       setInternalTransferError(
@@ -317,16 +320,6 @@ export default function App() {
 
     setIsLoading(true);
     try {
-      const emailRegistered = await isEmailRegistered(finalEmail);
-      if (authMode === 'register' && emailRegistered) {
-        alert('You are already registered, please sign in!');
-        return;
-      }
-      if (authMode === 'login' && !emailRegistered && finalEmail !== ADMIN_EMAIL) {
-        alert('You are not registered, please first register!');
-        return;
-      }
-
       let result;
       if (authMode === 'register') {
         result = await createAccount(finalEmail, finalPassword, {
@@ -1307,6 +1300,7 @@ export default function App() {
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       required={authMode === 'register'}
+                      maxLength={100}
                       className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                     />
                   </div>
@@ -1318,6 +1312,7 @@ export default function App() {
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       required={authMode === 'register'}
+                      maxLength={100}
                       className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                     />
                   </div>
@@ -1332,6 +1327,7 @@ export default function App() {
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   required
+                  maxLength={254}
                   className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                 />
               </div>
@@ -1344,6 +1340,8 @@ export default function App() {
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   required
+                  minLength={authMode === 'register' ? 12 : undefined}
+                  maxLength={128}
                   className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
                 />
               </div>
@@ -1358,7 +1356,7 @@ export default function App() {
             </form>
 
             <p className="text-[11px] text-gray-500 text-center mt-4">
-              Demo mode stores account data in this browser only.
+              Account data is securely stored in the shared account service.
             </p>
 
           </div>
