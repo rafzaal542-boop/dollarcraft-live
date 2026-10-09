@@ -7,15 +7,15 @@ import {
   observeAllUserProfiles,
   observeUserProfile,
   signInWithPassword
-} from './api';
+} from './localStore';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 
-const hasAdminCredentials = (email, serverVerifiedAdmin) =>
-  serverVerifiedAdmin === true && email?.trim().toLowerCase() === ADMIN_EMAIL;
+const hasAdminCredentials = (email, locallyVerifiedAdmin) =>
+  locallyVerifiedAdmin === true && email?.trim().toLowerCase() === ADMIN_EMAIL;
 
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
@@ -100,8 +100,8 @@ export default function App() {
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
       setUserFirstName(user.firstName || '');
     }).catch((error) => {
-      console.error('Unable to restore the saved sign-in session.', error);
-      if (active) setUsersLoadError('Unable to connect to the account server.');
+      console.error('Unable to restore the local sign-in session.', error);
+      if (active) setUsersLoadError('Unable to read local account storage.');
     });
     return () => {
       active = false;
@@ -114,8 +114,8 @@ export default function App() {
     }
 
     const onError = (error) => {
-      console.error('Unable to load registered user profiles from the account server.', error);
-      setUsersLoadError('Unable to load registered users. Check the account server and try again.');
+      console.error('Unable to load registered user profiles from local storage.', error);
+      setUsersLoadError('Unable to load registered users. Check this browser’s local storage.');
     };
     const onUsers = (users) => {
       const normalizedUsers = users.map((user) => normalizeUserProfile(user, user.id));
@@ -318,9 +318,6 @@ export default function App() {
     try {
       let result;
       if (authMode === 'register') {
-        if (finalEmail === ADMIN_EMAIL) {
-          throw new Error('This administrator account cannot be registered.');
-        }
         result = await createAccount(finalEmail, finalPassword, {
           firstName: trimmedFirstName,
           lastName: trimmedLastName
@@ -812,11 +809,11 @@ export default function App() {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-violet-950/60 via-slate-900 to-cyan-950/60 p-8 rounded-3xl border border-violet-500/30 shadow-2xl">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400 text-cyan-300 text-xs font-extrabold uppercase">SUPER ADMIN SECURE</span>
+                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400 text-amber-200 text-xs font-extrabold uppercase">LOCAL DEMO — NOT SECURE</span>
                   <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0</h2>
-                <p className="text-gray-300 text-sm mt-1">Secure server sign-in and live user history active.</p>
+                <p className="text-gray-300 text-sm mt-1">Local browser sign-in and live same-browser user history.</p>
               </div>
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
@@ -1338,7 +1335,7 @@ export default function App() {
             </form>
 
             <p className="text-[11px] text-gray-500 text-center mt-4">
-              Passwords are securely verified by the account server.
+              Demo mode stores account data in this browser only.
             </p>
 
           </div>
