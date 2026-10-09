@@ -186,6 +186,12 @@ export const getCurrentSession = async () => {
   return toAuthResult(user);
 };
 
+export const isEmailRegistered = async (email) => {
+  await initializeLocalStore();
+  const normalizedEmail = email.trim().toLowerCase();
+  return readUsers().some((user) => user.email.toLowerCase() === normalizedEmail);
+};
+
 export const createAccount = async (email, password, profile) => {
   await initializeLocalStore();
   const normalizedEmail = email.trim().toLowerCase();

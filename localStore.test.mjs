@@ -4,6 +4,7 @@ import {
   changeUserBalance,
   createAccount,
   getCurrentSession,
+  isEmailRegistered,
   logOutUser,
   observeAllUserProfiles,
   signInWithPassword
@@ -105,6 +106,16 @@ test('registration immediately publishes profile changes to admin subscribers', 
   assert.equal(latestUsers.length, 1);
   assert.equal(latestUsers[0].email, 'instant@example.com');
   unsubscribe();
+});
+
+test('registered email lookup is case-insensitive and checks local user storage', async () => {
+  await createAccount('lookup@example.com', 'local-password-123', {
+    firstName: 'Lookup',
+    lastName: 'User'
+  });
+
+  assert.equal(await isEmailRegistered('LOOKUP@example.com'), true);
+  assert.equal(await isEmailRegistered('missing@example.com'), false);
 });
 
 test('local sign-in verifies the password and grants the admin role only to the admin email', async () => {

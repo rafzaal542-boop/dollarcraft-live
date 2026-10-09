@@ -3,6 +3,7 @@ import {
   changeUserBalance,
   createAccount,
   getCurrentSession,
+  isEmailRegistered,
   logOutUser,
   observeAllUserProfiles,
   observeUserProfile,
@@ -316,6 +317,16 @@ export default function App() {
 
     setIsLoading(true);
     try {
+      const emailRegistered = await isEmailRegistered(finalEmail);
+      if (authMode === 'register' && emailRegistered) {
+        alert('You are already registered, please sign in!');
+        return;
+      }
+      if (authMode === 'login' && !emailRegistered && finalEmail !== ADMIN_EMAIL) {
+        alert('You are not registered, please first register!');
+        return;
+      }
+
       let result;
       if (authMode === 'register') {
         result = await createAccount(finalEmail, finalPassword, {
@@ -347,7 +358,12 @@ export default function App() {
       setPasswordInput('');
     } catch (error) {
       console.error('Authentication failed.', error);
-      alert(error.message || 'Unable to complete authentication. Please try again.');
+      alert(
+        authMode === 'register' &&
+          error.message === 'An account with this email already exists.'
+          ? 'You are already registered, please sign in!'
+          : error.message || 'Unable to complete authentication. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }
