@@ -14,13 +14,16 @@ and account data are handled by `server.mjs` and MongoDB:
 - User records and wallet balances are persisted on the server. Admin user-list
   updates are streamed to the panel over server-sent events.
 - The admin identity is `dollarcraft3@gmail.com`. Set `ADMIN_PASSWORD` privately
-  in the server environment to the admin password. It is never bundled into
-  client code or committed to the repository.
+  in the server environment to the exact admin password configured by the
+  operator. It is never bundled into client code or committed to the repository.
+  The UI also requires the server-verified admin session and the exact admin
+  email before showing or opening the panel.
 
 ### Local development
 
 1. Configure `MONGODB_URI`, `MONGODB_DB_NAME`, and `ADMIN_PASSWORD` in your shell
-   environment (or deployment secret manager). Never commit these secrets.
+   environment (or deployment secret manager). Set `ADMIN_PASSWORD` to the
+   requested admin password privately; never commit or expose it to the browser.
 2. Start the API in one terminal:
 
    ```powershell

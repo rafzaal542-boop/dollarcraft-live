@@ -14,6 +14,9 @@ const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 
+const hasAdminCredentials = (email, serverVerifiedAdmin) =>
+  serverVerifiedAdmin === true && email?.trim().toLowerCase() === ADMIN_EMAIL;
+
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
   (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / 1000) *
@@ -81,6 +84,8 @@ export default function App() {
   const currentUser = usersList.find(
     (user) => user.id === userUid
   );
+  const canAccessAdmin = isLoggedIn && hasAdminCredentials(userEmail, isAdmin);
+  const activeView = activeTab === 'admin' && !canAccessAdmin ? 'home' : activeTab;
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
 
   useEffect(() => {
@@ -89,7 +94,7 @@ export default function App() {
       if (!active || !result) return;
       const { user, isAdmin: adminAccess } = result;
       setIsLoggedIn(true);
-      setIsAdmin(adminAccess);
+      setIsAdmin(hasAdminCredentials(user.email, adminAccess));
       setUserUid(user.id);
       setUserEmail(user.email);
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
@@ -123,10 +128,10 @@ export default function App() {
       setUsersLoadError('');
     };
 
-    return isAdmin
+    return canAccessAdmin
       ? observeAllUserProfiles(onUsers, onError)
       : observeUserProfile(userUid, (user) => onUsers(user ? [user] : []), onError);
-  }, [isAdmin, isLoggedIn, userEmail, userUid]);
+  }, [canAccessAdmin, isLoggedIn, userEmail, userUid]);
 
   // Admin Metrics & History
   const [totalVisitsToday, setTotalVisitsToday] = useState(0);
@@ -245,7 +250,7 @@ export default function App() {
     setInternalTransferError('');
     setInternalTransferSuccess('');
 
-    if (!isAdmin) {
+    if (!canAccessAdmin) {
       setInternalTransferError('Only the administrator can make internal transfers.');
       return;
     }
@@ -325,8 +330,9 @@ export default function App() {
       }
 
       const { user, isAdmin: adminAccess } = result;
+      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess);
       setIsLoggedIn(true);
-      setIsAdmin(adminAccess);
+      setIsAdmin(authorizedAdmin);
       setUserUid(user.id);
       setUserEmail(user.email);
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
@@ -512,18 +518,18 @@ export default function App() {
             </div>
 
             <div className="hidden md:flex items-center space-x-8 text-sm font-semibold text-gray-300">
-              <button onClick={() => setActiveTab('home')} className={`transition-colors py-1 ${activeTab === 'home' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Home</button>
+              <button onClick={() => setActiveTab('home')} className={`transition-colors py-1 ${activeView === 'home' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Home</button>
               {isLoggedIn && (
                 <>
-                  <button onClick={() => setActiveTab('dashboard')} className={`transition-colors py-1 ${activeTab === 'dashboard' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Dashboard</button>
-                  <button onClick={() => setActiveTab('plans')} className={`transition-colors py-1 ${activeTab === 'plans' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Invest</button>
+                  <button onClick={() => setActiveTab('dashboard')} className={`transition-colors py-1 ${activeView === 'dashboard' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Dashboard</button>
+                  <button onClick={() => setActiveTab('plans')} className={`transition-colors py-1 ${activeView === 'plans' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Invest</button>
                 </>
               )}
-              <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeTab === 'contact' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>FAQ</button>
+              <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeView === 'contact' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>FAQ</button>
               
               {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
-              {isAdmin && (
-                <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeTab === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
+              {canAccessAdmin && (
+                <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeView === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
 
@@ -571,7 +577,7 @@ export default function App() {
             )}
             <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-violet-400 font-bold">FAQ</button>
             
-            {isAdmin && (
+            {canAccessAdmin && (
               <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
             )}
             {isLoggedIn && (
@@ -590,7 +596,7 @@ export default function App() {
       <main className="py-12 relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* 1. HOME VIEW */}
-        {activeTab === 'home' && (
+        {activeView === 'home' && (
           <div className="space-y-14">
             <section className="text-center pt-6 max-w-4xl mx-auto">
               <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-sm font-semibold mb-6 shadow-md">
@@ -652,7 +658,7 @@ export default function App() {
         )}
 
         {/* 2. INVEST TAB */}
-        {activeTab === 'plans' && (
+        {activeView === 'plans' && (
           <section className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-extrabold text-white mb-2">Exclusive Super DC Investment Plan</h2>
@@ -703,7 +709,7 @@ export default function App() {
         )}
 
         {/* 3. CUSTOMER DASHBOARD TAB */}
-        {activeTab === 'dashboard' && (
+        {activeView === 'dashboard' && (
           <section className="max-w-6xl mx-auto space-y-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -762,7 +768,7 @@ export default function App() {
         )}
 
         {/* 4. FAQ TAB */}
-        {activeTab === 'contact' && (
+        {activeView === 'contact' && (
           <section className="max-w-4xl mx-auto">
             <div className="bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 rounded-3xl p-8 sm:p-10 shadow-2xl">
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 pb-6 border-b border-white/10">
@@ -801,7 +807,7 @@ export default function App() {
         )}
 
         {/* 5. BRAND NEW REFRESHED ADMIN PANEL TAB (dollarcraft3@gmail.com ONLY) */}
-        {activeTab === 'admin' && isAdmin && (
+        {activeView === 'admin' && canAccessAdmin && (
           <section className="space-y-8">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-violet-950/60 via-slate-900 to-cyan-950/60 p-8 rounded-3xl border border-violet-500/30 shadow-2xl">
               <div>
