@@ -88,9 +88,9 @@ export default function App() {
     (user) => user.id === userUid
   );
   const canAccessAdmin = isLoggedIn && hasAdminCredentials(userEmail, isAdmin);
-  const activeView = activeTab === 'admin' && !canAccessAdmin
-    ? isLoggedIn ? 'dashboard' : 'home'
-    : activeTab;
+  const activeView = canAccessAdmin
+    ? activeTab === 'dashboard' ? 'admin' : activeTab
+    : activeTab === 'admin' ? isLoggedIn ? 'dashboard' : 'home' : activeTab;
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
 
   useEffect(() => {
@@ -171,7 +171,7 @@ export default function App() {
     if (!isLoggedIn) {
       setAuthModalOpen(true);
     } else {
-      setActiveTab('dashboard');
+      setActiveTab(canAccessAdmin ? 'admin' : 'dashboard');
     }
   };
 
@@ -550,7 +550,9 @@ export default function App() {
               <button onClick={() => setActiveTab('home')} className={`transition-colors py-1 ${activeView === 'home' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Home</button>
               {isLoggedIn && (
                 <>
-                  <button onClick={() => setActiveTab('dashboard')} className={`transition-colors py-1 ${activeView === 'dashboard' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Dashboard</button>
+                  {!canAccessAdmin && (
+                    <button onClick={() => setActiveTab('dashboard')} className={`transition-colors py-1 ${activeView === 'dashboard' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Dashboard</button>
+                  )}
                   <button onClick={() => setActiveTab('plans')} className={`transition-colors py-1 ${activeView === 'plans' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>Invest</button>
                 </>
               )}
@@ -600,7 +602,9 @@ export default function App() {
             <button onClick={() => { setActiveTab('home'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Home</button>
             {isLoggedIn && (
               <>
-                <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Dashboard</button>
+                {!canAccessAdmin && (
+                  <button onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Dashboard</button>
+                )}
                 <button onClick={() => { setActiveTab('plans'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Invest</button>
               </>
             )}
