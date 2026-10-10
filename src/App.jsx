@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import {
   changeUserBalance,
   createAccount,
@@ -74,6 +75,7 @@ export default function App() {
   const [lastName, setLastName] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [userFirstName, setUserFirstName] = useState('');
@@ -1341,16 +1343,28 @@ export default function App() {
 
               <div>
                 <label className="block text-[11px] font-semibold text-gray-300 mb-1">Password</label>
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  required
-                  minLength={authMode === 'register' ? 12 : undefined}
-                  maxLength={128}
-                  className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    required
+                    maxLength={128}
+                    className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 pr-10 text-xs text-white focus:outline-none focus:border-violet-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-white"
+                  >
+                    {showPassword
+                      ? <EyeOff size={16} aria-hidden="true" />
+                      : <Eye size={16} aria-hidden="true" />}
+                  </button>
+                </div>
               </div>
 
               <button 

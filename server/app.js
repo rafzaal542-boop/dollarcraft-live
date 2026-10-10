@@ -100,11 +100,11 @@ const validateRegistration = (body) => {
     !lastName.trim() ||
     lastName.trim().length > 100 ||
     typeof password !== 'string' ||
-    password.length < 12 ||
+    password.length < 1 ||
     password.length > 128 ||
     Buffer.byteLength(password, 'utf8') > 512
   ) {
-    throw new HttpError(400, 'Enter valid names and email, and a password of 12 to 128 characters.');
+    throw new HttpError(400, 'Enter valid names and email, and a password of 1 to 128 characters.');
   }
   return {
     email: normalizeEmail(email),

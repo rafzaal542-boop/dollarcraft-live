@@ -72,7 +72,7 @@ test('HTML API 404 falls back to persistent local registration and authenticatio
     { status: 404, headers: { 'Content-Type': 'text/html' } }
   );
 
-  const registration = await createAccount('new@example.com', 'secure-password-123', {
+  const registration = await createAccount('new@example.com', 'pass1234', {
     firstName: 'Ada',
     lastName: 'Lovelace'
   });
@@ -84,11 +84,11 @@ test('HTML API 404 falls back to persistent local registration and authenticatio
   assert.match(registration.user.id, /^local-/);
   assert.equal(values.get('dollarcraft.localSession.v1'), registration.user.id);
   assert.equal(savedAccounts.length, 1);
-  assert.equal(savedAccounts[0].passwordHash.includes('secure-password-123'), false);
+  assert.equal(savedAccounts[0].passwordHash.includes('pass1234'), false);
   assert.equal('password' in registration.user, false);
 
   const session = await getCurrentSession();
-  const login = await signInWithPassword('NEW@example.com', 'secure-password-123');
+  const login = await signInWithPassword('NEW@example.com', 'pass1234');
   assert.equal(session.user.id, registration.user.id);
   assert.equal(login.user.id, registration.user.id);
   await assert.rejects(

@@ -154,11 +154,11 @@ const createLocalAccount = async (email, password, profile) => {
     firstName.length > 100 ||
     !lastName ||
     lastName.length > 100 ||
-    password.length < 12 ||
+    password.length < 1 ||
     password.length > 128 ||
     new TextEncoder().encode(password).length > 512
   ) {
-    throw new Error('Enter valid names and email, and a password of 12 to 128 characters.');
+    throw new Error('Enter valid names and email, and a password of 1 to 128 characters.');
   }
 
   const accounts = readLocalAccounts();
