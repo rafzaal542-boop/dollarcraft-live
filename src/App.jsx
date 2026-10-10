@@ -330,15 +330,22 @@ export default function App() {
         result = await signInWithPassword(finalEmail, finalPassword);
       }
 
-      const { user, isAdmin: adminAccess } = result;
+      const { user, isAdmin: adminAccess } = result || {};
+      if (!user?.id || !user.email) {
+        throw new Error('The account service returned an invalid account profile.');
+      }
       if (authMode === 'register') {
         const newProfile = normalizeUserProfile(user, user.id);
         setUsersList((currentUsers) => [
-          ...currentUsers.filter((currentUser) => currentUser.id !== newProfile.id),
+          ...currentUsers.filter((currentUser) =>
+            currentUser.id !== newProfile.id &&
+            currentUser.email?.toLowerCase() !== newProfile.email.toLowerCase()
+          ),
           newProfile
         ]);
       }
-      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess);
+      const authorizedAdmin = !result.isLocal &&
+        hasAdminCredentials(user.email, adminAccess);
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
       setUserUid(user.id);

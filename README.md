@@ -41,6 +41,14 @@ Registration and login are rate-limited. Session cookies are HTTP-only and
 SameSite=Strict; production cookies are also Secure and therefore require
 HTTPS. Account sessions expire after seven days.
 
+If the `/api` authentication endpoints are unavailable or return a host-level
+404/HTML page, registration and sign-in fall back to browser-local storage.
+Local accounts use a browser-derived password hash, are limited to that browser,
+and never receive administrator access; they are not shared with MongoDB or
+other devices. The admin users table includes local accounts from the current
+browser while the API is unavailable, and merges them with server users when
+the API responds.
+
 ### Existing browser-local accounts
 
 Accounts created by the previous local-only demo are not uploaded or migrated

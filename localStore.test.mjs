@@ -10,9 +10,15 @@ import {
 } from './src/localStore.js';
 
 const originalFetch = globalThis.fetch;
+const originalWindow = globalThis.window;
+const originalLocalStorage = globalThis.localStorage;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  if (originalWindow === undefined) delete globalThis.window;
+  else globalThis.window = originalWindow;
+  if (originalLocalStorage === undefined) delete globalThis.localStorage;
+  else globalThis.localStorage = originalLocalStorage;
 });
 
 const mockJsonResponse = (body, status = 200) =>
@@ -52,6 +58,85 @@ test('registration sends account details to the backend and returns its profile'
   });
   assert.equal(result.user.id, 'user-1');
   assert.equal('password' in result.user, false);
+});
+
+test('HTML API 404 falls back to persistent local registration and authentication', async () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  globalThis.fetch = async () => new Response(
+    '<!doctype html><title>Not Found</title>',
+    { status: 404, headers: { 'Content-Type': 'text/html' } }
+  );
+
+  const registration = await createAccount('new@example.com', 'secure-password-123', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
+  const savedAccounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
+
+  assert.equal(registration.isLocal, true);
+  assert.equal(registration.isAdmin, false);
+  assert.equal(registration.user.email, 'new@example.com');
+  assert.match(registration.user.id, /^local-/);
+  assert.equal(values.get('dollarcraft.localSession.v1'), registration.user.id);
+  assert.equal(savedAccounts.length, 1);
+  assert.equal(savedAccounts[0].passwordHash.includes('secure-password-123'), false);
+  assert.equal('password' in registration.user, false);
+
+  const session = await getCurrentSession();
+  const login = await signInWithPassword('NEW@example.com', 'secure-password-123');
+  assert.equal(session.user.id, registration.user.id);
+  assert.equal(login.user.id, registration.user.id);
+  await assert.rejects(
+    signInWithPassword('new@example.com', 'incorrect-password'),
+    { message: 'Incorrect email or password.' }
+  );
+  await logOutUser();
+  assert.equal(values.has('dollarcraft.localSession.v1'), false);
+});
+
+test('local registrations immediately publish in the admin user observer', async () => {
+  const values = new Map();
+  const listeners = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  globalThis.window = {
+    setInterval: () => 17,
+    clearInterval() {},
+    addEventListener(type, callback) {
+      listeners.set(type, callback);
+    },
+    removeEventListener(type) {
+      listeners.delete(type);
+    },
+    dispatchEvent(event) {
+      listeners.get(event.type)?.(event);
+    }
+  };
+  globalThis.fetch = async () => new Response(
+    '<!doctype html><title>Not Found</title>',
+    { status: 404, headers: { 'Content-Type': 'text/html' } }
+  );
+
+  const published = [];
+  const unsubscribe = observeAllUserProfiles((users) => published.push(users), (error) => {
+    throw error;
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  await createAccount('new@example.com', 'secure-password-123', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
+  unsubscribe();
+
+  assert.equal(published.at(-1)[0].email, 'new@example.com');
 });
 
 test('sign-in, session restoration, and sign-out use the shared API', async () => {
@@ -125,6 +210,22 @@ test('API failures are surfaced to callers', async () => {
     signInWithPassword('user@example.com', 'incorrect-password'),
     { message: 'Incorrect email or password.' }
   );
+});
+
+test('non-JSON authentication errors do not trigger local account creation', async () => {
+  globalThis.fetch = async () => new Response('Unauthorized', {
+    status: 401,
+    headers: { 'Content-Type': 'text/plain' }
+  });
+
+  await assert.rejects(
+    createAccount('new@example.com', 'secure-password-123', {
+      firstName: 'Ada',
+      lastName: 'Lovelace'
+    }),
+    { message: 'The account service could not complete the request.' }
+  );
+  assert.equal(globalThis.localStorage, undefined);
 });
 
 test('wallet changes are submitted to the server for authorization and persistence', async () => {
