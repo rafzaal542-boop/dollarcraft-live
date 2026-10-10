@@ -79,6 +79,7 @@ export default function App() {
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [userFirstName, setUserFirstName] = useState('');
+  const [isReturningUser, setIsReturningUser] = useState(true);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   const currentUser = usersList.find(
@@ -93,6 +94,7 @@ export default function App() {
     getCurrentSession().then((result) => {
       if (!active || !result?.user) return;
       const { user, isAdmin: adminAccess } = result;
+      setIsReturningUser(true);
       setIsLoggedIn(true);
       setIsAdmin(hasAdminCredentials(user.email, adminAccess));
       setUserUid(user.id);
@@ -348,6 +350,7 @@ export default function App() {
       }
       const authorizedAdmin = !result.isLocal &&
         hasAdminCredentials(user.email, adminAccess);
+      setIsReturningUser(authMode === 'login');
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
       setUserUid(user.id);
@@ -736,7 +739,9 @@ export default function App() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <h2 className="text-3xl font-extrabold text-white">
-                  {userFirstName ? `Welcome, ${userFirstName}!` : 'Customer Dashboard'}
+                  {userName || userFirstName
+                    ? `${isReturningUser ? 'Welcome Back' : 'Welcome'}, ${userName || userFirstName}!`
+                    : 'Customer Dashboard'}
                 </h2>
                 <p className="text-sm text-gray-300 mt-1">Manage your deposits, earnings, referral wallet, and active positions.</p>
               </div>
