@@ -9,7 +9,8 @@ password hash, registration timestamp, wallet balance in cents, and an access
 role. Plaintext passwords are never stored or returned by the API.
 
 The admin users endpoint requires a server-issued, HTTP-only session and an
-account with the `admin` role. The users table refreshes from MongoDB every five
+account for `dollarcraft3@gmail.com` whose password matches the server-only
+`ADMIN_PASSWORD` setting. The users table refreshes from MongoDB every five
 seconds, so registrations from other devices and locations appear without a
 browser-local account store. Each user starts with a zero-cent wallet balance.
 
@@ -30,12 +31,13 @@ trusted reverse proxy is in front of the service.
 
 ### Provision the administrator
 
-The configured `ADMIN_EMAIL` cannot be claimed through public registration.
-Set `ADMIN_PASSWORD` temporarily to a unique password of at least 12
+The `dollarcraft3@gmail.com` address cannot be claimed through public
+registration. Set `ADMIN_PASSWORD` to a private password of at least 12
 characters, then run `npm run create-admin` against the configured database.
 The provision command creates or updates only that administrator account and
-stores the password hash. Remove `ADMIN_PASSWORD` from the environment after
-the command completes. Do not commit database credentials or admin passwords.
+stores a salted password hash. Keep `ADMIN_PASSWORD` configured for the running
+API so administrator access can be verified; never commit the password or
+`.env` file.
 
 Registration and login are rate-limited. Session cookies are HTTP-only and
 SameSite=Strict; production cookies are also Secure and therefore require

@@ -13,8 +13,10 @@ import {
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
+const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 const hasAdminCredentials = (email, serverVerifiedAdmin) =>
-  serverVerifiedAdmin === true && Boolean(email?.trim());
+  serverVerifiedAdmin === true &&
+  email?.trim().toLowerCase() === ADMIN_EMAIL;
 
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
@@ -86,7 +88,9 @@ export default function App() {
     (user) => user.id === userUid
   );
   const canAccessAdmin = isLoggedIn && hasAdminCredentials(userEmail, isAdmin);
-  const activeView = activeTab === 'admin' && !canAccessAdmin ? 'home' : activeTab;
+  const activeView = activeTab === 'admin' && !canAccessAdmin
+    ? isLoggedIn ? 'dashboard' : 'home'
+    : activeTab;
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
 
   useEffect(() => {

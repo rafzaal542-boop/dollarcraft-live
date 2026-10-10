@@ -11,7 +11,7 @@ const scrypt = promisify(scryptCallback);
 const SESSION_COOKIE = 'dollarcraft_session';
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_BALANCE_CENTS = Number.MAX_SAFE_INTEGER;
-const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
+export const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 
 const HttpError = class extends Error {
   constructor(status, message) {
@@ -80,9 +80,9 @@ const publicProfile = (user) => ({
   balanceCents: user.balanceCents
 });
 
-const authResult = (user) => ({
+const authResult = (user, isAdmin) => ({
   user: publicProfile(user),
-  isAdmin: user.role === 'admin'
+  isAdmin
 });
 
 const normalizeEmail = (email) => email.trim().toLowerCase();
@@ -130,13 +130,25 @@ const sessionAccount = async (req, db) => {
 
 export const createApiApp = ({
   db,
-  adminEmail = process.env.ADMIN_EMAIL || ADMIN_EMAIL,
+  adminPassword = process.env.ADMIN_PASSWORD,
   isProduction = process.env.NODE_ENV === 'production'
 }) => {
   if (!db) throw new Error('A MongoDB database connection is required.');
+  if (
+    typeof adminPassword !== 'string' ||
+    adminPassword.length < 12 ||
+    adminPassword.length > 128
+  ) {
+    throw new Error('ADMIN_PASSWORD must be configured with 12 to 128 characters.');
+  }
 
   const app = express();
-  const normalizedAdminEmail = normalizeEmail(adminEmail);
+  const isAuthorizedAdmin = async (user) =>
+    user.role === 'admin' &&
+    normalizeEmail(user.email) === ADMIN_EMAIL &&
+    typeof user.passwordSalt === 'string' &&
+    typeof user.passwordHash === 'string' &&
+    await verifyPassword(adminPassword, user.passwordSalt, user.passwordHash);
   app.disable('x-powered-by');
   app.set('trust proxy', process.env.TRUST_PROXY === '1' ? 1 : false);
   app.use('/api', (_req, res, next) => {
@@ -167,7 +179,7 @@ export const createApiApp = ({
   });
 
   const requireAdmin = asyncHandler(async (req, res, next) => {
-    if (req.account.user.role !== 'admin') {
+    if (!(await isAuthorizedAdmin(req.account.user))) {
       throw new HttpError(403, 'Administrator access is required.');
     }
     next();
@@ -177,7 +189,7 @@ export const createApiApp = ({
 
   app.post('/api/auth/register', registrationLimiter, asyncHandler(async (req, res) => {
     const { email, firstName, lastName, password } = validateRegistration(req.body);
-    if (email === normalizedAdminEmail) {
+    if (email === ADMIN_EMAIL) {
       throw new HttpError(403, 'This administrator account must be provisioned by the site owner.');
     }
 
@@ -209,7 +221,7 @@ export const createApiApp = ({
       expiresAt: new Date(now.getTime() + SESSION_DURATION_MS)
     });
     setSessionCookie(res, token, isProduction);
-    res.status(201).json(authResult(user));
+    res.status(201).json(authResult(user, false));
   }));
 
   app.post('/api/auth/login', loginLimiter, asyncHandler(async (req, res) => {
@@ -242,12 +254,14 @@ export const createApiApp = ({
       expiresAt: new Date(now.getTime() + SESSION_DURATION_MS)
     });
     setSessionCookie(res, token, isProduction);
-    res.json(authResult(user));
+    res.json(authResult(user, await isAuthorizedAdmin(user)));
   }));
 
   app.get('/api/auth/session', asyncHandler(async (req, res) => {
     const account = await sessionAccount(req, db);
-    res.json(account ? authResult(account.user) : { user: null, isAdmin: false });
+    res.json(account
+      ? authResult(account.user, await isAuthorizedAdmin(account.user))
+      : { user: null, isAdmin: false });
   }));
 
   app.post('/api/auth/logout', asyncHandler(async (req, res) => {
@@ -283,7 +297,7 @@ export const createApiApp = ({
       if (changeInCents < 0 && String(req.account.user._id) !== req.params.userId) {
         throw new HttpError(403, 'You can only withdraw from your own wallet.');
       }
-      if (changeInCents > 0 && req.account.user.role !== 'admin') {
+      if (changeInCents > 0 && !(await isAuthorizedAdmin(req.account.user))) {
         throw new HttpError(403, 'Administrator access is required to credit wallets.');
       }
 

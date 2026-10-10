@@ -1,11 +1,11 @@
 import 'dotenv/config';
 import { MongoClient } from 'mongodb';
-import { createPasswordRecord } from './app.js';
+import { ADMIN_EMAIL, createPasswordRecord } from './app.js';
 
 const createAdmin = async () => {
-  const { MONGODB_URI, ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
-  if (!MONGODB_URI || !ADMIN_EMAIL || !ADMIN_PASSWORD) {
-    throw new Error('Set MONGODB_URI, ADMIN_EMAIL, and ADMIN_PASSWORD to provision the admin account.');
+  const { MONGODB_URI, ADMIN_PASSWORD } = process.env;
+  if (!MONGODB_URI || !ADMIN_PASSWORD) {
+    throw new Error('Set MONGODB_URI and ADMIN_PASSWORD to provision the admin account.');
   }
   if (ADMIN_PASSWORD.length < 12 || ADMIN_PASSWORD.length > 128) {
     throw new Error('ADMIN_PASSWORD must be between 12 and 128 characters.');
@@ -15,7 +15,7 @@ const createAdmin = async () => {
   try {
     await client.connect();
     const users = client.db(process.env.MONGODB_DB || 'dollarcraft').collection('users');
-    const email = ADMIN_EMAIL.trim().toLowerCase();
+    const email = ADMIN_EMAIL;
     const passwordRecord = await createPasswordRecord(ADMIN_PASSWORD);
     const result = await users.updateOne(
       { email },

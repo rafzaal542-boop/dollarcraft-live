@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import { ObjectId } from 'mongodb';
-import { createApiApp, createPasswordRecord } from './app.js';
+import { ADMIN_EMAIL, createApiApp, createPasswordRecord } from './app.js';
 
 class MemoryCollection {
   documents = [];
@@ -91,7 +91,7 @@ class MemoryDatabase {
 const db = new MemoryDatabase();
 const server = createApiApp({
   db,
-  adminEmail: 'admin@example.com',
+  adminPassword: 'admin-password-123',
   isProduction: false
 }).listen(0, '127.0.0.1');
 await new Promise((resolve) => server.once('listening', resolve));
@@ -143,7 +143,7 @@ test('duplicate email registration and unprovisioned admin registration are reje
   const admin = await postJson('/api/auth/register', {
     firstName: 'Admin',
     lastName: 'Account',
-    email: 'admin@example.com',
+    email: ADMIN_EMAIL,
     password: 'secure-password-456'
   });
 
@@ -180,7 +180,7 @@ test('admin can fetch all database users, but unauthenticated and regular users 
   const adminPassword = 'admin-password-123';
   const admin = {
     _id: new ObjectId(),
-    email: 'admin@example.com',
+    email: ADMIN_EMAIL,
     firstName: 'Site',
     lastName: 'Admin',
     createdAt: new Date(),
@@ -193,7 +193,12 @@ test('admin can fetch all database users, but unauthenticated and regular users 
     email: admin.email,
     password: adminPassword
   });
+  const adminLoginBody = await adminLogin.clone().json();
   const adminCookie = cookieFrom(adminLogin);
+  const rejectedAdminLogin = await postJson('/api/auth/login', {
+    email: admin.email,
+    password: 'incorrect-admin-password'
+  });
   const adminResponse = await fetch(`${apiUrl}/api/users`, {
     headers: { Cookie: adminCookie }
   });
@@ -205,13 +210,43 @@ test('admin can fetch all database users, but unauthenticated and regular users 
   assert.equal((await withdraw.json()).user.balanceCents, 1000);
   assert.equal(creditAttempt.status, 403);
   assert.equal(adminResponse.status, 200);
+  assert.equal(adminLoginBody.isAdmin, true);
+  assert.equal(rejectedAdminLogin.status, 401);
   assert.equal(result.users.length, 2);
   assert.deepEqual(result.users.map((user) => user.email).sort(), [
-    'admin@example.com',
+    ADMIN_EMAIL,
     'new@example.com'
   ]);
   assert.equal('passwordHash' in result.users[0], false);
   assert.equal('passwordSalt' in result.users[0], false);
+});
+
+test('an admin role on another email does not grant administrator access', async () => {
+  const password = 'admin-password-123';
+  const impostor = {
+    _id: new ObjectId(),
+    email: 'impostor@example.com',
+    firstName: 'Not',
+    lastName: 'Admin',
+    createdAt: new Date(),
+    balanceCents: 0,
+    role: 'admin',
+    ...await createPasswordRecord(password)
+  };
+  db.collection('users').documents.push(impostor);
+
+  const login = await postJson('/api/auth/login', {
+    email: impostor.email,
+    password
+  });
+  const loginBody = await login.json();
+  const usersResponse = await fetch(`${apiUrl}/api/users`, {
+    headers: { Cookie: cookieFrom(login) }
+  });
+
+  assert.equal(login.status, 200);
+  assert.equal(loginBody.isAdmin, false);
+  assert.equal(usersResponse.status, 403);
 });
 
 test('registration rejects an empty password before saving', async () => {
