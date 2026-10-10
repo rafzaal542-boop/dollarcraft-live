@@ -362,7 +362,7 @@ export default function App() {
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
       setUserFirstName(user.firstName || '');
       setAuthModalOpen(false);
-      setActiveTab('dashboard');
+      setActiveTab(authorizedAdmin ? 'admin' : 'dashboard');
       setTotalVisitsToday((prev) => prev + 1);
       setPasswordInput('');
     } catch (error) {
