@@ -28,12 +28,12 @@ const request = async (path, options = {}) => {
     try {
       result = JSON.parse(responseText);
     } catch {
-      if (response.ok || response.status === 404 || response.status >= 500) {
-        throw new ApiUnavailableError('The account service returned an unexpected response.');
-      }
+      throw new ApiUnavailableError('The account service returned an unexpected response.');
     }
   } else if (response.ok) {
     throw new ApiUnavailableError('The account service returned an empty response.');
+  } else if (response.status === 404 || response.status >= 500) {
+    throw new ApiUnavailableError('The account service is unavailable.');
   }
 
   if (!response.ok) {

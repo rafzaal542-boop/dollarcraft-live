@@ -212,20 +212,27 @@ test('API failures are surfaced to callers', async () => {
   );
 });
 
-test('non-JSON authentication errors do not trigger local account creation', async () => {
-  globalThis.fetch = async () => new Response('Unauthorized', {
-    status: 401,
-    headers: { 'Content-Type': 'text/plain' }
-  });
-
-  await assert.rejects(
-    createAccount('new@example.com', 'secure-password-123', {
-      firstName: 'Ada',
-      lastName: 'Lovelace'
-    }),
-    { message: 'The account service could not complete the request.' }
+test('non-JSON authentication errors fall back to local registration and login', async () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  globalThis.fetch = async () => new Response(
+    '<!doctype html><title>Unauthorized</title>',
+    { status: 401, headers: { 'Content-Type': 'text/html' } }
   );
-  assert.equal(globalThis.localStorage, undefined);
+
+  const registration = await createAccount('new@example.com', 'secure-password-123', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
+  const login = await signInWithPassword('new@example.com', 'secure-password-123');
+
+  assert.equal(registration.isLocal, true);
+  assert.equal(login.user.id, registration.user.id);
+  assert.equal(JSON.parse(values.get('dollarcraft.localAccounts.v1')).length, 1);
 });
 
 test('wallet changes are submitted to the server for authorization and persistence', async () => {
