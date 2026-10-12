@@ -7,6 +7,7 @@ import {
   logOutUser,
   observeAllUserProfiles,
   observeUserProfile,
+  saveLocalSessionRole,
   signInWithPassword
 } from './localStore';
 
@@ -89,11 +90,14 @@ export default function App() {
   const currentUser = usersList.find(
     (user) => user.id === userUid
   );
-  const canAccessAdmin = isLoggedIn &&
-    isAdmin &&
-    user?.role === 'admin' &&
-    userEmail?.trim().toLowerCase() === ADMIN_EMAIL;
-  const activeView = canAccessAdmin
+  const isAdminUser = isLoggedIn && (
+    isAdmin ||
+    userEmail?.trim().toLowerCase() === ADMIN_EMAIL ||
+    user?.email?.trim().toLowerCase() === ADMIN_EMAIL ||
+    user?.role === 'admin'
+  );
+  const canAccessAdmin = isAdminUser;
+  const activeView = isAdminUser
     ? activeTab === 'dashboard' ? 'admin' : activeTab
     : activeTab === 'admin' ? isLoggedIn ? 'dashboard' : 'home' : activeTab;
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
@@ -103,14 +107,13 @@ export default function App() {
     getCurrentSession().then((result) => {
       if (!active || !result?.user) return;
       const { user, isAdmin: adminAccess } = result;
-      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess);
+      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess) ||
+        user.email?.trim().toLowerCase() === ADMIN_EMAIL ||
+        user.role === 'admin';
       setIsReturningUser(true);
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
-      setUser({
-        ...user,
-        role: authorizedAdmin ? 'admin' : user.role
-      });
+      setUser(authorizedAdmin ? { ...user, role: 'admin' } : user);
       setUserUid(user.id);
       setUserEmail(user.email);
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
@@ -368,10 +371,16 @@ export default function App() {
         finalPassword === ADMIN_PASSWORD &&
         user.email?.trim().toLowerCase() === ADMIN_EMAIL;
       const authorizedAdmin = hasAdminCredentials(user.email, adminAccess) ||
+        user.role === 'admin' ||
         isConfiguredAdminLogin;
-      const authenticatedUser = authorizedAdmin
-        ? { ...user, role: 'admin' }
-        : user;
+      const authenticatedUser = isConfiguredAdminLogin
+        ? { ...user, name: 'dollar craft', email: ADMIN_EMAIL, role: 'admin' }
+        : authorizedAdmin
+          ? { ...user, role: 'admin' }
+          : user;
+      if (isConfiguredAdminLogin && result.isLocal) {
+        saveLocalSessionRole('admin');
+      }
       setIsReturningUser(authMode === 'login');
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
@@ -578,7 +587,7 @@ export default function App() {
               <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeView === 'contact' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>FAQ</button>
               
               {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
-              {isAdmin && (
+              {isAdminUser && (
                 <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeView === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
@@ -629,7 +638,7 @@ export default function App() {
             )}
             <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-violet-400 font-bold">FAQ</button>
             
-            {isAdmin && (
+            {isAdminUser && (
               <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
             )}
             {isLoggedIn && (

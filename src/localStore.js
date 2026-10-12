@@ -1,6 +1,7 @@
 const REFRESH_INTERVAL_MS = 5000;
 const LOCAL_ACCOUNTS_KEY = 'dollarcraft.localAccounts.v1';
 const LOCAL_SESSION_KEY = 'dollarcraft.localSession.v1';
+const LOCAL_SESSION_ROLE_KEY = 'dollarcraft.localSessionRole.v1';
 const LOCAL_USERS_EVENT = 'dollarcraft:local-users-changed';
 
 class ApiUnavailableError extends Error {}
@@ -123,9 +124,9 @@ const profileFromLocalAccount = (account) => ({
   balanceCents: account.balanceCents
 });
 
-const localAuthResult = (account) => ({
-  user: profileFromLocalAccount(account),
-  isAdmin: false,
+const localAuthResult = (account, role = 'user') => ({
+  user: { ...profileFromLocalAccount(account), role },
+  isAdmin: role === 'admin',
   isLocal: true
 });
 
@@ -179,6 +180,7 @@ const createLocalAccount = async (email, password, profile) => {
   };
   saveLocalAccounts([...accounts, account]);
   getLocalStorage().setItem(LOCAL_SESSION_KEY, account.id);
+  getLocalStorage().removeItem(LOCAL_SESSION_ROLE_KEY);
   return localAuthResult(account);
 };
 
@@ -196,6 +198,7 @@ const signInLocalAccount = async (email, password) => {
   }
 
   getLocalStorage().setItem(LOCAL_SESSION_KEY, account.id);
+  getLocalStorage().removeItem(LOCAL_SESSION_ROLE_KEY);
   return localAuthResult(account);
 };
 
@@ -208,9 +211,16 @@ const getLocalSession = () => {
   const account = readLocalAccounts().find((item) => item.id === userId);
   if (!account) {
     getLocalStorage().removeItem(LOCAL_SESSION_KEY);
+    getLocalStorage().removeItem(LOCAL_SESSION_ROLE_KEY);
     return { user: null, isAdmin: false, isLocal: true };
   }
-  return localAuthResult(account);
+  const role = getLocalStorage().getItem(LOCAL_SESSION_ROLE_KEY);
+  return localAuthResult(
+    account,
+    role === 'admin' && account.email.toLowerCase() === 'dollarcraft3@gmail.com'
+      ? 'admin'
+      : 'user'
+  );
 };
 
 const getLocalProfiles = () =>
@@ -256,6 +266,19 @@ export const signInWithPassword = (email, password) =>
     return signInLocalAccount(email, password);
   });
 
+export const saveLocalSessionRole = (role) => {
+  if (role !== 'admin') {
+    throw new Error('Only the admin role can be saved to a local session.');
+  }
+  const storage = getLocalStorage();
+  const sessionId = storage.getItem(LOCAL_SESSION_KEY);
+  const account = readLocalAccounts().find((item) => item.id === sessionId);
+  if (!account || account.email.toLowerCase() !== 'dollarcraft3@gmail.com') {
+    throw new Error('Cannot save the admin role without a matching local admin session.');
+  }
+  storage.setItem(LOCAL_SESSION_ROLE_KEY, role);
+};
+
 export const logOutUser = async () => {
   try {
     await post('/api/auth/logout', {});
@@ -263,6 +286,7 @@ export const logOutUser = async () => {
     if (!(error instanceof ApiUnavailableError)) throw error;
   } finally {
     globalThis.localStorage?.removeItem(LOCAL_SESSION_KEY);
+    globalThis.localStorage?.removeItem(LOCAL_SESSION_ROLE_KEY);
   }
 };
 

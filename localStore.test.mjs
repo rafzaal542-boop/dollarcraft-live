@@ -6,6 +6,7 @@ import {
   getCurrentSession,
   logOutUser,
   observeAllUserProfiles,
+  saveLocalSessionRole,
   signInWithPassword
 } from './src/localStore.js';
 
@@ -233,6 +234,34 @@ test('non-JSON authentication errors fall back to local registration and login',
   assert.equal(registration.isLocal, true);
   assert.equal(login.user.id, registration.user.id);
   assert.equal(JSON.parse(values.get('dollarcraft.localAccounts.v1')).length, 1);
+});
+
+test('local admin role persists in the session and is restored only for the admin email', async () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  globalThis.fetch = async () => new Response(
+    '<!doctype html><title>Not Found</title>',
+    { status: 404, headers: { 'Content-Type': 'text/html' } }
+  );
+
+  await createAccount('dollarcraft3@gmail.com', 'haseeb@craft@007', {
+    firstName: 'Dollar',
+    lastName: 'Craft'
+  });
+  await signInWithPassword('dollarcraft3@gmail.com', 'haseeb@craft@007');
+  saveLocalSessionRole('admin');
+
+  const session = await getCurrentSession();
+  assert.equal(values.get('dollarcraft.localSessionRole.v1'), 'admin');
+  assert.equal(session.isAdmin, true);
+  assert.equal(session.user.role, 'admin');
+
+  await logOutUser();
+  assert.equal(values.has('dollarcraft.localSessionRole.v1'), false);
 });
 
 test('wallet changes are submitted to the server for authorization and persistence', async () => {
