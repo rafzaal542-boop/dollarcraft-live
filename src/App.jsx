@@ -16,8 +16,8 @@ const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 const ADMIN_PASSWORD = 'haseeb@craft@007';
-const hasAdminCredentials = (email, serverVerifiedAdmin) =>
-  serverVerifiedAdmin === true &&
+const hasAdminCredentials = (email, verifiedAdmin) =>
+  verifiedAdmin === true &&
   email?.trim().toLowerCase() === ADMIN_EMAIL;
 
 const getGlobalAccrualTotal = (now = Date.now()) =>
@@ -97,8 +97,6 @@ export default function App() {
   );
   const isAdminUser = isLoggedIn && (
     isAdmin ||
-    userEmail?.trim().toLowerCase() === ADMIN_EMAIL ||
-    user?.email?.trim().toLowerCase() === ADMIN_EMAIL ||
     user?.role === 'admin'
   );
   const canAccessAdmin = isAdminUser;
@@ -132,8 +130,8 @@ export default function App() {
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
       setUserFirstName(user.firstName || '');
     }).catch((error) => {
-      console.error('Unable to restore the account session.', error);
-      if (active) setUsersLoadError('Unable to connect to the account service.');
+      console.error('Unable to restore the locally saved account session.', error);
+      if (active) setUsersLoadError('Unable to read locally saved account data.');
     });
     return () => {
       active = false;
@@ -146,8 +144,8 @@ export default function App() {
     }
 
     const onError = (error) => {
-      console.error('Unable to load registered user profiles from the account service.', error);
-      setUsersLoadError('Account synchronization is unavailable. Showing locally saved users while retrying.');
+      console.error('Unable to load registered user profiles from local storage.', error);
+      setUsersLoadError('Unable to read registered users from this browser’s local storage.');
     };
     const onUsers = (users) => {
       const normalizedUsers = users.map((user) => normalizeUserProfile(user, user.id));
@@ -367,7 +365,7 @@ export default function App() {
 
       const { user, isAdmin: adminAccess } = result || {};
       if (!user?.id || !user.email) {
-        throw new Error('The account service returned an invalid account profile.');
+        throw new Error('The local account store returned an invalid account profile.');
       }
       if (authMode === 'register') {
         const newProfile = normalizeUserProfile(user, user.id);
@@ -1043,9 +1041,7 @@ export default function App() {
                       {usersList.length === 0 ? (
                         <tr>
                           <td colSpan="5" className="py-8 text-center text-gray-400">
-                            {usersLoadError
-                              ? 'No locally saved accounts are available yet. Waiting for synchronization.'
-                              : 'No registered users yet.'}
+                            No registered users yet.
                           </td>
                         </tr>
                       ) : (
@@ -1392,7 +1388,7 @@ export default function App() {
             </form>
 
             <p className="text-[11px] text-gray-500 text-center mt-4">
-              Account data is securely stored in the shared account service.
+              Account data is stored in this browser’s local storage. Passwords are saved as salted hashes.
             </p>
 
           </div>

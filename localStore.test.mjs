@@ -22,277 +22,156 @@ afterEach(() => {
   else globalThis.localStorage = originalLocalStorage;
 });
 
-const mockJsonResponse = (body, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-test('registration sends account details to the backend and returns its profile', async () => {
-  let request;
+const createStorage = () => {
   const values = new Map();
   globalThis.localStorage = {
     getItem: (key) => values.get(key) ?? null,
     setItem: (key, value) => values.set(key, value),
     removeItem: (key) => values.delete(key)
   };
-  globalThis.fetch = async (url, options) => {
-    request = { url, options };
-    return mockJsonResponse({
-      user: {
-        id: 'user-1',
-        email: 'new@example.com',
-        firstName: 'Ada',
-        lastName: 'Lovelace',
-        balanceCents: 0
-      },
-      isAdmin: false
-    }, 201);
+  return values;
+};
+
+const createWindow = () => {
+  const listeners = new Map();
+  globalThis.window = {
+    addEventListener(type, callback) {
+      if (!listeners.has(type)) listeners.set(type, new Set());
+      listeners.get(type).add(callback);
+    },
+    removeEventListener(type, callback) {
+      listeners.get(type)?.delete(callback);
+    },
+    dispatchEvent(event) {
+      listeners.get(event.type)?.forEach((callback) => callback(event));
+    }
+  };
+};
+
+test('registration stores a persistent profile and salted password hash without contacting an API', async () => {
+  const values = createStorage();
+  globalThis.fetch = async () => {
+    throw new Error('Registration must not call fetch.');
   };
 
-  const result = await createAccount('new@example.com', 'secure-password-123', {
+  const result = await createAccount('NEW@example.com', 'secure-password-123', {
     firstName: 'Ada',
     lastName: 'Lovelace'
   });
+  const accounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
 
-  assert.equal(request.url, '/api/auth/register');
-  assert.equal(request.options.credentials, 'same-origin');
-  assert.deepEqual(JSON.parse(request.options.body), {
-    email: 'new@example.com',
-    password: 'secure-password-123',
-    firstName: 'Ada',
-    lastName: 'Lovelace'
-  });
-  assert.equal(result.user.id, 'user-1');
-  assert.equal('password' in result.user, false);
-  const localAccounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
-  assert.equal(localAccounts.length, 1);
-  assert.equal(localAccounts[0].email, 'new@example.com');
-  assert.equal(localAccounts[0].id, 'user-1');
-  assert.equal(localAccounts[0].passwordHash.includes('secure-password-123'), false);
-});
-
-test('registration falls back to persistent local storage when the backend is unavailable', async () => {
-  const values = new Map();
-  globalThis.localStorage = {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: (key) => values.delete(key)
-  };
-  globalThis.fetch = async () => new Response(
-    '<!doctype html><title>Not Found</title>',
-    { status: 404, headers: { 'Content-Type': 'text/html' } }
-  );
-
-  const result = await createAccount('new@example.com', 'pass1234', {
-    firstName: 'Ada',
-    lastName: 'Lovelace'
-  });
-  const savedAccounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
-  assert.equal(result.isLocal, true);
-  assert.equal(savedAccounts.length, 1);
-  assert.equal(savedAccounts[0].email, 'new@example.com');
-  assert.equal(savedAccounts[0].passwordHash.includes('pass1234'), false);
+  assert.equal(result.user.email, 'new@example.com');
+  assert.equal(result.user.firstName, 'Ada');
+  assert.equal(result.user.lastName, 'Lovelace');
+  assert.equal(result.user.balanceCents, 0);
+  assert.ok(Number.isFinite(Date.parse(result.user.createdAt)));
+  assert.equal(accounts.length, 1);
+  assert.notEqual(accounts[0].passwordHash, 'secure-password-123');
+  assert.equal(accounts[0].passwordHash.length, 64);
+  assert.equal(accounts[0].passwordSalt.length, 32);
+  assert.equal('password' in accounts[0], false);
   assert.equal(values.get('dollarcraft.localSession.v1'), result.user.id);
 });
 
-test('admin observer immediately shows local users and merges server profiles, retaining data on failure', async () => {
-  globalThis.localStorage = {
-    getItem: (key) => key === 'dollarcraft.localAccounts.v1'
-      ? JSON.stringify([{
-        id: 'local-user',
-        firstName: 'Local',
-        lastName: 'Only',
-        email: 'local@example.com',
-        createdAt: new Date().toISOString(),
-        balanceCents: 0,
-        passwordSalt: 'salt',
-        passwordHash: 'hash'
-      }])
-      : null,
-    setItem() {},
-    removeItem() {}
-  };
-  let intervalCallback;
-  const errors = [];
-  const published = [];
-  globalThis.window = {
-    setInterval(callback) {
-      intervalCallback = callback;
-      return 17;
-    },
-    clearInterval() {}
-  };
-  let shouldFail = false;
-  globalThis.fetch = async () => {
-    if (shouldFail) throw new TypeError('Network unavailable');
-    return mockJsonResponse({
-      users: [
-        { id: 'user-1', email: 'global@example.com' },
-        { id: 'local-user', email: 'local@example.com', firstName: 'Server' }
-      ]
-    });
-  };
+test('registration rejects duplicate emails and login verifies the stored password hash', async () => {
+  createStorage();
+  const account = await createAccount('new@example.com', 'secure-password-123', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
 
+  await assert.rejects(
+    createAccount('NEW@example.com', 'another-password', {
+      firstName: 'Another',
+      lastName: 'User'
+    }),
+    { message: 'An account with this email already exists.' }
+  );
+  await assert.rejects(
+    signInWithPassword('new@example.com', 'incorrect-password'),
+    { message: 'Incorrect email or password.' }
+  );
+
+  const signedIn = await signInWithPassword('NEW@example.com', 'secure-password-123');
+  assert.equal(signedIn.user.id, account.user.id);
+  assert.equal((await getCurrentSession()).user.id, account.user.id);
+  await logOutUser();
+  assert.equal((await getCurrentSession()).user, null);
+});
+
+test('Users History observes local registrations immediately and across storage events', async () => {
+  const values = createStorage();
+  createWindow();
+  const published = [];
+  const errors = [];
   const unsubscribe = observeAllUserProfiles(
     (users) => published.push(users),
     (error) => errors.push(error)
   );
-  assert.equal(published[0][0].email, 'local@example.com');
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(published.length, 2);
-  assert.equal(published[1].length, 2);
-  assert.equal(published[1].find((user) => user.email === 'local@example.com').firstName, 'Server');
-  shouldFail = true;
-  intervalCallback();
-  await new Promise((resolve) => setImmediate(resolve));
-  unsubscribe();
 
-  assert.equal(published.length, 3);
-  assert.deepEqual(published.at(-1).map((user) => user.email).sort(), [
-    'global@example.com',
-    'local@example.com'
-  ]);
-  assert.equal(errors.length, 1);
-});
-
-test('sign-in, session restoration, and sign-out use the shared API', async () => {
-  const calls = [];
-  globalThis.fetch = async (url, options) => {
-    calls.push({ url, options });
-    if (url === '/api/auth/session') {
-      return mockJsonResponse({ user: null, isAdmin: false });
-    }
-    if (url === '/api/auth/logout') {
-      return new Response(null, { status: 204 });
-    }
-    return mockJsonResponse({
-      user: { id: 'user-1', email: 'user@example.com' },
-      isAdmin: false
-    });
-  };
-
-  const login = await signInWithPassword('user@example.com', 'secure-password-123');
-  const session = await getCurrentSession();
-  await logOutUser();
-
-  assert.equal(login.user.id, 'user-1');
-  assert.equal(session.user, null);
-  assert.deepEqual(calls.map(({ url }) => url), [
-    '/api/auth/login',
-    '/api/auth/session',
-    '/api/auth/logout'
-  ]);
-});
-
-test('admin user observation immediately loads the API and refreshes every two seconds', async () => {
-  let intervalCallback;
-  let intervalDelay;
-  let clearedInterval;
-  const published = [];
-  globalThis.window = {
-    setInterval(callback, delay) {
-      intervalCallback = callback;
-      intervalDelay = delay;
-      return 17;
-    },
-    clearInterval(id) {
-      clearedInterval = id;
-    }
-  };
-  globalThis.fetch = async () => mockJsonResponse({
-    users: [{ id: 'user-1', email: 'user@example.com' }]
-  });
-
-  const unsubscribe = observeAllUserProfiles((users) => published.push(users), (error) => {
-    throw error;
-  });
-  await new Promise((resolve) => setImmediate(resolve));
-  intervalCallback();
-  await new Promise((resolve) => setImmediate(resolve));
-  unsubscribe();
-
-  assert.equal(intervalDelay, 2000);
-  assert.equal(published.length, 3);
-  assert.deepEqual(published[0], []);
-  assert.equal(published.at(-1)[0].email, 'user@example.com');
-  assert.equal(clearedInterval, 17);
-});
-
-test('API failures are surfaced to callers', async () => {
-  globalThis.fetch = async () => mockJsonResponse({
-    error: 'Incorrect email or password.'
-  }, 401);
-
-  await assert.rejects(
-    signInWithPassword('user@example.com', 'incorrect-password'),
-    { message: 'Incorrect email or password.' }
-  );
-});
-
-test('non-JSON API failures fall back to browser-local registration', async () => {
-  const values = new Map();
-  globalThis.localStorage = {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: (key) => values.delete(key)
-  };
-  globalThis.fetch = async () => new Response(
-    '<!doctype html><title>Not Found</title>',
-    { status: 404, headers: { 'Content-Type': 'text/html' } }
-  );
-
-  const registration = await createAccount('new@example.com', 'secure-password-123', {
+  const account = await createAccount('new@example.com', 'secure-password-123', {
     firstName: 'Ada',
     lastName: 'Lovelace'
   });
-  assert.equal(registration.isLocal, true);
-  assert.equal(JSON.parse(values.get('dollarcraft.localAccounts.v1')).length, 1);
-});
+  assert.equal(published.at(-1)[0].id, account.user.id);
+  assert.equal(published.at(-1)[0].email, 'new@example.com');
 
-test('local admin role persists in the session and is restored only for the admin email', async () => {
-  const values = new Map();
-  globalThis.localStorage = {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: (key) => values.delete(key)
-  };
   values.set('dollarcraft.localAccounts.v1', JSON.stringify([{
-    id: 'local-admin',
-    firstName: 'Dollar',
-    lastName: 'Craft',
-    email: 'dollarcraft3@gmail.com',
+    id: 'other-local-user',
+    firstName: 'Grace',
+    lastName: 'Hopper',
+    email: 'grace@example.com',
     createdAt: new Date().toISOString(),
-    balanceCents: 0,
+    balanceCents: 2500,
     passwordSalt: 'salt',
     passwordHash: 'hash'
   }]));
-  values.set('dollarcraft.localSession.v1', 'local-admin');
-  globalThis.fetch = async () => new Response(
-    '<!doctype html><title>Not Found</title>',
-    { status: 404, headers: { 'Content-Type': 'text/html' } }
+  globalThis.window.dispatchEvent({
+    type: 'storage',
+    key: 'dollarcraft.localAccounts.v1'
+  });
+  assert.deepEqual(
+    published.at(-1).map((user) => user.email),
+    ['grace@example.com']
   );
-
-  saveLocalSessionRole('admin');
-
-  const session = await getCurrentSession();
-  assert.equal(values.get('dollarcraft.localSessionRole.v1'), 'admin');
-  assert.equal(session.isAdmin, true);
-  assert.equal(session.user.role, 'admin');
-
-  await logOutUser();
-  assert.equal(values.has('dollarcraft.localSessionRole.v1'), false);
+  assert.deepEqual(errors, []);
+  unsubscribe();
 });
 
-test('wallet changes are submitted to the server for authorization and persistence', async () => {
-  let request;
-  globalThis.fetch = async (url, options) => {
-    request = { url, options };
-    return mockJsonResponse({ user: { id: 'user-1', balanceCents: 500 } });
-  };
+test('wallet changes persist locally and reject insufficient or unsafe balances', async () => {
+  createStorage();
+  const account = await createAccount('new@example.com', 'secure-password-123', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
 
-  await changeUserBalance('user-1', -1000);
+  const credited = await changeUserBalance(account.user.id, 2500);
+  assert.equal(credited.balanceCents, 2500);
+  await assert.rejects(
+    changeUserBalance(account.user.id, -3000),
+    { message: 'Insufficient balance.' }
+  );
+  const accounts = JSON.parse(globalThis.localStorage.getItem('dollarcraft.localAccounts.v1'));
+  assert.equal(accounts[0].balanceCents, 2500);
+});
 
-  assert.equal(request.url, '/api/users/user-1/balance');
-  assert.deepEqual(JSON.parse(request.options.body), { changeInCents: -1000 });
+test('local admin role is restricted to the configured admin email and persists in session', async () => {
+  createStorage();
+  const admin = await createAccount('dollarcraft3@gmail.com', 'admin-password', {
+    firstName: 'Dollar',
+    lastName: 'Craft'
+  });
+  saveLocalSessionRole('admin');
+  assert.equal((await getCurrentSession()).user.role, 'admin');
+
+  await logOutUser();
+  await createAccount('user@example.com', 'user-password', {
+    firstName: 'Regular',
+    lastName: 'User'
+  });
+  assert.throws(
+    () => saveLocalSessionRole('admin'),
+    { message: 'Cannot save the admin role without a matching local admin session.' }
+  );
+  assert.ok(admin.user.id);
 });

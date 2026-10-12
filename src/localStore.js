@@ -1,55 +1,7 @@
-const REFRESH_INTERVAL_MS = 2000;
 const LOCAL_ACCOUNTS_KEY = 'dollarcraft.localAccounts.v1';
 const LOCAL_SESSION_KEY = 'dollarcraft.localSession.v1';
 const LOCAL_SESSION_ROLE_KEY = 'dollarcraft.localSessionRole.v1';
-
-class ApiUnavailableError extends Error {}
-
-const request = async (path, options = {}) => {
-  let response;
-  try {
-    response = await fetch(path, {
-      ...options,
-      credentials: 'same-origin',
-      headers: {
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...options.headers
-      }
-    });
-  } catch {
-    throw new ApiUnavailableError('The account service is unavailable.');
-  }
-
-  if (response.status === 204) return null;
-
-  const responseText = await response.text();
-  let result = null;
-  if (responseText) {
-    try {
-      result = JSON.parse(responseText);
-    } catch {
-      if (!response.ok && (response.status === 404 || response.status >= 500)) {
-        throw new ApiUnavailableError('The account service is unavailable.');
-      }
-      throw new ApiUnavailableError('The account service returned an unexpected response.');
-    }
-  } else if (response.ok) {
-    throw new ApiUnavailableError('The account service returned an empty response.');
-  } else if (response.status === 404 || response.status >= 500) {
-    throw new ApiUnavailableError('The account service is unavailable.');
-  }
-
-  if (!response.ok) {
-    if (response.status === 404 || response.status >= 500) {
-      throw new ApiUnavailableError('The account service is unavailable.');
-    }
-    throw new Error(result?.error || 'The account service could not complete the request.');
-  }
-  return result;
-};
-
-const post = (path, body) =>
-  request(path, { method: 'POST', body: JSON.stringify(body) });
+const LOCAL_USERS_EVENT = 'dollarcraft:local-users-changed';
 
 const getLocalStorage = () => {
   if (!globalThis.localStorage) {
@@ -91,6 +43,15 @@ const getCrypto = () => {
   return cryptoApi;
 };
 
+const publishLocalUsersChanged = () => {
+  if (
+    typeof globalThis.window?.dispatchEvent === 'function' &&
+    typeof globalThis.Event === 'function'
+  ) {
+    globalThis.window.dispatchEvent(new Event(LOCAL_USERS_EVENT));
+  }
+};
+
 const createPasswordHash = async (password, salt) => {
   const cryptoApi = getCrypto();
   const key = await cryptoApi.subtle.importKey(
@@ -126,16 +87,6 @@ const getLocalProfiles = () =>
     ? readLocalAccounts().map(profileFromLocalAccount)
     : [];
 
-const mergeProfiles = (localProfiles, remoteProfiles) => {
-  const profilesByEmail = new Map(
-    localProfiles.map((profile) => [profile.email.toLowerCase(), profile])
-  );
-  remoteProfiles.forEach((profile) => {
-    profilesByEmail.set(profile.email.toLowerCase(), profile);
-  });
-  return [...profilesByEmail.values()];
-};
-
 const localAuthResult = (account, role = 'user') => ({
   user: { ...profileFromLocalAccount(account), role },
   isAdmin: role === 'admin',
@@ -153,6 +104,7 @@ const saveLocalAccount = (account) => {
     accounts[accountIndex] = account;
   }
   getLocalStorage().setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
+  publishLocalUsersChanged();
 };
 
 const updateLocalAccountProfile = (profile) => {
@@ -172,9 +124,20 @@ const updateLocalAccountProfile = (profile) => {
     balanceCents: profile.balanceCents
   };
   getLocalStorage().setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
+  publishLocalUsersChanged();
 };
 
-const createLocalAccount = async (email, password, profile, { startSession }) => {
+const createLocalAccount = async (email, password, profile) => {
+  if (
+    typeof email !== 'string' ||
+    typeof password !== 'string' ||
+    !profile ||
+    typeof profile.firstName !== 'string' ||
+    typeof profile.lastName !== 'string'
+  ) {
+    throw new Error('Enter valid names and email, and a password of 1 to 128 characters.');
+  }
+
   const normalizedEmail = email.trim().toLowerCase();
   const firstName = profile.firstName.trim();
   const lastName = profile.lastName.trim();
@@ -196,7 +159,7 @@ const createLocalAccount = async (email, password, profile, { startSession }) =>
   const existingAccount = existingAccounts.find(
     (account) => account.email.toLowerCase() === normalizedEmail
   );
-  if (startSession && existingAccount) {
+  if (existingAccount) {
     throw new Error('An account with this email already exists.');
   }
 
@@ -205,7 +168,7 @@ const createLocalAccount = async (email, password, profile, { startSession }) =>
     (byte) => byte.toString(16).padStart(2, '0')
   ).join('');
   const account = {
-    id: profile.id || existingAccount?.id || `local-${salt}`,
+    id: existingAccount?.id || `local-${salt}`,
     firstName,
     lastName,
     email: normalizedEmail,
@@ -215,10 +178,8 @@ const createLocalAccount = async (email, password, profile, { startSession }) =>
     passwordHash: await createPasswordHash(password, new TextEncoder().encode(salt))
   };
   saveLocalAccount(account);
-  if (startSession) {
-    getLocalStorage().setItem(LOCAL_SESSION_KEY, account.id);
-    getLocalStorage().removeItem(LOCAL_SESSION_ROLE_KEY);
-  }
+  getLocalStorage().setItem(LOCAL_SESSION_KEY, account.id);
+  getLocalStorage().removeItem(LOCAL_SESSION_ROLE_KEY);
   return localAuthResult(account);
 };
 
@@ -261,45 +222,13 @@ const getLocalSession = () => {
   );
 };
 
-export const getCurrentSession = async () => {
-  try {
-    const result = await request('/api/auth/session');
-    if (result?.user) return result;
-    return getLocalSession();
-  } catch (error) {
-    if (!(error instanceof ApiUnavailableError)) throw error;
-    return getLocalSession();
-  }
-};
+export const getCurrentSession = async () => getLocalSession();
 
-export const createAccount = async (email, password, profile) => {
-  try {
-    const result = await post('/api/auth/register', {
-      email,
-      password,
-      firstName: profile.firstName,
-      lastName: profile.lastName
-    });
-    try {
-      await createLocalAccount(email, password, {
-        ...result.user,
-        ...profile
-      }, { startSession: false });
-    } catch (error) {
-      console.error('Unable to save the registered account to local shared storage.', error);
-    }
-    return result;
-  } catch (error) {
-    if (!(error instanceof ApiUnavailableError)) throw error;
-    return createLocalAccount(email, password, profile, { startSession: true });
-  }
-};
+export const createAccount = (email, password, profile) =>
+  createLocalAccount(email, password, profile);
 
 export const signInWithPassword = (email, password) =>
-  post('/api/auth/login', { email, password }).catch((error) => {
-    if (!(error instanceof ApiUnavailableError)) throw error;
-    return signInLocalAccount(email, password);
-  });
+  signInLocalAccount(email, password);
 
 export const saveLocalSessionRole = (role) => {
   if (role !== 'admin') {
@@ -315,103 +244,75 @@ export const saveLocalSessionRole = (role) => {
 };
 
 export const logOutUser = async () => {
-  try {
-    await post('/api/auth/logout', {});
-  } catch (error) {
-    if (!(error instanceof ApiUnavailableError)) throw error;
-  } finally {
-    globalThis.localStorage?.removeItem(LOCAL_SESSION_KEY);
-    globalThis.localStorage?.removeItem(LOCAL_SESSION_ROLE_KEY);
-  }
+  globalThis.localStorage?.removeItem(LOCAL_SESSION_KEY);
+  globalThis.localStorage?.removeItem(LOCAL_SESSION_ROLE_KEY);
 };
 
 export const observeAllUserProfiles = (onUsers, onError) => {
   let active = true;
-  let requestInProgress = false;
-  let remoteUsers = [];
 
   const publishProfiles = () => {
-    if (active) onUsers(mergeProfiles(getLocalProfiles(), remoteUsers));
-  };
-
-  const refresh = async () => {
-    if (!active || requestInProgress) return;
-    requestInProgress = true;
     try {
-      const result = await request('/api/users');
-      if (!Array.isArray(result?.users)) {
-        throw new Error('The account service returned an invalid registered-user list.');
-      }
-      remoteUsers = result.users;
-      publishProfiles();
+      if (active) onUsers(getLocalProfiles());
     } catch (error) {
-      try {
-        publishProfiles();
-      } catch (storageError) {
-        if (active) onError(storageError);
-      }
       if (active) onError(error);
-    } finally {
-      requestInProgress = false;
     }
   };
 
-  try {
-    publishProfiles();
-  } catch (error) {
-    if (active) onError(error);
-  }
-  void refresh();
-  const intervalId = window.setInterval(refresh, REFRESH_INTERVAL_MS);
+  publishProfiles();
+  const onStorage = (event) => {
+    if (event.key === LOCAL_ACCOUNTS_KEY || event.key === null) publishProfiles();
+  };
+  globalThis.window?.addEventListener?.(LOCAL_USERS_EVENT, publishProfiles);
+  globalThis.window?.addEventListener?.('storage', onStorage);
   return () => {
     active = false;
-    window.clearInterval(intervalId);
+    globalThis.window?.removeEventListener?.(LOCAL_USERS_EVENT, publishProfiles);
+    globalThis.window?.removeEventListener?.('storage', onStorage);
   };
 };
 
 export const observeUserProfile = (userId, onUser, onError) => {
   let active = true;
-  let requestInProgress = false;
-
-  const refresh = async () => {
-    if (!active || requestInProgress) return;
-    requestInProgress = true;
+  const refresh = () => {
     try {
-      try {
-        const result = await request('/api/auth/session');
-        if (active) {
-          onUser(result.user
-            ? result.user.id === userId ? result.user : null
-            : getLocalSession().user);
-        }
-      } catch (error) {
-        if (!(error instanceof ApiUnavailableError)) throw error;
-        const localResult = getLocalSession();
-        if (active) onUser(localResult.user?.id === userId ? localResult.user : null);
-      }
+      const localUser = getLocalProfiles().find((profile) => profile.id === userId) || null;
+      if (active) onUser(localUser);
     } catch (error) {
       if (active) onError(error);
-    } finally {
-      requestInProgress = false;
     }
   };
 
-  void refresh();
-  const intervalId = window.setInterval(refresh, REFRESH_INTERVAL_MS);
+  refresh();
+  const onStorage = (event) => {
+    if (event.key === LOCAL_ACCOUNTS_KEY || event.key === null) refresh();
+  };
+  globalThis.window?.addEventListener?.(LOCAL_USERS_EVENT, refresh);
+  globalThis.window?.addEventListener?.('storage', onStorage);
   return () => {
     active = false;
-    window.clearInterval(intervalId);
+    globalThis.window?.removeEventListener?.(LOCAL_USERS_EVENT, refresh);
+    globalThis.window?.removeEventListener?.('storage', onStorage);
   };
 };
 
 export const changeUserBalance = async (userId, changeInCents) => {
-  const result = await post(`/api/users/${encodeURIComponent(userId)}/balance`, {
-    changeInCents
-  });
-  try {
-    updateLocalAccountProfile(result.user);
-  } catch (error) {
-    console.error('Unable to update the local registered-user cache after a wallet change.', error);
+  if (!Number.isSafeInteger(changeInCents) || changeInCents === 0) {
+    throw new Error('The wallet change must be a non-zero whole number of cents.');
   }
-  return result.user;
+  const accounts = readLocalAccounts();
+  const account = accounts.find((item) => item.id === userId);
+  if (!account) throw new Error('User account not found.');
+
+  const balanceCents = account.balanceCents + changeInCents;
+  if (!Number.isSafeInteger(balanceCents) || balanceCents < 0) {
+    throw new Error(balanceCents < 0
+      ? 'Insufficient balance.'
+      : 'The resulting balance is too large to store accurately.');
+  }
+  updateLocalAccountProfile({
+    ...profileFromLocalAccount(account),
+    balanceCents
+  });
+  return { ...profileFromLocalAccount(account), balanceCents };
 };
