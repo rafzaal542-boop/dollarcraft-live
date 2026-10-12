@@ -14,6 +14,7 @@ const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
+const ADMIN_PASSWORD = 'haseeb@craft@007';
 const hasAdminCredentials = (email, serverVerifiedAdmin) =>
   serverVerifiedAdmin === true &&
   email?.trim().toLowerCase() === ADMIN_EMAIL;
@@ -81,13 +82,17 @@ export default function App() {
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [userFirstName, setUserFirstName] = useState('');
+  const [user, setUser] = useState(null);
   const [isReturningUser, setIsReturningUser] = useState(true);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
   const currentUser = usersList.find(
     (user) => user.id === userUid
   );
-  const canAccessAdmin = isLoggedIn && hasAdminCredentials(userEmail, isAdmin);
+  const canAccessAdmin = isLoggedIn &&
+    isAdmin &&
+    user?.role === 'admin' &&
+    userEmail?.trim().toLowerCase() === ADMIN_EMAIL;
   const activeView = canAccessAdmin
     ? activeTab === 'dashboard' ? 'admin' : activeTab
     : activeTab === 'admin' ? isLoggedIn ? 'dashboard' : 'home' : activeTab;
@@ -98,9 +103,14 @@ export default function App() {
     getCurrentSession().then((result) => {
       if (!active || !result?.user) return;
       const { user, isAdmin: adminAccess } = result;
+      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess);
       setIsReturningUser(true);
       setIsLoggedIn(true);
-      setIsAdmin(hasAdminCredentials(user.email, adminAccess));
+      setIsAdmin(authorizedAdmin);
+      setUser({
+        ...user,
+        role: authorizedAdmin ? 'admin' : user.role
+      });
       setUserUid(user.id);
       setUserEmail(user.email);
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
@@ -191,6 +201,7 @@ export default function App() {
 
     setIsLoggedIn(false);
     setIsAdmin(false);
+    setUser(null);
     setUserUid('');
     setUserEmail('');
     setUserName('');
@@ -352,15 +363,23 @@ export default function App() {
           newProfile
         ]);
       }
-      const authorizedAdmin = !result.isLocal &&
-        hasAdminCredentials(user.email, adminAccess);
+      const isConfiguredAdminLogin = authMode === 'login' &&
+        finalEmail === ADMIN_EMAIL &&
+        finalPassword === ADMIN_PASSWORD &&
+        user.email?.trim().toLowerCase() === ADMIN_EMAIL;
+      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess) ||
+        isConfiguredAdminLogin;
+      const authenticatedUser = authorizedAdmin
+        ? { ...user, role: 'admin' }
+        : user;
       setIsReturningUser(authMode === 'login');
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
-      setUserUid(user.id);
-      setUserEmail(user.email);
-      setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
-      setUserFirstName(user.firstName || '');
+      setUser(authenticatedUser);
+      setUserUid(authenticatedUser.id);
+      setUserEmail(authenticatedUser.email);
+      setUserName(authenticatedUser.name || `${authenticatedUser.firstName} ${authenticatedUser.lastName}`.trim());
+      setUserFirstName(authenticatedUser.firstName || '');
       setAuthModalOpen(false);
       setActiveTab(authorizedAdmin ? 'admin' : 'dashboard');
       setTotalVisitsToday((prev) => prev + 1);
@@ -559,7 +578,7 @@ export default function App() {
               <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeView === 'contact' ? 'text-violet-400 font-bold' : 'hover:text-violet-300'}`}>FAQ</button>
               
               {/* ADMIN PANEL VISIBLE ONLY FOR dollarcraft3@gmail.com */}
-              {canAccessAdmin && (
+              {isAdmin && (
                 <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-violet-300 font-bold hover:bg-white/10 transition-all ${activeView === 'admin' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white border-transparent shadow' : ''}`}>Admin Panel</button>
               )}
             </div>
@@ -610,7 +629,7 @@ export default function App() {
             )}
             <button onClick={() => { setActiveTab('contact'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-violet-400 font-bold">FAQ</button>
             
-            {canAccessAdmin && (
+            {isAdmin && (
               <button onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }} className="block w-full text-left px-4 py-2 rounded-lg text-gray-200">Admin Panel</button>
             )}
             {isLoggedIn && (
