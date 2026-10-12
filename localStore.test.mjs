@@ -58,7 +58,7 @@ test('registration stores a persistent profile and salted password hash without 
     firstName: 'Ada',
     lastName: 'Lovelace'
   });
-  const accounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
+  const accounts = JSON.parse(values.get('dollarcraft_registered_users'));
 
   assert.equal(result.user.email, 'new@example.com');
   assert.equal(result.user.firstName, 'Ada');
@@ -116,7 +116,7 @@ test('Users History observes local registrations immediately and across storage 
   assert.equal(published.at(-1)[0].id, account.user.id);
   assert.equal(published.at(-1)[0].email, 'new@example.com');
 
-  values.set('dollarcraft.localAccounts.v1', JSON.stringify([{
+  values.set('dollarcraft_registered_users', JSON.stringify([{
     id: 'other-local-user',
     firstName: 'Grace',
     lastName: 'Hopper',
@@ -128,7 +128,7 @@ test('Users History observes local registrations immediately and across storage 
   }]));
   globalThis.window.dispatchEvent({
     type: 'storage',
-    key: 'dollarcraft.localAccounts.v1'
+    key: 'dollarcraft_registered_users'
   });
   assert.deepEqual(
     published.at(-1).map((user) => user.email),
@@ -151,8 +151,34 @@ test('wallet changes persist locally and reject insufficient or unsafe balances'
     changeUserBalance(account.user.id, -3000),
     { message: 'Insufficient balance.' }
   );
-  const accounts = JSON.parse(globalThis.localStorage.getItem('dollarcraft.localAccounts.v1'));
+  const accounts = JSON.parse(globalThis.localStorage.getItem('dollarcraft_registered_users'));
   assert.equal(accounts[0].balanceCents, 2500);
+});
+
+test('legacy registered accounts migrate to the unified localStorage key', async () => {
+  const values = createStorage();
+  values.set('dollarcraft.localAccounts.v1', JSON.stringify([{
+    id: 'legacy-user',
+    firstName: 'Legacy',
+    lastName: 'User',
+    email: 'legacy@example.com',
+    createdAt: new Date().toISOString(),
+    balanceCents: 1000,
+    passwordSalt: 'salt',
+    passwordHash: 'hash'
+  }]));
+
+  const published = [];
+  const unsubscribe = observeAllUserProfiles((users) => published.push(users), (error) => {
+    throw error;
+  });
+  unsubscribe();
+  const accounts = JSON.parse(values.get('dollarcraft_registered_users'));
+  const session = await getCurrentSession();
+  assert.equal(accounts[0].id, 'legacy-user');
+  assert.equal(published[0][0].email, 'legacy@example.com');
+  assert.equal(values.has('dollarcraft.localAccounts.v1'), false);
+  assert.equal(session.user, null);
 });
 
 test('local admin role is restricted to the configured admin email and persists in session', async () => {

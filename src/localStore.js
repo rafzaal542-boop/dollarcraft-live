@@ -1,4 +1,5 @@
-const LOCAL_ACCOUNTS_KEY = 'dollarcraft.localAccounts.v1';
+const LOCAL_ACCOUNTS_KEY = 'dollarcraft_registered_users';
+const LEGACY_LOCAL_ACCOUNTS_KEY = 'dollarcraft.localAccounts.v1';
 const LOCAL_SESSION_KEY = 'dollarcraft.localSession.v1';
 const LOCAL_SESSION_ROLE_KEY = 'dollarcraft.localSessionRole.v1';
 const LOCAL_USERS_EVENT = 'dollarcraft:local-users-changed';
@@ -11,8 +12,18 @@ const getLocalStorage = () => {
 };
 
 const readLocalAccounts = () => {
-  const serializedAccounts = getLocalStorage().getItem(LOCAL_ACCOUNTS_KEY);
-  if (!serializedAccounts) return [];
+  const storage = getLocalStorage();
+  let serializedAccounts = storage.getItem(LOCAL_ACCOUNTS_KEY);
+  if (serializedAccounts === null) {
+    serializedAccounts = storage.getItem(LEGACY_LOCAL_ACCOUNTS_KEY);
+    if (serializedAccounts !== null) {
+      storage.setItem(LOCAL_ACCOUNTS_KEY, serializedAccounts);
+    }
+  }
+  if (!serializedAccounts) {
+    storage.removeItem(LEGACY_LOCAL_ACCOUNTS_KEY);
+    return [];
+  }
 
   let accounts;
   try {
@@ -32,6 +43,7 @@ const readLocalAccounts = () => {
   ) {
     throw new Error("Saved local account data is invalid. Clear this site's saved account data and try again.");
   }
+  storage.removeItem(LEGACY_LOCAL_ACCOUNTS_KEY);
   return accounts;
 };
 
