@@ -992,7 +992,7 @@ export default function App() {
                           setInternalTransferSuccess('');
                         }}
                         className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
-                        placeholder="user@example.com"
+                        placeholder="Enter user email address..."
                       />
                     </div>
                     <div>
