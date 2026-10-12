@@ -25,8 +25,8 @@ const getGlobalAccrualTotal = (now = Date.now()) =>
   (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / 1000) *
     GLOBAL_ACCRUAL_PER_SECOND;
 
-const formatSignupTimestamp = (createdAt) => {
-  const timestamp =
+const getSignupDate = (createdAt) => {
+  const date =
     typeof createdAt?.toDate === 'function'
       ? createdAt.toDate()
       : typeof createdAt === 'number'
@@ -34,8 +34,13 @@ const formatSignupTimestamp = (createdAt) => {
         : typeof createdAt === 'string'
           ? new Date(createdAt)
         : null;
-  return timestamp && Number.isFinite(timestamp.getTime())
-    ? timestamp.toISOString()
+  return date && Number.isFinite(date.getTime()) ? date : null;
+};
+
+const formatSignupTimestamp = (createdAt) => {
+  const date = getSignupDate(createdAt);
+  return date
+    ? date.toISOString()
     : 'Timestamp pending';
 };
 
@@ -101,6 +106,14 @@ export default function App() {
     ? activeTab === 'dashboard' ? 'admin' : activeTab
     : activeTab === 'admin' ? isLoggedIn ? 'dashboard' : 'home' : activeTab;
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
+  const today = new Date();
+  const todayRegisteredUsers = usersList.filter((registeredUser) => {
+    const signupDate = getSignupDate(registeredUser.createdAt);
+    return signupDate &&
+      signupDate.getFullYear() === today.getFullYear() &&
+      signupDate.getMonth() === today.getMonth() &&
+      signupDate.getDate() === today.getDate();
+  }).length;
 
   useEffect(() => {
     let active = true;
@@ -153,9 +166,7 @@ export default function App() {
   }, [canAccessAdmin, isLoggedIn, userEmail, userUid]);
 
   // Admin Metrics & History
-  const [totalVisitsToday, setTotalVisitsToday] = useState(0);
-  const [activeVaultCapital, setActiveVaultCapital] = useState(0);
-  const [dailyRoiPool, setDailyRoiPool] = useState(0);
+  const [internalTransferCount, setInternalTransferCount] = useState(0);
   const [platformFee, setPlatformFee] = useState('2.5');
   const [roiRate, setRoiRate] = useState('1.66');
 
@@ -210,6 +221,7 @@ export default function App() {
     setUserName('');
     setUserFirstName('');
     setUsersList([]);
+    setInternalTransferCount(0);
     setActiveTab('home');
     setAdminSubTab('dashboard');
     setMobileMenuOpen(false);
@@ -318,6 +330,7 @@ export default function App() {
     setInternalTransferSuccess(
       `$${(amountCents / 100).toFixed(2)} USD transferred to ${recipient.email}.`
     );
+    setInternalTransferCount((count) => count + 1);
     setInternalTransferAmount('');
   };
 
@@ -391,7 +404,6 @@ export default function App() {
       setUserFirstName(authenticatedUser.firstName || '');
       setAuthModalOpen(false);
       setActiveTab(authorizedAdmin ? 'admin' : 'dashboard');
-      setTotalVisitsToday((prev) => prev + 1);
       setPasswordInput('');
     } catch (error) {
       console.error('Authentication failed.', error);
@@ -893,26 +905,21 @@ export default function App() {
             {/* ADMIN SUB-TAB 1: DASHBOARD OVERVIEW */}
             {adminSubTab === 'dashboard' && (
               <div className="space-y-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
-                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">TODAY'S USERS / VISITS</span>
-                    <h3 className="text-4xl font-black text-white font-mono">{totalVisitsToday}</h3>
-                    <span className="text-xs text-emerald-400 font-semibold mt-2 block">✓ Fresh tracking active</span>
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">TOTAL REGISTERED USERS</span>
+                    <h3 className="text-4xl font-black text-white font-mono">{usersList.length}</h3>
+                    <span className="text-xs text-emerald-400 font-semibold mt-2 block">All registered accounts</span>
                   </div>
                   <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
-                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">ACTIVE VAULT CAPITAL</span>
-                    <h3 className="text-4xl font-black text-cyan-400 font-mono">${activeVaultCapital.toFixed(2)}</h3>
-                    <span className="text-xs text-cyan-300 font-semibold mt-2 block">⚡ Zeroed & Fresh</span>
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">TODAY REGISTERED USERS</span>
+                    <h3 className="text-4xl font-black text-cyan-400 font-mono">{todayRegisteredUsers}</h3>
+                    <span className="text-xs text-cyan-300 font-semibold mt-2 block">Registered today</span>
                   </div>
                   <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
-                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">PENDING WITHDRAWALS</span>
-                    <h3 className="text-4xl font-black text-amber-400 font-mono">0 Requests</h3>
-                    <span className="text-xs text-amber-300 font-semibold mt-2 block">✓ Cleared & Fresh</span>
-                  </div>
-                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-6 shadow-xl">
-                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">DAILY ROI PAYOUT POOL</span>
-                    <h3 className="text-4xl font-black text-teal-400 font-mono">${dailyRoiPool.toFixed(2)}</h3>
-                    <span className="text-xs text-teal-300 font-semibold mt-2 block">✓ Zeroed & Fresh</span>
+                    <span className="text-gray-400 text-xs font-bold uppercase tracking-wider block mb-2">INTERNAL TRANSFER</span>
+                    <h3 className="text-4xl font-black text-violet-300 font-mono">{internalTransferCount}</h3>
+                    <span className="text-xs text-violet-200 font-semibold mt-2 block">Successful transfers this session</span>
                   </div>
                 </div>
 
@@ -951,9 +958,6 @@ export default function App() {
                         className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all"
                       >
                         ↔️ Internal Transfer
-                      </button>
-                      <button onClick={() => { setTotalVisitsToday(0); setActiveVaultCapital(0); setDailyRoiPool(0); alert('All admin metrics & history reset successfully!'); }} className="w-full py-3.5 rounded-2xl bg-red-600 hover:bg-red-500 text-white font-bold text-sm shadow transition-all">
-                        Reset All Metrics to 0
                       </button>
                       <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
                         Flush Server Cache
