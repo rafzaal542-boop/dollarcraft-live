@@ -1,5 +1,8 @@
-const LOCAL_ACCOUNTS_KEY = 'dollarcraft_registered_users';
-const LEGACY_LOCAL_ACCOUNTS_KEY = 'dollarcraft.localAccounts.v1';
+const LOCAL_ACCOUNTS_KEY = 'dollarcraft_global_users';
+const LEGACY_LOCAL_ACCOUNTS_KEYS = [
+  'dollarcraft_registered_users',
+  'dollarcraft.localAccounts.v1'
+];
 const LOCAL_SESSION_KEY = 'dollarcraft.localSession.v1';
 const LOCAL_SESSION_ROLE_KEY = 'dollarcraft.localSessionRole.v1';
 const LOCAL_USERS_EVENT = 'dollarcraft:local-users-changed';
@@ -13,37 +16,52 @@ const getLocalStorage = () => {
 
 const readLocalAccounts = () => {
   const storage = getLocalStorage();
-  let serializedAccounts = storage.getItem(LOCAL_ACCOUNTS_KEY);
-  if (serializedAccounts === null) {
-    serializedAccounts = storage.getItem(LEGACY_LOCAL_ACCOUNTS_KEY);
-    if (serializedAccounts !== null) {
-      storage.setItem(LOCAL_ACCOUNTS_KEY, serializedAccounts);
+  const parseAccounts = (serializedAccounts) => {
+    let accounts;
+    try {
+      accounts = JSON.parse(serializedAccounts);
+    } catch {
+      throw new Error("Saved local accounts could not be read. Clear this site's saved account data and try again.");
     }
-  }
-  if (!serializedAccounts) {
-    storage.removeItem(LEGACY_LOCAL_ACCOUNTS_KEY);
-    return [];
-  }
+    if (
+      !Array.isArray(accounts) ||
+      accounts.some((account) =>
+        !account ||
+        typeof account.id !== 'string' ||
+        typeof account.email !== 'string' ||
+        typeof account.passwordSalt !== 'string' ||
+        typeof account.passwordHash !== 'string'
+      )
+    ) {
+      throw new Error("Saved local account data is invalid. Clear this site's saved account data and try again.");
+    }
+    return accounts;
+  };
 
-  let accounts;
-  try {
-    accounts = JSON.parse(serializedAccounts);
-  } catch {
-    throw new Error("Saved local accounts could not be read. Clear this site's saved account data and try again.");
+  const globalAccounts = storage.getItem(LOCAL_ACCOUNTS_KEY);
+  const accountsByEmail = new Map(
+    (globalAccounts ? parseAccounts(globalAccounts) : [])
+      .map((account) => [account.email.toLowerCase(), account])
+  );
+  const legacyKeys = [];
+  LEGACY_LOCAL_ACCOUNTS_KEYS.forEach((key) => {
+    const serializedAccounts = storage.getItem(key);
+    if (serializedAccounts === null) return;
+    parseAccounts(serializedAccounts).forEach((account) => {
+      if (!accountsByEmail.has(account.email.toLowerCase())) {
+        accountsByEmail.set(account.email.toLowerCase(), account);
+      }
+    });
+    legacyKeys.push(key);
+  });
+
+  const accounts = [...accountsByEmail.values()];
+  if (globalAccounts === null || legacyKeys.length > 0) {
+    if (accounts.length > 0) {
+      storage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
+    }
+    legacyKeys.forEach((key) => storage.removeItem(key));
   }
-  if (
-    !Array.isArray(accounts) ||
-    accounts.some((account) =>
-      !account ||
-      typeof account.id !== 'string' ||
-      typeof account.email !== 'string' ||
-      typeof account.passwordSalt !== 'string' ||
-      typeof account.passwordHash !== 'string'
-    )
-  ) {
-    throw new Error("Saved local account data is invalid. Clear this site's saved account data and try again.");
-  }
-  storage.removeItem(LEGACY_LOCAL_ACCOUNTS_KEY);
   return accounts;
 };
 

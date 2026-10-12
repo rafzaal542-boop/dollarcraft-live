@@ -58,7 +58,7 @@ test('registration stores a persistent profile and salted password hash without 
     firstName: 'Ada',
     lastName: 'Lovelace'
   });
-  const accounts = JSON.parse(values.get('dollarcraft_registered_users'));
+  const accounts = JSON.parse(values.get('dollarcraft_global_users'));
 
   assert.equal(result.user.email, 'new@example.com');
   assert.equal(result.user.firstName, 'Ada');
@@ -116,7 +116,7 @@ test('Users History observes local registrations immediately and across storage 
   assert.equal(published.at(-1)[0].id, account.user.id);
   assert.equal(published.at(-1)[0].email, 'new@example.com');
 
-  values.set('dollarcraft_registered_users', JSON.stringify([{
+  values.set('dollarcraft_global_users', JSON.stringify([{
     id: 'other-local-user',
     firstName: 'Grace',
     lastName: 'Hopper',
@@ -128,7 +128,7 @@ test('Users History observes local registrations immediately and across storage 
   }]));
   globalThis.window.dispatchEvent({
     type: 'storage',
-    key: 'dollarcraft_registered_users'
+    key: 'dollarcraft_global_users'
   });
   assert.deepEqual(
     published.at(-1).map((user) => user.email),
@@ -151,13 +151,13 @@ test('wallet changes persist locally and reject insufficient or unsafe balances'
     changeUserBalance(account.user.id, -3000),
     { message: 'Insufficient balance.' }
   );
-  const accounts = JSON.parse(globalThis.localStorage.getItem('dollarcraft_registered_users'));
+  const accounts = JSON.parse(globalThis.localStorage.getItem('dollarcraft_global_users'));
   assert.equal(accounts[0].balanceCents, 2500);
 });
 
-test('legacy registered accounts migrate to the unified localStorage key', async () => {
+test('legacy registered accounts migrate to the global users key', async () => {
   const values = createStorage();
-  values.set('dollarcraft.localAccounts.v1', JSON.stringify([{
+  const legacyUser = {
     id: 'legacy-user',
     firstName: 'Legacy',
     lastName: 'User',
@@ -166,6 +166,12 @@ test('legacy registered accounts migrate to the unified localStorage key', async
     balanceCents: 1000,
     passwordSalt: 'salt',
     passwordHash: 'hash'
+  };
+  values.set('dollarcraft.localAccounts.v1', JSON.stringify([legacyUser]));
+  values.set('dollarcraft_registered_users', JSON.stringify([{
+    ...legacyUser,
+    id: 'registered-user',
+    email: 'registered@example.com'
   }]));
 
   const published = [];
@@ -173,11 +179,18 @@ test('legacy registered accounts migrate to the unified localStorage key', async
     throw error;
   });
   unsubscribe();
-  const accounts = JSON.parse(values.get('dollarcraft_registered_users'));
+  const accounts = JSON.parse(values.get('dollarcraft_global_users'));
   const session = await getCurrentSession();
-  assert.equal(accounts[0].id, 'legacy-user');
-  assert.equal(published[0][0].email, 'legacy@example.com');
+  assert.deepEqual(accounts.map((account) => account.email).sort(), [
+    'legacy@example.com',
+    'registered@example.com'
+  ]);
+  assert.deepEqual(published[0].map((account) => account.email).sort(), [
+    'legacy@example.com',
+    'registered@example.com'
+  ]);
   assert.equal(values.has('dollarcraft.localAccounts.v1'), false);
+  assert.equal(values.has('dollarcraft_registered_users'), false);
   assert.equal(session.user, null);
 });
 
