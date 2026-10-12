@@ -298,7 +298,7 @@ export default function App() {
     );
 
     if (!recipient) {
-      setInternalTransferError('Select or enter the email of a registered user.');
+      setInternalTransferError('No registered user was found with that email address.');
       return;
     }
 
@@ -981,27 +981,19 @@ export default function App() {
                       <label htmlFor="internal-transfer-email" className="block text-sm font-semibold text-gray-200 mb-2">
                         User email
                       </label>
-                      <select
+                      <input
                         id="internal-transfer-email"
+                        type="email"
                         required
-                        disabled={usersList.length === 0}
                         value={internalTransferEmail}
                         onChange={(e) => {
                           setInternalTransferEmail(e.target.value);
                           setInternalTransferError('');
                           setInternalTransferSuccess('');
                         }}
-                        className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500 disabled:opacity-50"
-                      >
-                        <option value="" disabled>
-                          {usersList.length === 0 ? 'No registered users available' : 'Select a registered user'}
-                        </option>
-                        {usersList.map((user) => (
-                          <option key={user.email} value={user.email}>
-                            {user.name} ({user.email})
-                          </option>
-                        ))}
-                      </select>
+                        className="w-full bg-black/60 border border-white/15 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-violet-500"
+                        placeholder="user@example.com"
+                      />
                     </div>
                     <div>
                       <label htmlFor="internal-transfer-amount" className="block text-sm font-semibold text-gray-200 mb-2">
