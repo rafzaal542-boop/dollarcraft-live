@@ -129,6 +129,11 @@ test('registration persists a salted password hash and creates a session', async
   assert.equal(storedUser.passwordSalt.length, 32);
   assert.equal(storedUser.balanceCents, 0);
   assert.equal(storedUser.role, 'user');
+  assert.equal(storedUser.firstName, 'New');
+  assert.equal(storedUser.lastName, 'User');
+  assert.equal(storedUser.email, 'new@example.com');
+  assert.ok(storedUser.createdAt instanceof Date);
+  assert.equal('password' in storedUser, false);
   assert.equal(db.collection('sessions').documents.length, 1);
   assert.match(response.headers.get('set-cookie'), /HttpOnly/);
 });

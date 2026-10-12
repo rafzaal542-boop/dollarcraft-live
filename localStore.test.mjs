@@ -61,7 +61,7 @@ test('registration sends account details to the backend and returns its profile'
   assert.equal('password' in result.user, false);
 });
 
-test('HTML API 404 falls back to persistent local registration and authentication', async () => {
+test('registration fails when the backend is unavailable instead of creating a local-only account', async () => {
   const values = new Map();
   globalThis.localStorage = {
     getItem: (key) => values.get(key) ?? null,
@@ -73,71 +73,65 @@ test('HTML API 404 falls back to persistent local registration and authenticatio
     { status: 404, headers: { 'Content-Type': 'text/html' } }
   );
 
-  const registration = await createAccount('new@example.com', 'pass1234', {
-    firstName: 'Ada',
-    lastName: 'Lovelace'
-  });
-  const savedAccounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
-
-  assert.equal(registration.isLocal, true);
-  assert.equal(registration.isAdmin, false);
-  assert.equal(registration.user.email, 'new@example.com');
-  assert.match(registration.user.id, /^local-/);
-  assert.equal(values.get('dollarcraft.localSession.v1'), registration.user.id);
-  assert.equal(savedAccounts.length, 1);
-  assert.equal(savedAccounts[0].passwordHash.includes('pass1234'), false);
-  assert.equal('password' in registration.user, false);
-
-  const session = await getCurrentSession();
-  const login = await signInWithPassword('NEW@example.com', 'pass1234');
-  assert.equal(session.user.id, registration.user.id);
-  assert.equal(login.user.id, registration.user.id);
   await assert.rejects(
-    signInWithPassword('new@example.com', 'incorrect-password'),
-    { message: 'Incorrect email or password.' }
+    createAccount('new@example.com', 'pass1234', {
+      firstName: 'Ada',
+      lastName: 'Lovelace'
+    }),
+    { message: 'The account service is unavailable.' }
   );
-  await logOutUser();
+  assert.equal(values.has('dollarcraft.localAccounts.v1'), false);
   assert.equal(values.has('dollarcraft.localSession.v1'), false);
 });
 
-test('local registrations immediately publish in the admin user observer', async () => {
-  const values = new Map();
-  const listeners = new Map();
+test('admin user observer shows only backend users and retains the last server snapshot on failure', async () => {
   globalThis.localStorage = {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: (key) => values.delete(key)
+    getItem: (key) => key === 'dollarcraft.localAccounts.v1'
+      ? JSON.stringify([{
+        id: 'local-user',
+        firstName: 'Local',
+        lastName: 'Only',
+        email: 'local@example.com',
+        createdAt: new Date().toISOString(),
+        balanceCents: 0,
+        passwordSalt: 'salt',
+        passwordHash: 'hash'
+      }])
+      : null,
+    setItem() {},
+    removeItem() {}
   };
-  globalThis.window = {
-    setInterval: () => 17,
-    clearInterval() {},
-    addEventListener(type, callback) {
-      listeners.set(type, callback);
-    },
-    removeEventListener(type) {
-      listeners.delete(type);
-    },
-    dispatchEvent(event) {
-      listeners.get(event.type)?.(event);
-    }
-  };
-  globalThis.fetch = async () => new Response(
-    '<!doctype html><title>Not Found</title>',
-    { status: 404, headers: { 'Content-Type': 'text/html' } }
-  );
-
+  let intervalCallback;
+  const errors = [];
   const published = [];
-  const unsubscribe = observeAllUserProfiles((users) => published.push(users), (error) => {
-    throw error;
-  });
+  globalThis.window = {
+    setInterval(callback) {
+      intervalCallback = callback;
+      return 17;
+    },
+    clearInterval() {}
+  };
+  let shouldFail = false;
+  globalThis.fetch = async () => {
+    if (shouldFail) throw new TypeError('Network unavailable');
+    return mockJsonResponse({
+      users: [{ id: 'user-1', email: 'global@example.com' }]
+    });
+  };
+
+  const unsubscribe = observeAllUserProfiles(
+    (users) => published.push(users),
+    (error) => errors.push(error)
+  );
   await new Promise((resolve) => setImmediate(resolve));
-  await createAccount('new@example.com', 'secure-password-123', {
-    firstName: 'Ada',
-    lastName: 'Lovelace'
-  });
+  shouldFail = true;
+  intervalCallback();
+  await new Promise((resolve) => setImmediate(resolve));
   unsubscribe();
 
-  assert.equal(published.at(-1)[0].email, 'new@example.com');
+  assert.equal(published.length, 1);
+  assert.deepEqual(published[0].map((user) => user.email), ['global@example.com']);
+  assert.equal(errors.length, 1);
 });
 
 test('sign-in, session restoration, and sign-out use the shared API', async () => {
@@ -169,7 +163,7 @@ test('sign-in, session restoration, and sign-out use the shared API', async () =
   ]);
 });
 
-test('admin user observation immediately loads the API and refreshes every five seconds', async () => {
+test('admin user observation immediately loads the API and refreshes every two seconds', async () => {
   let intervalCallback;
   let intervalDelay;
   let clearedInterval;
@@ -196,7 +190,7 @@ test('admin user observation immediately loads the API and refreshes every five 
   await new Promise((resolve) => setImmediate(resolve));
   unsubscribe();
 
-  assert.equal(intervalDelay, 5000);
+  assert.equal(intervalDelay, 2000);
   assert.equal(published.length, 2);
   assert.equal(published[0][0].email, 'user@example.com');
   assert.equal(clearedInterval, 17);
@@ -213,30 +207,7 @@ test('API failures are surfaced to callers', async () => {
   );
 });
 
-test('non-JSON authentication errors fall back to local registration and login', async () => {
-  const values = new Map();
-  globalThis.localStorage = {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: (key) => values.delete(key)
-  };
-  globalThis.fetch = async () => new Response(
-    '<!doctype html><title>Unauthorized</title>',
-    { status: 401, headers: { 'Content-Type': 'text/html' } }
-  );
-
-  const registration = await createAccount('new@example.com', 'secure-password-123', {
-    firstName: 'Ada',
-    lastName: 'Lovelace'
-  });
-  const login = await signInWithPassword('new@example.com', 'secure-password-123');
-
-  assert.equal(registration.isLocal, true);
-  assert.equal(login.user.id, registration.user.id);
-  assert.equal(JSON.parse(values.get('dollarcraft.localAccounts.v1')).length, 1);
-});
-
-test('local admin role persists in the session and is restored only for the admin email', async () => {
+test('non-JSON registration errors do not create browser-local accounts', async () => {
   const values = new Map();
   globalThis.localStorage = {
     getItem: (key) => values.get(key) ?? null,
@@ -248,11 +219,39 @@ test('local admin role persists in the session and is restored only for the admi
     { status: 404, headers: { 'Content-Type': 'text/html' } }
   );
 
-  await createAccount('dollarcraft3@gmail.com', 'haseeb@craft@007', {
+  await assert.rejects(
+    createAccount('new@example.com', 'secure-password-123', {
+      firstName: 'Ada',
+      lastName: 'Lovelace'
+    }),
+    { message: 'The account service is unavailable.' }
+  );
+  assert.equal(values.has('dollarcraft.localAccounts.v1'), false);
+});
+
+test('local admin role persists in the session and is restored only for the admin email', async () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  values.set('dollarcraft.localAccounts.v1', JSON.stringify([{
+    id: 'local-admin',
     firstName: 'Dollar',
-    lastName: 'Craft'
-  });
-  await signInWithPassword('dollarcraft3@gmail.com', 'haseeb@craft@007');
+    lastName: 'Craft',
+    email: 'dollarcraft3@gmail.com',
+    createdAt: new Date().toISOString(),
+    balanceCents: 0,
+    passwordSalt: 'salt',
+    passwordHash: 'hash'
+  }]));
+  values.set('dollarcraft.localSession.v1', 'local-admin');
+  globalThis.fetch = async () => new Response(
+    '<!doctype html><title>Not Found</title>',
+    { status: 404, headers: { 'Content-Type': 'text/html' } }
+  );
+
   saveLocalSessionRole('admin');
 
   const session = await getCurrentSession();

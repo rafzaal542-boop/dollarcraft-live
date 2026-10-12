@@ -1043,7 +1043,9 @@ export default function App() {
                       {usersList.length === 0 ? (
                         <tr>
                           <td colSpan="5" className="py-8 text-center text-gray-400">
-                            No registered users yet.
+                            {usersLoadError
+                              ? 'Registered users are unavailable until the account service reconnects.'
+                              : 'No registered users yet.'}
                           </td>
                         </tr>
                       ) : (

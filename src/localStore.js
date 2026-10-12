@@ -1,8 +1,7 @@
-const REFRESH_INTERVAL_MS = 5000;
+const REFRESH_INTERVAL_MS = 2000;
 const LOCAL_ACCOUNTS_KEY = 'dollarcraft.localAccounts.v1';
 const LOCAL_SESSION_KEY = 'dollarcraft.localSession.v1';
 const LOCAL_SESSION_ROLE_KEY = 'dollarcraft.localSessionRole.v1';
-const LOCAL_USERS_EVENT = 'dollarcraft:local-users-changed';
 
 class ApiUnavailableError extends Error {}
 
@@ -29,6 +28,9 @@ const request = async (path, options = {}) => {
     try {
       result = JSON.parse(responseText);
     } catch {
+      if (!response.ok && (response.status === 404 || response.status >= 500)) {
+        throw new ApiUnavailableError('The account service is unavailable.');
+      }
       throw new ApiUnavailableError('The account service returned an unexpected response.');
     }
   } else if (response.ok) {
@@ -109,11 +111,6 @@ const createPasswordHash = async (password, salt) => {
   ).join('');
 };
 
-const createRandomHex = (byteLength) => {
-  const bytes = getCrypto().getRandomValues(new Uint8Array(byteLength));
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-};
-
 const profileFromLocalAccount = (account) => ({
   id: account.id,
   firstName: account.firstName,
@@ -129,60 +126,6 @@ const localAuthResult = (account, role = 'user') => ({
   isAdmin: role === 'admin',
   isLocal: true
 });
-
-const publishLocalUsersChanged = () => {
-  if (
-    typeof globalThis.window?.dispatchEvent === 'function' &&
-    typeof globalThis.Event === 'function'
-  ) {
-    globalThis.window.dispatchEvent(new Event(LOCAL_USERS_EVENT));
-  }
-};
-
-const saveLocalAccounts = (accounts) => {
-  getLocalStorage().setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
-  publishLocalUsersChanged();
-};
-
-const createLocalAccount = async (email, password, profile) => {
-  const normalizedEmail = email.trim().toLowerCase();
-  const firstName = profile.firstName.trim();
-  const lastName = profile.lastName.trim();
-  if (
-    normalizedEmail.length > 254 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
-    !firstName ||
-    firstName.length > 100 ||
-    !lastName ||
-    lastName.length > 100 ||
-    password.length < 1 ||
-    password.length > 128 ||
-    new TextEncoder().encode(password).length > 512
-  ) {
-    throw new Error('Enter valid names and email, and a password of 1 to 128 characters.');
-  }
-
-  const accounts = readLocalAccounts();
-  if (accounts.some((account) => account.email === normalizedEmail)) {
-    throw new Error('An account with this email already exists.');
-  }
-
-  const salt = createRandomHex(16);
-  const account = {
-    id: `local-${createRandomHex(16)}`,
-    firstName,
-    lastName,
-    email: normalizedEmail,
-    createdAt: new Date().toISOString(),
-    balanceCents: 0,
-    passwordSalt: salt,
-    passwordHash: await createPasswordHash(password, new TextEncoder().encode(salt))
-  };
-  saveLocalAccounts([...accounts, account]);
-  getLocalStorage().setItem(LOCAL_SESSION_KEY, account.id);
-  getLocalStorage().removeItem(LOCAL_SESSION_ROLE_KEY);
-  return localAuthResult(account);
-};
 
 const signInLocalAccount = async (email, password) => {
   const normalizedEmail = email.trim().toLowerCase();
@@ -223,21 +166,6 @@ const getLocalSession = () => {
   );
 };
 
-const getLocalProfiles = () =>
-  globalThis.localStorage
-    ? readLocalAccounts().map(profileFromLocalAccount)
-    : [];
-
-const mergeProfiles = (localProfiles, remoteProfiles) => {
-  const profilesByEmail = new Map(
-    localProfiles.map((profile) => [profile.email.toLowerCase(), profile])
-  );
-  remoteProfiles.forEach((profile) => {
-    profilesByEmail.set(profile.email.toLowerCase(), profile);
-  });
-  return [...profilesByEmail.values()];
-};
-
 export const getCurrentSession = async () => {
   try {
     const result = await request('/api/auth/session');
@@ -255,9 +183,6 @@ export const createAccount = (email, password, profile) =>
     password,
     firstName: profile.firstName,
     lastName: profile.lastName
-  }).catch((error) => {
-    if (!(error instanceof ApiUnavailableError)) throw error;
-    return createLocalAccount(email, password, profile);
   });
 
 export const signInWithPassword = (email, password) =>
@@ -296,7 +221,7 @@ export const observeAllUserProfiles = (onUsers, onError) => {
   let remoteUsers = [];
 
   const publishProfiles = () => {
-    if (active) onUsers(mergeProfiles(getLocalProfiles(), remoteUsers));
+    if (active) onUsers(remoteUsers);
   };
 
   const refresh = async () => {
@@ -304,18 +229,13 @@ export const observeAllUserProfiles = (onUsers, onError) => {
     requestInProgress = true;
     try {
       const result = await request('/api/users');
+      if (!Array.isArray(result?.users)) {
+        throw new Error('The account service returned an invalid registered-user list.');
+      }
       remoteUsers = result.users;
       publishProfiles();
     } catch (error) {
-      if (error instanceof ApiUnavailableError) {
-        try {
-          publishProfiles();
-        } catch (storageError) {
-          if (active) onError(storageError);
-        }
-      } else if (active) {
-        onError(error);
-      }
+      if (active) onError(error);
     } finally {
       requestInProgress = false;
     }
@@ -323,23 +243,9 @@ export const observeAllUserProfiles = (onUsers, onError) => {
 
   void refresh();
   const intervalId = window.setInterval(refresh, REFRESH_INTERVAL_MS);
-  const onLocalUsersChanged = () => {
-    try {
-      publishProfiles();
-    } catch (error) {
-      if (active) onError(error);
-    }
-  };
-  const onStorage = (event) => {
-    if (event.key === LOCAL_ACCOUNTS_KEY) onLocalUsersChanged();
-  };
-  window.addEventListener?.(LOCAL_USERS_EVENT, onLocalUsersChanged);
-  window.addEventListener?.('storage', onStorage);
   return () => {
     active = false;
     window.clearInterval(intervalId);
-    window.removeEventListener?.(LOCAL_USERS_EVENT, onLocalUsersChanged);
-    window.removeEventListener?.('storage', onStorage);
   };
 };
 
