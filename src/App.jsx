@@ -147,7 +147,7 @@ export default function App() {
 
     const onError = (error) => {
       console.error('Unable to load registered user profiles from the account service.', error);
-      setUsersLoadError('Unable to load registered users. Check the account service connection.');
+      setUsersLoadError('Account synchronization is unavailable. Showing locally saved users while retrying.');
     };
     const onUsers = (users) => {
       const normalizedUsers = users.map((user) => normalizeUserProfile(user, user.id));
@@ -1025,7 +1025,7 @@ export default function App() {
                 </div>
 
                 {usersLoadError && (
-                  <p role="alert" className="text-rose-300 text-sm">{usersLoadError}</p>
+                  <p role="status" className="text-amber-300 text-sm">{usersLoadError}</p>
                 )}
 
                 <div className="overflow-x-auto">
@@ -1044,7 +1044,7 @@ export default function App() {
                         <tr>
                           <td colSpan="5" className="py-8 text-center text-gray-400">
                             {usersLoadError
-                              ? 'Registered users are unavailable until the account service reconnects.'
+                              ? 'No locally saved accounts are available yet. Waiting for synchronization.'
                               : 'No registered users yet.'}
                           </td>
                         </tr>

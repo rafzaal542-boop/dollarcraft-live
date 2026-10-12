@@ -30,6 +30,12 @@ const mockJsonResponse = (body, status = 200) =>
 
 test('registration sends account details to the backend and returns its profile', async () => {
   let request;
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
   globalThis.fetch = async (url, options) => {
     request = { url, options };
     return mockJsonResponse({
@@ -59,9 +65,14 @@ test('registration sends account details to the backend and returns its profile'
   });
   assert.equal(result.user.id, 'user-1');
   assert.equal('password' in result.user, false);
+  const localAccounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
+  assert.equal(localAccounts.length, 1);
+  assert.equal(localAccounts[0].email, 'new@example.com');
+  assert.equal(localAccounts[0].id, 'user-1');
+  assert.equal(localAccounts[0].passwordHash.includes('secure-password-123'), false);
 });
 
-test('registration fails when the backend is unavailable instead of creating a local-only account', async () => {
+test('registration falls back to persistent local storage when the backend is unavailable', async () => {
   const values = new Map();
   globalThis.localStorage = {
     getItem: (key) => values.get(key) ?? null,
@@ -73,18 +84,19 @@ test('registration fails when the backend is unavailable instead of creating a l
     { status: 404, headers: { 'Content-Type': 'text/html' } }
   );
 
-  await assert.rejects(
-    createAccount('new@example.com', 'pass1234', {
-      firstName: 'Ada',
-      lastName: 'Lovelace'
-    }),
-    { message: 'The account service is unavailable.' }
-  );
-  assert.equal(values.has('dollarcraft.localAccounts.v1'), false);
-  assert.equal(values.has('dollarcraft.localSession.v1'), false);
+  const result = await createAccount('new@example.com', 'pass1234', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
+  const savedAccounts = JSON.parse(values.get('dollarcraft.localAccounts.v1'));
+  assert.equal(result.isLocal, true);
+  assert.equal(savedAccounts.length, 1);
+  assert.equal(savedAccounts[0].email, 'new@example.com');
+  assert.equal(savedAccounts[0].passwordHash.includes('pass1234'), false);
+  assert.equal(values.get('dollarcraft.localSession.v1'), result.user.id);
 });
 
-test('admin user observer shows only backend users and retains the last server snapshot on failure', async () => {
+test('admin observer immediately shows local users and merges server profiles, retaining data on failure', async () => {
   globalThis.localStorage = {
     getItem: (key) => key === 'dollarcraft.localAccounts.v1'
       ? JSON.stringify([{
@@ -115,7 +127,10 @@ test('admin user observer shows only backend users and retains the last server s
   globalThis.fetch = async () => {
     if (shouldFail) throw new TypeError('Network unavailable');
     return mockJsonResponse({
-      users: [{ id: 'user-1', email: 'global@example.com' }]
+      users: [
+        { id: 'user-1', email: 'global@example.com' },
+        { id: 'local-user', email: 'local@example.com', firstName: 'Server' }
+      ]
     });
   };
 
@@ -123,14 +138,21 @@ test('admin user observer shows only backend users and retains the last server s
     (users) => published.push(users),
     (error) => errors.push(error)
   );
+  assert.equal(published[0][0].email, 'local@example.com');
   await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(published.length, 2);
+  assert.equal(published[1].length, 2);
+  assert.equal(published[1].find((user) => user.email === 'local@example.com').firstName, 'Server');
   shouldFail = true;
   intervalCallback();
   await new Promise((resolve) => setImmediate(resolve));
   unsubscribe();
 
-  assert.equal(published.length, 1);
-  assert.deepEqual(published[0].map((user) => user.email), ['global@example.com']);
+  assert.equal(published.length, 3);
+  assert.deepEqual(published.at(-1).map((user) => user.email).sort(), [
+    'global@example.com',
+    'local@example.com'
+  ]);
   assert.equal(errors.length, 1);
 });
 
@@ -191,8 +213,9 @@ test('admin user observation immediately loads the API and refreshes every two s
   unsubscribe();
 
   assert.equal(intervalDelay, 2000);
-  assert.equal(published.length, 2);
-  assert.equal(published[0][0].email, 'user@example.com');
+  assert.equal(published.length, 3);
+  assert.deepEqual(published[0], []);
+  assert.equal(published.at(-1)[0].email, 'user@example.com');
   assert.equal(clearedInterval, 17);
 });
 
@@ -207,7 +230,7 @@ test('API failures are surfaced to callers', async () => {
   );
 });
 
-test('non-JSON registration errors do not create browser-local accounts', async () => {
+test('non-JSON API failures fall back to browser-local registration', async () => {
   const values = new Map();
   globalThis.localStorage = {
     getItem: (key) => values.get(key) ?? null,
@@ -219,14 +242,12 @@ test('non-JSON registration errors do not create browser-local accounts', async 
     { status: 404, headers: { 'Content-Type': 'text/html' } }
   );
 
-  await assert.rejects(
-    createAccount('new@example.com', 'secure-password-123', {
-      firstName: 'Ada',
-      lastName: 'Lovelace'
-    }),
-    { message: 'The account service is unavailable.' }
-  );
-  assert.equal(values.has('dollarcraft.localAccounts.v1'), false);
+  const registration = await createAccount('new@example.com', 'secure-password-123', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
+  assert.equal(registration.isLocal, true);
+  assert.equal(JSON.parse(values.get('dollarcraft.localAccounts.v1')).length, 1);
 });
 
 test('local admin role persists in the session and is restored only for the admin email', async () => {

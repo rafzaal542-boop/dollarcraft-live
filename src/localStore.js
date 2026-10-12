@@ -121,11 +121,106 @@ const profileFromLocalAccount = (account) => ({
   balanceCents: account.balanceCents
 });
 
+const getLocalProfiles = () =>
+  globalThis.localStorage
+    ? readLocalAccounts().map(profileFromLocalAccount)
+    : [];
+
+const mergeProfiles = (localProfiles, remoteProfiles) => {
+  const profilesByEmail = new Map(
+    localProfiles.map((profile) => [profile.email.toLowerCase(), profile])
+  );
+  remoteProfiles.forEach((profile) => {
+    profilesByEmail.set(profile.email.toLowerCase(), profile);
+  });
+  return [...profilesByEmail.values()];
+};
+
 const localAuthResult = (account, role = 'user') => ({
   user: { ...profileFromLocalAccount(account), role },
   isAdmin: role === 'admin',
   isLocal: true
 });
+
+const saveLocalAccount = (account) => {
+  const accounts = readLocalAccounts();
+  const accountIndex = accounts.findIndex(
+    (item) => item.email.toLowerCase() === account.email.toLowerCase()
+  );
+  if (accountIndex === -1) {
+    accounts.push(account);
+  } else {
+    accounts[accountIndex] = account;
+  }
+  getLocalStorage().setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
+};
+
+const updateLocalAccountProfile = (profile) => {
+  if (!globalThis.localStorage) return;
+  const accounts = readLocalAccounts();
+  const accountIndex = accounts.findIndex(
+    (account) => account.email.toLowerCase() === profile.email.toLowerCase()
+  );
+  if (accountIndex === -1) return;
+
+  accounts[accountIndex] = {
+    ...accounts[accountIndex],
+    id: profile.id,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    createdAt: profile.createdAt,
+    balanceCents: profile.balanceCents
+  };
+  getLocalStorage().setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
+};
+
+const createLocalAccount = async (email, password, profile, { startSession }) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  const firstName = profile.firstName.trim();
+  const lastName = profile.lastName.trim();
+  if (
+    normalizedEmail.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail) ||
+    !firstName ||
+    firstName.length > 100 ||
+    !lastName ||
+    lastName.length > 100 ||
+    password.length < 1 ||
+    password.length > 128 ||
+    new TextEncoder().encode(password).length > 512
+  ) {
+    throw new Error('Enter valid names and email, and a password of 1 to 128 characters.');
+  }
+
+  const existingAccounts = readLocalAccounts();
+  const existingAccount = existingAccounts.find(
+    (account) => account.email.toLowerCase() === normalizedEmail
+  );
+  if (startSession && existingAccount) {
+    throw new Error('An account with this email already exists.');
+  }
+
+  const salt = existingAccount?.passwordSalt || Array.from(
+    getCrypto().getRandomValues(new Uint8Array(16)),
+    (byte) => byte.toString(16).padStart(2, '0')
+  ).join('');
+  const account = {
+    id: profile.id || existingAccount?.id || `local-${salt}`,
+    firstName,
+    lastName,
+    email: normalizedEmail,
+    createdAt: profile.createdAt || new Date().toISOString(),
+    balanceCents: Number.isSafeInteger(profile.balanceCents) ? profile.balanceCents : 0,
+    passwordSalt: salt,
+    passwordHash: await createPasswordHash(password, new TextEncoder().encode(salt))
+  };
+  saveLocalAccount(account);
+  if (startSession) {
+    getLocalStorage().setItem(LOCAL_SESSION_KEY, account.id);
+    getLocalStorage().removeItem(LOCAL_SESSION_ROLE_KEY);
+  }
+  return localAuthResult(account);
+};
 
 const signInLocalAccount = async (email, password) => {
   const normalizedEmail = email.trim().toLowerCase();
@@ -177,13 +272,28 @@ export const getCurrentSession = async () => {
   }
 };
 
-export const createAccount = (email, password, profile) =>
-  post('/api/auth/register', {
-    email,
-    password,
-    firstName: profile.firstName,
-    lastName: profile.lastName
-  });
+export const createAccount = async (email, password, profile) => {
+  try {
+    const result = await post('/api/auth/register', {
+      email,
+      password,
+      firstName: profile.firstName,
+      lastName: profile.lastName
+    });
+    try {
+      await createLocalAccount(email, password, {
+        ...result.user,
+        ...profile
+      }, { startSession: false });
+    } catch (error) {
+      console.error('Unable to save the registered account to local shared storage.', error);
+    }
+    return result;
+  } catch (error) {
+    if (!(error instanceof ApiUnavailableError)) throw error;
+    return createLocalAccount(email, password, profile, { startSession: true });
+  }
+};
 
 export const signInWithPassword = (email, password) =>
   post('/api/auth/login', { email, password }).catch((error) => {
@@ -221,7 +331,7 @@ export const observeAllUserProfiles = (onUsers, onError) => {
   let remoteUsers = [];
 
   const publishProfiles = () => {
-    if (active) onUsers(remoteUsers);
+    if (active) onUsers(mergeProfiles(getLocalProfiles(), remoteUsers));
   };
 
   const refresh = async () => {
@@ -235,12 +345,22 @@ export const observeAllUserProfiles = (onUsers, onError) => {
       remoteUsers = result.users;
       publishProfiles();
     } catch (error) {
+      try {
+        publishProfiles();
+      } catch (storageError) {
+        if (active) onError(storageError);
+      }
       if (active) onError(error);
     } finally {
       requestInProgress = false;
     }
   };
 
+  try {
+    publishProfiles();
+  } catch (error) {
+    if (active) onError(error);
+  }
   void refresh();
   const intervalId = window.setInterval(refresh, REFRESH_INTERVAL_MS);
   return () => {
@@ -288,5 +408,10 @@ export const changeUserBalance = async (userId, changeInCents) => {
   const result = await post(`/api/users/${encodeURIComponent(userId)}/balance`, {
     changeInCents
   });
+  try {
+    updateLocalAccountProfile(result.user);
+  } catch (error) {
+    console.error('Unable to update the local registered-user cache after a wallet change.', error);
+  }
   return result.user;
 };
