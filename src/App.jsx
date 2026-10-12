@@ -923,46 +923,22 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl">
-                    <h3 className="text-lg font-extrabold text-white mb-6 flex items-center gap-3">📈 Protocol Performance & Yield Inflow</h3>
-                    <div className="h-56 rounded-2xl bg-black/50 border border-white/10 flex items-center justify-center p-6">
-                      <div className="w-full space-y-4">
-                        <div className="flex justify-between text-sm text-gray-300">
-                          <span>Super DC Vault Liquidity</span>
-                          <span className="text-cyan-400 font-bold">0.0% (Zeroed & Fresh)</span>
-                        </div>
-                        <div className="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden">
-                          <div className="bg-gradient-to-r from-violet-600 to-cyan-400 h-full w-[0%]"></div>
-                        </div>
-                        <div className="flex justify-between text-sm text-gray-300 pt-3">
-                          <span>Global Hub Sync Speed</span>
-                          <span className="text-emerald-400 font-bold">0.012ms (Optimal)</span>
-                        </div>
-                        <div className="w-full bg-slate-800 h-3.5 rounded-full overflow-hidden">
-                          <div className="bg-gradient-to-r from-emerald-600 to-teal-400 h-full w-[100%]"></div>
-                        </div>
-                      </div>
-                    </div>
+                <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl max-w-3xl">
+                  <div>
+                    <h3 className="text-lg font-extrabold text-white mb-3">⚡ Quick Admin Actions</h3>
+                    <p className="text-gray-400 text-sm mb-6">Manage customer balances and platform metrics.</p>
                   </div>
-
-                  <div className="bg-slate-900/90 border border-violet-500/20 rounded-3xl p-8 shadow-2xl flex flex-col justify-between">
-                    <div>
-                      <h3 className="text-lg font-extrabold text-white mb-3">⚡ Quick Admin Actions</h3>
-                      <p className="text-gray-400 text-sm mb-6">Manage customer balances and platform metrics.</p>
-                    </div>
-                    <div className="space-y-4">
-                      <button
-                        type="button"
-                        onClick={() => document.getElementById('internal-transfer-card')?.scrollIntoView({ behavior: 'smooth' })}
-                        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all"
-                      >
-                        ↔️ Internal Transfer
-                      </button>
-                      <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
-                        Flush Server Cache
-                      </button>
-                    </div>
+                  <div className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('internal-transfer-card')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 hover:opacity-90 text-white font-extrabold text-sm shadow-lg shadow-violet-500/30 transition-all"
+                    >
+                      ↔️ Internal Transfer
+                    </button>
+                    <button onClick={() => alert('Cache cleared & global nodes synced!')} className="w-full py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm border border-white/15 transition-all">
+                      Flush Server Cache
+                    </button>
                   </div>
                 </div>
 
