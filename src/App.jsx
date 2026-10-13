@@ -7,7 +7,6 @@ import {
   logOutUser,
   observeAllUserProfiles,
   observeUserProfile,
-  saveLocalSessionRole,
   signInWithPassword
 } from './localStore';
 
@@ -15,7 +14,6 @@ const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
-const ADMIN_PASSWORD = 'haseeb@craft@007';
 const hasAdminCredentials = (email, verifiedAdmin) =>
   verifiedAdmin === true &&
   email?.trim().toLowerCase() === ADMIN_EMAIL;
@@ -118,9 +116,7 @@ export default function App() {
     getCurrentSession().then((result) => {
       if (!active || !result?.user) return;
       const { user, isAdmin: adminAccess } = result;
-      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess) ||
-        user.email?.trim().toLowerCase() === ADMIN_EMAIL ||
-        user.role === 'admin';
+      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess);
       setIsReturningUser(true);
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
@@ -130,8 +126,8 @@ export default function App() {
       setUserName(user.name || `${user.firstName} ${user.lastName}`.trim());
       setUserFirstName(user.firstName || '');
     }).catch((error) => {
-      console.error('Unable to restore the locally saved account session.', error);
-      if (active) setUsersLoadError('Unable to read locally saved account data.');
+      console.error('Unable to restore the server account session.', error);
+      if (active) setUsersLoadError('Unable to connect to the account service. Please try again.');
     });
     return () => {
       active = false;
@@ -144,8 +140,8 @@ export default function App() {
     }
 
     const onError = (error) => {
-      console.error('Unable to load registered user profiles from local storage.', error);
-      setUsersLoadError('Unable to read registered users from this browser’s local storage.');
+      console.error('Unable to sync registered user profiles from the account service.', error);
+      setUsersLoadError('Unable to sync registered users. Retrying automatically.');
     };
     const onUsers = (users) => {
       const normalizedUsers = users.map((user) => normalizeUserProfile(user, user.id));
@@ -365,7 +361,7 @@ export default function App() {
 
       const { user, isAdmin: adminAccess } = result || {};
       if (!user?.id || !user.email) {
-        throw new Error('The local account store returned an invalid account profile.');
+        throw new Error('The account service returned an invalid account profile.');
       }
       if (authMode === 'register') {
         const newProfile = normalizeUserProfile(user, user.id);
@@ -377,21 +373,8 @@ export default function App() {
           newProfile
         ]);
       }
-      const isConfiguredAdminLogin = authMode === 'login' &&
-        finalEmail === ADMIN_EMAIL &&
-        finalPassword === ADMIN_PASSWORD &&
-        user.email?.trim().toLowerCase() === ADMIN_EMAIL;
-      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess) ||
-        user.role === 'admin' ||
-        isConfiguredAdminLogin;
-      const authenticatedUser = isConfiguredAdminLogin
-        ? { ...user, name: 'dollar craft', email: ADMIN_EMAIL, role: 'admin' }
-        : authorizedAdmin
-          ? { ...user, role: 'admin' }
-          : user;
-      if (isConfiguredAdminLogin && result.isLocal) {
-        saveLocalSessionRole('admin');
-      }
+      const authorizedAdmin = hasAdminCredentials(user.email, adminAccess);
+      const authenticatedUser = authorizedAdmin ? { ...user, role: 'admin' } : user;
       setIsReturningUser(authMode === 'login');
       setIsLoggedIn(true);
       setIsAdmin(authorizedAdmin);
@@ -885,11 +868,11 @@ export default function App() {
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-gradient-to-r from-violet-950/60 via-slate-900 to-cyan-950/60 p-8 rounded-3xl border border-violet-500/30 shadow-2xl">
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400 text-amber-200 text-xs font-extrabold uppercase">LOCAL DEMO — NOT SECURE</span>
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-200 text-xs font-extrabold uppercase">SERVER-SECURED ADMIN</span>
                   <span className="text-sm text-gray-400 font-mono">({userEmail})</span>
                 </div>
                 <h2 className="text-3xl sm:text-4xl font-black text-white">Admin Control Center v2.0</h2>
-                <p className="text-gray-300 text-sm mt-1">Local browser sign-in and live same-browser user history.</p>
+                <p className="text-gray-300 text-sm mt-1">MongoDB-backed registrations with automatic live user-history sync.</p>
               </div>
               
               <div className="flex flex-wrap gap-2 bg-black/60 p-2 rounded-2xl border border-violet-500/30">
@@ -1388,7 +1371,7 @@ export default function App() {
             </form>
 
             <p className="text-[11px] text-gray-500 text-center mt-4">
-              Account data is stored in this browser’s local storage. Passwords are saved as salted hashes.
+              Account details are securely saved by the account service. Passwords are never stored in this browser.
             </p>
 
           </div>

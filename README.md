@@ -10,9 +10,13 @@ role. Plaintext passwords are never stored or returned by the API.
 
 The admin users endpoint requires a server-issued, HTTP-only session and an
 account for `dollarcraft3@gmail.com` whose password matches the server-only
-`ADMIN_PASSWORD` setting. The users table refreshes from MongoDB every five
-seconds, so registrations from other devices and locations appear without a
-browser-local account store. Each user starts with a zero-cent wallet balance.
+`ADMIN_PASSWORD` setting. Registration and sign-in always use the account API;
+the browser never stores account credentials or treats a local account as a
+successful server registration. The admin users table loads from MongoDB
+immediately and refreshes every two seconds, including after network failures
+and when the page regains focus. A temporary outage leaves the last successful
+results visible and reports that synchronization is retrying. Each user starts
+with a zero-cent wallet balance.
 
 ### Configure and run locally
 
@@ -43,13 +47,10 @@ Registration and login are rate-limited. Session cookies are HTTP-only and
 SameSite=Strict; production cookies are also Secure and therefore require
 HTTPS. Account sessions expire after seven days.
 
-If the `/api` authentication endpoints are unavailable or return a host-level
-404/HTML page, registration and sign-in fall back to browser-local storage.
-Local accounts use a browser-derived password hash, are limited to that browser,
-and never receive administrator access; they are not shared with MongoDB or
-other devices. The admin users table includes local accounts from the current
-browser while the API is unavailable, and merges them with server users when
-the API responds.
+If the account API is unavailable, registration and sign-in fail visibly and
+ask the user to retry; they do not create browser-only accounts or claim
+success. Existing browser-local data from older app versions is not used as an
+authentication or user-history source.
 
 ### Existing browser-local accounts
 
