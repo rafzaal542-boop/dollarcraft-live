@@ -119,9 +119,7 @@ export default function App() {
       setUserEmail(sessionUser.email);
       setUserName(sessionUser.name || `${sessionUser.firstName || ''} ${sessionUser.lastName || ''}`.trim());
       setUserFirstName(sessionUser.firstName || '');
-    }).catch(() => {
-      if (active) setUsersLoadError('');
-    });
+    }).catch(() => {});
     return () => {
       active = false;
     };
@@ -129,59 +127,15 @@ export default function App() {
 
   useEffect(() => {
     if (!isLoggedIn) return undefined;
-
-    const loadUsers = () => {
-      try {
-        const localStoredUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
-        if (localStoredUsers.length > 0) {
-          setUsersList(localStoredUsers.map(u => normalizeUserProfile(u, u.id || u.email)));
-        }
-      } catch (err) {
-        console.error(err);
+    try {
+      const localStoredUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
+      if (localStoredUsers.length > 0) {
+        setUsersList(localStoredUsers.map(u => normalizeUserProfile(u, u.id || u.email)));
       }
-    };
-
-    loadUsers();
-    const unsubscribe = observeAllUserProfiles
-      ? observeAllUserProfiles((users) => {
-          const combined = [...users];
-          try {
-            const localStoredUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
-            localStoredUsers.forEach(lu => {
-              if (!combined.some(c => c.email?.toLowerCase() === lu.email?.toLowerCase())) {
-                combined.push(lu);
-              }
-            });
-          } catch (e) {}
-          setUsersList(combined.map((u) => normalizeUserProfile(u, u.id || u.email)));
-        }, () => {})
-      : null;
-
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-    };
+    } catch (err) {}
   }, [isLoggedIn]);
 
   const [internalTransferCount, setInternalTransferCount] = useState(0);
-  const [selectedLanguage, setSelectedLanguage] = useState(null);
-  const [selectedIssue, setSelectedIssue] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState([
-    { sender: 'agent', text: '👋 Welcome! Select language / Zuban muntakhib karein:' }
-  ]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [attachedFile, setAttachedFile] = useState(null);
-  const chatMessagesEndRef = useRef(null);
-
-  const scrollToBottom = () => {
-    chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    if (chatOpen) {
-      scrollToBottom();
-    }
-  }, [chatOpen, messages]);
 
   const handleGetStartedClick = () => {
     if (!isLoggedIn) {
@@ -228,7 +182,6 @@ export default function App() {
       return;
     }
 
-    setIsLoading(true);
     setAuthError('');
 
     try {
@@ -253,51 +206,26 @@ export default function App() {
         setAuthModalOpen(false);
         setActiveTab('admin');
         setPasswordInput('');
-        setIsLoading(false);
         return;
       }
 
       let result;
+      let globalUsers = [];
       try {
-        if (authMode === 'register') {
-          result = await createAccount(finalEmail, finalPassword, {
-            firstName: trimmedFirstName,
-            lastName: trimmedLastName
-          });
-        } else {
-          result = await signInWithPassword(finalEmail, finalPassword);
-        }
-      } catch (apiErr) {
-        let globalUsers = [];
-        try {
-          globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
-        } catch (e) {}
+        globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
+      } catch (e) {}
 
-        if (authMode === 'login') {
-          const found = globalUsers.find(u => u.email?.toLowerCase() === finalEmail);
-          if (found) {
-            result = { user: found, isAdmin: false };
-          } else {
-            const newUserObj = {
-              id: 'usr-' + Date.now(),
-              email: finalEmail,
-              name: finalEmail.split('@')[0],
-              firstName: finalEmail.split('@')[0],
-              lastName: '',
-              createdAt: new Date().toISOString(),
-              balanceCents: 0
-            };
-            globalUsers.push(newUserObj);
-            localStorage.setItem('dollarcraft_global_users', JSON.stringify(globalUsers));
-            result = { user: newUserObj, isAdmin: false };
-          }
+      if (authMode === 'login') {
+        const found = globalUsers.find(u => u.email?.toLowerCase() === finalEmail);
+        if (found) {
+          result = { user: found, isAdmin: false };
         } else {
           const newUserObj = {
             id: 'usr-' + Date.now(),
             email: finalEmail,
-            name: `${trimmedFirstName} ${trimmedLastName}`,
-            firstName: trimmedFirstName,
-            lastName: trimmedLastName,
+            name: finalEmail.split('@')[0],
+            firstName: finalEmail.split('@')[0],
+            lastName: '',
             createdAt: new Date().toISOString(),
             balanceCents: 0
           };
@@ -305,9 +233,22 @@ export default function App() {
           localStorage.setItem('dollarcraft_global_users', JSON.stringify(globalUsers));
           result = { user: newUserObj, isAdmin: false };
         }
+      } else {
+        const newUserObj = {
+          id: 'usr-' + Date.now(),
+          email: finalEmail,
+          name: `${trimmedFirstName} ${trimmedLastName}`,
+          firstName: trimmedFirstName,
+          lastName: trimmedLastName,
+          createdAt: new Date().toISOString(),
+          balanceCents: 0
+        };
+        globalUsers.push(newUserObj);
+        localStorage.setItem('dollarcraft_global_users', JSON.stringify(globalUsers));
+        result = { user: newUserObj, isAdmin: false };
       }
 
-      const { user: authenticatedUser, isAdmin: adminAccess } = result || {};
+      const { user: authenticatedUser, isAdmin: adminAccess } = result;
       const authorizedAdmin = hasAdminCredentials(authenticatedUser?.email, adminAccess);
       
       setIsLoggedIn(true);
@@ -332,8 +273,6 @@ export default function App() {
       setPasswordInput('');
     } catch (error) {
       setAuthError(error.message || 'Authentication error.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -348,18 +287,17 @@ export default function App() {
       return;
     }
 
-    try {
-      const updatedUser = await changeUserBalance(currentUser.id, -amountCents).catch(() => ({
-        ...currentUser,
-        balanceCents: (currentUser.balanceCents || 0) - amountCents
-      }));
+    if (currentUser) {
+      const updatedBalance = Math.max(0, (currentUser.balanceCents || 0) - amountCents);
+      const updatedUser = { ...currentUser, balanceCents: updatedBalance };
       setUsersList((users) => users.map((u) =>
         u.id === updatedUser.id ? normalizeUserProfile(updatedUser, updatedUser.id) : u
       ));
-    } catch (error) {
-      setWithdrawalError('Unable to update your balance.');
-      setWithdrawalSuccess(false);
-      return;
+      try {
+        const stored = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
+        const updatedStored = stored.map(u => u.id === updatedUser.id ? updatedUser : u);
+        localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedStored));
+      } catch (e) {}
     }
 
     setWithdrawalError('');
@@ -391,18 +329,15 @@ export default function App() {
       return;
     }
 
+    const updatedRecipient = { ...recipient, balanceCents: (recipient.balanceCents || 0) + amountCents };
+    setUsersList((users) => users.map((u) =>
+      u.id === updatedRecipient.id ? normalizeUserProfile(updatedRecipient, updatedRecipient.id) : u
+    ));
     try {
-      const updatedUser = await changeUserBalance(recipient.id, amountCents).catch(() => ({
-        ...recipient,
-        balanceCents: (recipient.balanceCents || 0) + amountCents
-      }));
-      setUsersList((users) => users.map((u) =>
-        u.id === updatedUser.id ? normalizeUserProfile(updatedUser, updatedUser.id) : u
-      ));
-    } catch (error) {
-      setInternalTransferError('Unable to save transfer.');
-      return;
-    }
+      const stored = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
+      const updatedStored = stored.map(u => u.id === updatedRecipient.id ? updatedRecipient : u);
+      localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedStored));
+    } catch (e) {}
 
     setInternalTransferSuccess(`$${(amountCents / 100).toFixed(2)} USD transferred to ${recipient.email}.`);
     setInternalTransferCount((count) => count + 1);
@@ -430,7 +365,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#090d23] via-[#050814] to-[#03050a] text-white font-sans text-sm sm:text-base selection:bg-violet-500 selection:text-white relative overflow-x-hidden">
-      {/* Background Glows */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[140px] pointer-events-none"></div>
       <div className="absolute top-1/3 right-1/4 w-[600px] h-[600px] bg-cyan-600/10 rounded-full blur-[140px] pointer-events-none"></div>
 
@@ -577,6 +511,42 @@ export default function App() {
           </div>
         )}
 
+        {/* INVEST VIEW */}
+        {activeView === 'plans' && (
+          <section className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-extrabold text-white mb-2">Exclusive Super DC Investment Plan</h2>
+              <p className="text-sm text-gray-300">Minimum $50, Maximum $10,000 — Daily Earning & 50% Monthly Return.</p>
+            </div>
+            <div className="relative rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-violet-500/30 p-8 sm:p-10 shadow-2xl">
+              <div className="absolute top-0 right-0 bg-gradient-to-l from-violet-600 to-cyan-400 text-white text-xs font-black px-4 py-1.5 rounded-bl-2xl uppercase shadow">VIP Premium</div>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-white/10 pb-8">
+                <div>
+                  <span className="text-violet-400 font-semibold text-xs uppercase tracking-wider">Flagship Protocol</span>
+                  <h3 className="text-2xl font-black text-white mt-1">SUPER DC PLAN</h3>
+                </div>
+                <div className="text-left md:text-right">
+                  <span className="text-4xl font-extrabold bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-transparent">50%</span>
+                  <span className="text-gray-300 block text-sm mt-0.5">Monthly Return (~1.66% Daily)</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                  <span className="text-gray-300 text-xs uppercase block mb-1.5 font-semibold">Minimum Investment</span>
+                  <span className="text-2xl font-bold text-white">$50 USD</span>
+                </div>
+                <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                  <span className="text-gray-300 text-xs uppercase block mb-1.5 font-semibold">Maximum Investment</span>
+                  <span className="text-2xl font-bold text-white">$10,000 USD</span>
+                </div>
+              </div>
+              <button onClick={handleGetStartedClick} className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-extrabold text-base shadow-xl hover:opacity-90 transition-all">
+                Invest Now & Start Earning
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* ADMIN PANEL VIEW */}
         {activeView === 'admin' && canAccessAdmin && (
           <div className="space-y-8 max-w-7xl mx-auto">
@@ -703,9 +673,22 @@ export default function App() {
 
         {activeView === 'contact' && (
           <div className="max-w-4xl mx-auto space-y-8">
-            <div className="bg-slate-900/90 border border-violet-500/30 rounded-3xl p-8 shadow-2xl text-center">
-              <h2 className="text-3xl font-black text-white mb-4">Frequently Asked Questions</h2>
-              <p className="text-gray-300 text-sm">Find answers to common questions about accounts, deposits, and yields.</p>
+            <div className="bg-slate-900/90 border border-violet-500/30 rounded-3xl p-8 shadow-2xl space-y-6">
+              <h2 className="text-3xl font-black text-white mb-2">Frequently Asked Questions</h2>
+              <div className="space-y-4 text-gray-300 text-sm">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                  <h4 className="font-bold text-white mb-1">How do I start investing?</h4>
+                  <p>Register an account, select the Super DC Plan in the Invest tab, and deposit funds to earn daily compounding yields.</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                  <h4 className="font-bold text-white mb-1">What is the minimum withdrawal amount?</h4>
+                  <p>The minimum withdrawal limit is $10 USD, processed securely through our global gateways.</p>
+                </div>
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
+                  <h4 className="font-bold text-white mb-1">How is the 50% monthly return calculated?</h4>
+                  <p>Returns accrue continuously at a daily compound rate distributed evenly throughout the month.</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -783,8 +766,8 @@ export default function App() {
 
               {authError && <p className="text-xs text-rose-400">{authError}</p>}
 
-              <button type="submit" disabled={isLoading} className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-extrabold text-sm shadow-lg hover:opacity-90 transition-all">
-                {isLoading ? 'Processing...' : authMode === 'register' ? 'Create Account' : 'Sign In'}
+              <button type="submit" className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 text-white font-extrabold text-sm shadow-lg hover:opacity-90 transition-all">
+                {authMode === 'register' ? 'Create Account' : 'Sign In'}
               </button>
             </form>
           </div>
@@ -835,4 +818,5 @@ export default function App() {
         </div>
       )}
     </div>
-  }
+  );
+}
