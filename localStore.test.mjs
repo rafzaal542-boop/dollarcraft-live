@@ -93,6 +93,33 @@ test('session, sign-in, and logout use the server API and surface backend errors
   ]);
 });
 
+test('authentication reports non-JSON service failures without treating them as success', async () => {
+  globalThis.fetch = async () => new Response(
+    '<html><body>Bad Gateway</body></html>',
+    { status: 502, headers: { 'Content-Type': 'text/html' } }
+  );
+
+  await assert.rejects(
+    signInWithPassword('ada@example.com', 'password'),
+    { message: 'Account service unavailable (HTTP 502). Please try again.' }
+  );
+});
+
+test('authentication rejects a malformed successful API response', async () => {
+  globalThis.fetch = async () => new Response(
+    '<html><body>Unexpected proxy response</body></html>',
+    { status: 200, headers: { 'Content-Type': 'text/html' } }
+  );
+
+  await assert.rejects(
+    createAccount('ada@example.com', 'password', {
+      firstName: 'Ada',
+      lastName: 'Lovelace'
+    }),
+    { message: 'The account service returned an unreadable response. Please try again.' }
+  );
+});
+
 test('user history loads immediately and retries after a connection failure', async () => {
   const listeners = new Map();
   let intervalCallback;

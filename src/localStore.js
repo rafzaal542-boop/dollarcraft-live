@@ -19,17 +19,36 @@ const requestApi = async (path, options = {}) => {
 
   if (response.status === 204) return null;
 
-  let body;
+  let responseText;
   try {
-    body = await response.json();
+    responseText = await response.text();
   } catch (error) {
-    throw new Error('The account service returned an invalid response. Please try again.', {
+    throw new Error('Unable to read the account service response. Please try again.', {
       cause: error
     });
   }
 
+  let body = null;
+  if (responseText) {
+    try {
+      body = JSON.parse(responseText);
+    } catch (error) {
+      if (response.ok) {
+        throw new Error('The account service returned an unreadable response. Please try again.', {
+          cause: error
+        });
+      }
+    }
+  }
+
   if (!response.ok) {
-    throw new Error(body?.error || 'The account service could not complete the request.');
+    throw new Error(
+      (typeof body?.error === 'string' && body.error) ||
+      `Account service unavailable (HTTP ${response.status}). Please try again.`
+    );
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    throw new Error('The account service returned an unreadable response. Please try again.');
   }
   return body;
 };

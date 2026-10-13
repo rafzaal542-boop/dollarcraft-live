@@ -73,6 +73,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('register'); // 'login' or 'register'
+  const [authError, setAuthError] = useState('');
   const [usersList, setUsersList] = useState([]);
   const [usersLoadError, setUsersLoadError] = useState('');
   const [userUid, setUserUid] = useState('');
@@ -348,6 +349,7 @@ export default function App() {
     }
 
     setIsLoading(true);
+    setAuthError('');
     try {
       let result;
       if (authMode === 'register') {
@@ -388,11 +390,13 @@ export default function App() {
       setPasswordInput('');
     } catch (error) {
       console.error('Authentication failed.', error);
-      alert(
+      setAuthError(
         authMode === 'register' &&
           error.message === 'An account with this email already exists.'
-          ? 'You are already registered, please sign in!'
-          : error.message || 'Unable to complete authentication. Please try again.'
+          ? 'You are already registered. Please sign in.'
+          : error instanceof Error
+            ? error.message
+            : 'Unable to complete authentication. Please try again.'
       );
     } finally {
       setIsLoading(false);
@@ -1278,14 +1282,20 @@ export default function App() {
             <div className="flex bg-black/50 p-1 rounded-xl border border-white/10 mb-4">
               <button 
                 type="button"
-                onClick={() => setAuthMode('register')}
+                onClick={() => {
+                  setAuthMode('register');
+                  setAuthError('');
+                }}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'register' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
               >
                 Register
               </button>
               <button 
                 type="button"
-                onClick={() => setAuthMode('login')}
+                onClick={() => {
+                  setAuthMode('login');
+                  setAuthError('');
+                }}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${authMode === 'login' ? 'bg-gradient-to-r from-violet-600 to-cyan-500 text-white shadow' : 'text-gray-400 hover:text-white'}`}
               >
                 Sign In
@@ -1301,7 +1311,10 @@ export default function App() {
                       type="text" 
                       placeholder="Alexander"
                       value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
+                      onChange={(e) => {
+                        setFirstName(e.target.value);
+                        setAuthError('');
+                      }}
                       required={authMode === 'register'}
                       maxLength={100}
                       className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
@@ -1313,7 +1326,10 @@ export default function App() {
                       type="text" 
                       placeholder="Smith"
                       value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
+                      onChange={(e) => {
+                        setLastName(e.target.value);
+                        setAuthError('');
+                      }}
                       required={authMode === 'register'}
                       maxLength={100}
                       className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
@@ -1328,7 +1344,10 @@ export default function App() {
                   type="email" 
                   placeholder="alexander.smith@gmail.com"
                   value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
+                  onChange={(e) => {
+                    setEmailInput(e.target.value);
+                    setAuthError('');
+                  }}
                   required
                   maxLength={254}
                   className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-violet-500"
@@ -1342,7 +1361,10 @@ export default function App() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value);
+                      setAuthError('');
+                    }}
                     required
                     maxLength={128}
                     className="w-full bg-black/70 border border-white/15 rounded-lg px-3 py-2.5 pr-10 text-xs text-white focus:outline-none focus:border-violet-500"
@@ -1360,6 +1382,12 @@ export default function App() {
                   </button>
                 </div>
               </div>
+
+              {authError && (
+                <p role="alert" className="text-rose-300 text-xs" aria-live="polite">
+                  {authError}
+                </p>
+              )}
 
               <button 
                 type="submit"
