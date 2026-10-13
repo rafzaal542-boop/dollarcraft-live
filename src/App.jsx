@@ -1399,7 +1399,7 @@ export default function App() {
             </form>
 
             <p className="text-[11px] text-gray-500 text-center mt-4">
-              Account details are securely saved by the account service. Passwords are never stored in this browser.
+              If the account service is unavailable, standard accounts are saved on this device only. Administrator sign-in requires the service.
             </p>
 
           </div>

@@ -120,6 +120,49 @@ test('authentication rejects a malformed successful API response', async () => {
   );
 });
 
+test('registration and sign-in fall back to hashed browser-persistent accounts on API 404', async () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  globalThis.fetch = async () => jsonResponse({ error: 'API route not found.' }, 404);
+
+  const created = await createAccount('Ada@Example.com', 'secure-password', {
+    firstName: 'Ada',
+    lastName: 'Lovelace'
+  });
+  const savedAccounts = JSON.parse(values.get('dollarcraft_global_users'));
+  assert.equal(created.isLocal, true);
+  assert.equal(created.user.email, 'ada@example.com');
+  assert.equal(values.get('dollarcraft.localSession.v1'), created.user.id);
+  assert.equal(savedAccounts.length, 1);
+  assert.notEqual(savedAccounts[0].passwordHash, 'secure-password');
+  assert.equal(savedAccounts[0].passwordHash.length, 64);
+  assert.equal('password' in savedAccounts[0], false);
+
+  await logOutUser();
+  const signedIn = await signInWithPassword('ADA@example.com', 'secure-password');
+  assert.equal(signedIn.user.id, created.user.id);
+  assert.equal((await getCurrentSession()).user.id, created.user.id);
+});
+
+test('offline administrator authentication is never granted from browser storage', async () => {
+  const values = new Map();
+  globalThis.localStorage = {
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: (key) => values.delete(key)
+  };
+  globalThis.fetch = async () => jsonResponse({ error: 'API route not found.' }, 404);
+
+  await assert.rejects(
+    signInWithPassword('dollarcraft3@gmail.com', 'any-password'),
+    { message: 'Administrator sign-in requires the account service.' }
+  );
+});
+
 test('user history loads immediately and retries after a connection failure', async () => {
   const listeners = new Map();
   let intervalCallback;
