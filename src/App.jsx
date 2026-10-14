@@ -11,7 +11,6 @@ const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 
-// Strict Admin Credentials
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 const ADMIN_PASSWORD = 'haseeb@craft@007';
 
@@ -69,12 +68,20 @@ export default function App() {
       signupDate.getDate() === today.getDate();
   }).length;
 
+  // ⚡ LIVE REAL-TIME SYNC: Har 2 seconds par storage check karke new signups immediately fetch karta hai
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
-      if (stored.length > 0) setUsersList(stored);
-    } catch (e) {}
-  }, [isLoggedIn]);
+    const syncUsers = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
+        setUsersList(stored);
+      } catch (e) {}
+    };
+
+    syncUsers(); // Initial load
+    const interval = setInterval(syncUsers, 2000); // 2 second live polling loop
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleGetStartedClick = () => {
     if (!isLoggedIn) {
@@ -108,7 +115,7 @@ export default function App() {
     const finalPassword = passwordInput;
     const trimmedName = fullName.trim();
 
-    // 1. ADMIN LOGIN CHECK
+    // 1. ADMIN CHECK
     if (finalEmail === ADMIN_EMAIL) {
       if (finalPassword === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
@@ -134,7 +141,7 @@ export default function App() {
 
     const existingUser = globalUsers.find(u => u.email?.toLowerCase() === finalEmail);
 
-    // 2. SIGN IN MODE (LOGIN)
+    // 2. SIGN IN MODE
     if (authMode === 'login') {
       if (!existingUser) {
         setAuthError('Account not found. Please register your account first.');
@@ -158,7 +165,7 @@ export default function App() {
       return;
     }
 
-    // 3. REGISTER MODE
+    // 3. REGISTER MODE (Instant save to global history)
     if (authMode === 'register') {
       if (existingUser) {
         setAuthError('An account with this email already exists. Please Sign In.');
@@ -172,7 +179,7 @@ export default function App() {
       const newUserObj = {
         id: 'usr-' + Date.now(),
         email: finalEmail,
-        password: finalPassword, // Password stored for matching
+        password: finalPassword,
         name: trimmedName || finalEmail.split('@')[0],
         firstName: firstName,
         lastName: lastName,
@@ -180,7 +187,7 @@ export default function App() {
         balanceCents: 0
       };
 
-      const updatedUsers = [...globalUsers, newUserObj];
+      const updatedUsers = [newUserObj, ...globalUsers]; // Newest user on top
       localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
       setUsersList(updatedUsers);
 
