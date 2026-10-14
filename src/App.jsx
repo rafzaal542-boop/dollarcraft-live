@@ -108,10 +108,7 @@ export default function App() {
     const finalPassword = passwordInput;
     const trimmedName = fullName.trim();
 
-    // Standard Generic Error Text for any failed login attempt
-    const STANDARD_ERROR = 'Invalid email or password. Please check your credentials.';
-
-    // 1. ADMIN CHECK
+    // 1. ADMIN LOGIN CHECK
     if (finalEmail === ADMIN_EMAIL) {
       if (finalPassword === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
@@ -125,48 +122,79 @@ export default function App() {
         setActiveTab('admin');
         return;
       } else {
-        // Safe generic error (does NOT reveal admin status)
-        setAuthError(STANDARD_ERROR);
+        setAuthError('Invalid email or password. Please check your credentials.');
         return;
       }
     }
 
-    // 2. REGULAR USER FLOW
     let globalUsers = [];
-    try { globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]'); } catch (e) {}
-
-    const nameParts = trimmedName.split(/\s+/);
-    const firstName = nameParts[0] || finalEmail.split('@')[0];
-    const lastName = nameParts.slice(1).join(' ') || '';
+    try { 
+      globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]'); 
+    } catch (e) {}
 
     const existingUser = globalUsers.find(u => u.email?.toLowerCase() === finalEmail);
 
-    let activeUser = existingUser;
-    if (!existingUser) {
-      activeUser = {
+    // 2. SIGN IN MODE (LOGIN)
+    if (authMode === 'login') {
+      if (!existingUser) {
+        setAuthError('Account not found. Please register your account first.');
+        return;
+      }
+      if (existingUser.password && existingUser.password !== finalPassword) {
+        setAuthError('Incorrect password. Please try again.');
+        return;
+      }
+
+      setIsLoggedIn(true);
+      setIsAdmin(false);
+      setUserUid(existingUser.id);
+      setUserEmail(existingUser.email);
+      setUserName(existingUser.name);
+      setUserFirstName(existingUser.firstName || existingUser.name);
+      setAuthModalOpen(false);
+      setEmailInput('');
+      setPasswordInput('');
+      setActiveTab('dashboard');
+      return;
+    }
+
+    // 3. REGISTER MODE
+    if (authMode === 'register') {
+      if (existingUser) {
+        setAuthError('An account with this email already exists. Please Sign In.');
+        return;
+      }
+
+      const nameParts = trimmedName.split(/\s+/);
+      const firstName = nameParts[0] || finalEmail.split('@')[0];
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const newUserObj = {
         id: 'usr-' + Date.now(),
         email: finalEmail,
+        password: finalPassword, // Password stored for matching
         name: trimmedName || finalEmail.split('@')[0],
         firstName: firstName,
         lastName: lastName,
         createdAt: new Date().toISOString(),
         balanceCents: 0
       };
-      globalUsers.push(activeUser);
-      localStorage.setItem('dollarcraft_global_users', JSON.stringify(globalUsers));
-      setUsersList(globalUsers);
-    }
 
-    setIsLoggedIn(true);
-    setIsAdmin(false);
-    setUserUid(activeUser.id);
-    setUserEmail(activeUser.email);
-    setUserName(activeUser.name);
-    setUserFirstName(activeUser.firstName);
-    setAuthModalOpen(false);
-    setEmailInput('');
-    setPasswordInput('');
-    setActiveTab('dashboard');
+      const updatedUsers = [...globalUsers, newUserObj];
+      localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
+      setUsersList(updatedUsers);
+
+      setIsLoggedIn(true);
+      setIsAdmin(false);
+      setUserUid(newUserObj.id);
+      setUserEmail(newUserObj.email);
+      setUserName(newUserObj.name);
+      setUserFirstName(newUserObj.firstName);
+      setAuthModalOpen(false);
+      setEmailInput('');
+      setPasswordInput('');
+      setActiveTab('dashboard');
+    }
   };
 
   const handleInternalTransferSubmit = (e) => {
