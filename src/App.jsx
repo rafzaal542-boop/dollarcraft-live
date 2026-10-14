@@ -5,7 +5,7 @@ import AdminPanel from './components/AdminPanel';
 import AuthModal from './components/AuthModal';
 import DashboardView from './components/DashboardView';
 import FaqView from './components/FaqView';
-import { logOutUser } from './localStore';
+import { getLocalAccounts, createAccount, signInWithPassword, logOutUser, changeUserBalance } from './localStore';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
@@ -40,26 +40,22 @@ export default function App() {
   const [authMode, setAuthMode] = useState('register');
   const [authError, setAuthError] = useState('');
   const [usersList, setUsersList] = useState([]);
-  const [userUid, setUserUid] = useState('');
+  const [currentUserData, setCurrentUserData] = useState(null);
 
   const [fullName, setFullName] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
-  const [userName, setUserName] = useState('');
-  const [userFirstName, setUserFirstName] = useState('');
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
-  const isAdminUser = isLoggedIn && isAdmin && userEmail.toLowerCase() === ADMIN_EMAIL;
+  const isAdminUser = isLoggedIn && isAdmin;
   const canAccessAdmin = isAdminUser;
 
   const activeView = isAdminUser
     ? activeTab === 'dashboard' ? 'admin' : activeTab
     : activeTab === 'admin' ? isLoggedIn ? 'dashboard' : 'home' : activeTab;
 
-  const currentUser = usersList.find((u) => u.id === userUid || u.email?.toLowerCase() === userEmail?.toLowerCase());
-  const totalBalanceCents = currentUser?.balanceCents ?? 0;
+  const totalBalanceCents = currentUserData?.balanceCents ?? 0;
   
   const today = new Date();
   const todayRegisteredUsers = usersList.filter((u) => {
@@ -72,28 +68,10 @@ export default function App() {
     );
   }).length;
 
-  // ⚡ FOOLPROOF REAL-TIME MASTER SYNC
-  const fetchGlobalRegistry = () => {
+  const syncUsersList = () => {
     try {
-      const raw = localStorage.getItem('dollarcraft_global_users');
-      let registry = raw ? JSON.parse(raw) : [];
-
-      // Ensure Admin master is always in the list
-      const adminExists = registry.some(u => u.email?.toLowerCase() === ADMIN_EMAIL);
-      if (!adminExists) {
-        registry.unshift({
-          id: 'admin-master',
-          email: ADMIN_EMAIL,
-          name: 'Dollar Craft Admin',
-          firstName: 'Dollar',
-          lastName: 'Craft',
-          createdAt: '2026-10-10T16:55:54.137Z',
-          balanceCents: 0
-        });
-      }
-      setUsersList(registry);
-    } catch (e) {
-      setUsersList([{
+      const localAccs = getLocalAccounts();
+      const adminEntry = {
         id: 'admin-master',
         email: ADMIN_EMAIL,
         name: 'Dollar Craft Admin',
@@ -101,28 +79,24 @@ export default function App() {
         lastName: 'Craft',
         createdAt: '2026-10-10T16:55:54.137Z',
         balanceCents: 0
-      }]);
+      };
+      setUsersList([adminEntry, ...localAccs]);
+    } catch (e) {
+      setUsersList([]);
     }
   };
 
   useEffect(() => {
-    fetchGlobalRegistry();
-
-    // Event listeners to catch updates instantly from any tab or action
-    const handleStorageChange = (e) => {
-      if (!e || e.key === 'dollarcraft_global_users' || !e.key) {
-        fetchGlobalRegistry();
-      }
-    };
-
+    syncUsersList();
+    const handleStorageChange = () => syncUsersList();
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', fetchGlobalRegistry);
-    const pollingTimer = setInterval(fetchGlobalRegistry, 1000); // 1s sync loop
+    window.addEventListener('dollarcraft:local-users-changed', handleStorageChange);
+    const interval = setInterval(syncUsersList, 1500);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', fetchGlobalRegistry);
-      clearInterval(pollingTimer);
+      window.removeEventListener('dollarcraft:local-users-changed', handleStorageChange);
+      clearInterval(interval);
     };
   }, []);
 
@@ -130,9 +104,7 @@ export default function App() {
     if (!isLoggedIn) {
       setIsInitializing(true);
       setAuthModalOpen(true);
-      setTimeout(() => {
-        setIsInitializing(false);
-      }, 2000);
+      setTimeout(() => setIsInitializing(false), 2000);
     } else {
       setActiveTab(canAccessAdmin ? 'admin' : 'dashboard');
     }
@@ -142,10 +114,7 @@ export default function App() {
     try { await logOutUser(); } catch (e) {}
     setIsLoggedIn(false);
     setIsAdmin(false);
-    setUserUid('');
-    setUserEmail('');
-    setUserName('');
-    setUserFirstName('');
+    setCurrentUserData(null);
     setActiveTab('home');
     setAuthModalOpen(false);
     setLogoutConfirmationOpen(false);
@@ -158,18 +127,21 @@ export default function App() {
     const finalPassword = passwordInput;
     const trimmedName = fullName.trim();
 
-    // 1. ADMIN LOGIN
     if (finalEmail === ADMIN_EMAIL) {
       if (finalPassword === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
         setIsAdmin(true);
-        setUserEmail(ADMIN_EMAIL);
-        setUserName('Dollar Craft Admin');
-        setUserFirstName('Admin');
+        setCurrentUserData({
+          id: 'admin-master',
+          email: ADMIN_EMAIL,
+          name: 'Dollar Craft Admin',
+          firstName: 'Admin',
+          lastName: '',
+          balanceCents: 0
+        });
         setAuthModalOpen(false);
         setEmailInput('');
         setPasswordInput('');
-        fetchGlobalRegistry();
         setActiveTab('admin');
         return;
       } else {
@@ -178,82 +150,38 @@ export default function App() {
       }
     }
 
-    // Fetch latest storage list safely
-    let globalUsers = [];
     try {
-      const raw = localStorage.getItem('dollarcraft_global_users');
-      globalUsers = raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      globalUsers = [];
-    }
+      if (authMode === 'login') {
+        const result = await signInWithPassword(finalEmail, finalPassword);
+        setIsLoggedIn(true);
+        setIsAdmin(false);
+        setCurrentUserData(result.user);
+        setAuthModalOpen(false);
+        setEmailInput('');
+        setPasswordInput('');
+        setActiveTab('dashboard');
+        syncUsersList();
+      } else {
+        const nameParts = trimmedName.split(/\s+/);
+        const firstName = nameParts[0] || finalEmail.split('@')[0];
+        const lastName = nameParts.slice(1).join(' ') || '';
 
-    const existingUser = globalUsers.find(u => u.email?.toLowerCase() === finalEmail);
-
-    // 2. SIGN IN (LOGIN) MODE
-    if (authMode === 'login') {
-      if (!existingUser) {
-        setAuthError('Account not found. Please register your account first.');
-        return;
+        const result = await createAccount(finalEmail, finalPassword, { firstName, lastName });
+        setIsLoggedIn(true);
+        setIsAdmin(false);
+        setCurrentUserData(result.user);
+        setAuthModalOpen(false);
+        setEmailInput('');
+        setPasswordInput('');
+        setActiveTab('dashboard');
+        syncUsersList();
       }
-      if (existingUser.password && existingUser.password !== finalPassword) {
-        setAuthError('Incorrect password. Please try again.');
-        return;
-      }
-
-      setIsLoggedIn(true);
-      setIsAdmin(false);
-      setUserUid(existingUser.id);
-      setUserEmail(existingUser.email);
-      setUserName(existingUser.name);
-      setUserFirstName(existingUser.firstName || existingUser.name);
-      setAuthModalOpen(false);
-      setEmailInput('');
-      setPasswordInput('');
-      setActiveTab('dashboard');
-      return;
-    }
-
-    // 3. REGISTER MODE
-    if (authMode === 'register') {
-      if (existingUser) {
-        setAuthError('An account with this email already exists. Please Sign In.');
-        return;
-      }
-
-      const nameParts = trimmedName.split(/\s+/);
-      const firstName = nameParts[0] || finalEmail.split('@')[0];
-      const lastName = nameParts.slice(1).join(' ') || '';
-
-      const newUserObj = {
-        id: 'usr-' + Date.now(),
-        email: finalEmail,
-        password: finalPassword,
-        name: trimmedName || finalEmail.split('@')[0],
-        firstName: firstName,
-        lastName: lastName,
-        createdAt: new Date().toISOString(),
-        balanceCents: 0
-      };
-
-      const updatedUsers = [newUserObj, ...globalUsers];
-      localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
-      
-      fetchGlobalRegistry(); // Force immediate state reload
-
-      setIsLoggedIn(true);
-      setIsAdmin(false);
-      setUserUid(newUserObj.id);
-      setUserEmail(newUserObj.email);
-      setUserName(newUserObj.name);
-      setUserFirstName(newUserObj.firstName);
-      setAuthModalOpen(false);
-      setEmailInput('');
-      setPasswordInput('');
-      setActiveTab('dashboard');
+    } catch (err) {
+      setAuthError(err.message || 'Authentication failed. Please try again.');
     }
   };
 
-  const handleInternalTransferSubmit = (e) => {
+  const handleInternalTransferSubmit = async (e) => {
     e.preventDefault();
     setInternalTransferError('');
     setInternalTransferSuccess('');
@@ -261,26 +189,21 @@ export default function App() {
     const recipientEmail = internalTransferEmail.trim().toLowerCase();
     const amountCents = Math.round(Number(internalTransferAmount) * 100);
 
-    let globalUsers = [];
-    try { 
-      const raw = localStorage.getItem('dollarcraft_global_users');
-      globalUsers = raw ? JSON.parse(raw) : []; 
-    } catch (e) {}
-
-    const recipient = globalUsers.find(u => u.email?.toLowerCase() === recipientEmail);
-    if (!recipient) {
+    const targetAccount = usersList.find(u => u.email?.toLowerCase() === recipientEmail && u.id !== 'admin-master');
+    if (!targetAccount) {
       setInternalTransferError('No registered user found with this email.');
       return;
     }
 
-    const updatedUsers = globalUsers.map(u => 
-      u.email?.toLowerCase() === recipientEmail ? { ...u, balanceCents: (u.balanceCents || 0) + amountCents } : u
-    );
-    localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
-    fetchGlobalRegistry();
-    setInternalTransferSuccess(`Successfully transferred $${(amountCents / 100).toFixed(2)} USD to ${recipientEmail}`);
-    setInternalTransferCount(c => c + 1);
-    setInternalTransferAmount('');
+    try {
+      await changeUserBalance(targetAccount.id, amountCents);
+      syncUsersList();
+      setInternalTransferSuccess(`Successfully transferred $${(amountCents / 100).toFixed(2)} USD to ${recipientEmail}`);
+      setInternalTransferCount(c => c + 1);
+      setInternalTransferAmount('');
+    } catch (err) {
+      setInternalTransferError(err.message || 'Transfer failed.');
+    }
   };
 
   const [liveProtocolTotal, setLiveProtocolTotal] = useState(getGlobalAccrualTotal);
@@ -311,8 +234,8 @@ export default function App() {
 
         {activeView === 'dashboard' && isLoggedIn && (
           <DashboardView
-            userName={userName}
-            userFirstName={userFirstName}
+            userName={currentUserData?.name || 'Investor'}
+            userFirstName={currentUserData?.firstName || 'Investor'}
             totalBalanceCents={totalBalanceCents}
             setWithdrawalModalOpen={setWithdrawalModalOpen}
           />
