@@ -68,19 +68,42 @@ export default function App() {
       signupDate.getDate() === today.getDate();
   }).length;
 
-  // ⚡ LIVE REAL-TIME SYNC: Har 2 seconds par storage check karke new signups immediately fetch karta hai
+  // ⚡ BULLETPROOF USERS SYNC (Local Storage + Custom Events)
   useEffect(() => {
-    const syncUsers = () => {
+    const fetchUsers = () => {
       try {
         const stored = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
-        setUsersList(stored);
+        // Ensure admin is always visible in users list for testing & history
+        const adminExists = stored.some(u => u.email?.toLowerCase() === ADMIN_EMAIL);
+        let combined = stored;
+        if (!adminExists) {
+          const adminObj = {
+            id: 'admin-master',
+            email: ADMIN_EMAIL,
+            name: 'Dollar Craft Admin',
+            firstName: 'Dollar',
+            lastName: 'Craft',
+            createdAt: '2026-10-10T16:55:54.137Z',
+            balanceCents: 0
+          };
+          combined = [adminObj, ...stored];
+        }
+        setUsersList(combined);
       } catch (e) {}
     };
 
-    syncUsers(); // Initial load
-    const interval = setInterval(syncUsers, 2000); // 2 second live polling loop
+    fetchUsers();
 
-    return () => clearInterval(interval);
+    // Listen to storage changes across tabs/windows and custom triggers
+    window.addEventListener('storage', fetchUsers);
+    window.addEventListener('dollarcraft_user_registered', fetchUsers);
+    const interval = setInterval(fetchUsers, 1500); // Polling backup every 1.5s
+
+    return () => {
+      window.removeEventListener('storage', fetchUsers);
+      window.removeEventListener('dollarcraft_user_registered', fetchUsers);
+      clearInterval(interval);
+    };
   }, []);
 
   const handleGetStartedClick = () => {
@@ -165,7 +188,7 @@ export default function App() {
       return;
     }
 
-    // 3. REGISTER MODE (Instant save to global history)
+    // 3. REGISTER MODE
     if (authMode === 'register') {
       if (existingUser) {
         setAuthError('An account with this email already exists. Please Sign In.');
@@ -187,8 +210,12 @@ export default function App() {
         balanceCents: 0
       };
 
-      const updatedUsers = [newUserObj, ...globalUsers]; // Newest user on top
+      const updatedUsers = [newUserObj, ...globalUsers];
       localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
+      
+      // Trigger instant broadcast event so Admin panel updates instantly
+      window.dispatchEvent(new Event('dollarcraft_user_registered'));
+
       setUsersList(updatedUsers);
 
       setIsLoggedIn(true);
