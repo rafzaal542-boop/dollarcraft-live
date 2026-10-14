@@ -35,7 +35,7 @@ export default function App() {
   const [internalTransferCount, setInternalTransferCount] = useState(0);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); // Only true if exact admin credentials are used
+  const [isAdmin, setIsAdmin] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [authMode, setAuthMode] = useState('register');
@@ -52,7 +52,6 @@ export default function App() {
   const [userFirstName, setUserFirstName] = useState('');
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
-  // Strict check: Only logged in users with exact admin email AND verified admin flag can access admin
   const isAdminUser = isLoggedIn && isAdmin && userEmail.toLowerCase() === ADMIN_EMAIL;
   const canAccessAdmin = isAdminUser;
 
@@ -109,26 +108,30 @@ export default function App() {
     const finalPassword = passwordInput;
     const trimmedName = fullName.trim();
 
-    // 1. Check if user is trying to login as ADMIN
+    // Standard Generic Error Text for any failed login attempt
+    const STANDARD_ERROR = 'Invalid email or password. Please check your credentials.';
+
+    // 1. ADMIN CHECK
     if (finalEmail === ADMIN_EMAIL) {
       if (finalPassword === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
-        setIsAdmin(true); // Strict admin grant
+        setIsAdmin(true);
         setUserEmail(ADMIN_EMAIL);
         setUserName('Dollar Craft Admin');
         setUserFirstName('Admin');
         setAuthModalOpen(false);
         setEmailInput('');
         setPasswordInput('');
-        setActiveTab('admin'); // Direct jump to Admin Panel
+        setActiveTab('admin');
         return;
       } else {
-        setAuthError('Invalid Admin credentials. Access denied.');
+        // Safe generic error (does NOT reveal admin status)
+        setAuthError(STANDARD_ERROR);
         return;
       }
     }
 
-    // 2. Regular User Flow (Non-Admin)
+    // 2. REGULAR USER FLOW
     let globalUsers = [];
     try { globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]'); } catch (e) {}
 
@@ -155,7 +158,7 @@ export default function App() {
     }
 
     setIsLoggedIn(true);
-    setIsAdmin(false); // Ensure regular user NEVER gets admin privileges
+    setIsAdmin(false);
     setUserUid(activeUser.id);
     setUserEmail(activeUser.email);
     setUserName(activeUser.name);
