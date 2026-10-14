@@ -1,20 +1,13 @@
 const LOCAL_ACCOUNTS_KEY = 'dollarcraft_global_users';
 const LOCAL_SESSION_KEY = 'dollarcraft.localSession.v1';
-const LOCAL_USERS_EVENT = 'dollarcraft:local-users-changed';
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 
-const getStorage = () => {
-  if (!globalThis.localStorage) return null;
-  return globalThis.localStorage;
-};
-
 export const getStoredUsers = () => {
-  const storage = getStorage();
-  if (!storage) return [];
   try {
-    const raw = storage.getItem(LOCAL_ACCOUNTS_KEY);
+    const raw = localStorage.getItem(LOCAL_ACCOUNTS_KEY);
     let accounts = raw ? JSON.parse(raw) : [];
     
+    // Ensure admin master entry is always present
     const hasAdmin = accounts.some(u => u.email?.toLowerCase() === ADMIN_EMAIL);
     if (!hasAdmin) {
       accounts.unshift({
@@ -29,6 +22,7 @@ export const getStoredUsers = () => {
     }
     return accounts;
   } catch (e) {
+    console.error("Error reading stored users:", e);
     return [{
       id: 'admin-master',
       email: ADMIN_EMAIL,
@@ -41,68 +35,64 @@ export const getStoredUsers = () => {
   }
 };
 
-const saveLocalAccounts = (accounts) => {
-  const storage = getStorage();
-  if (!storage) return;
-  storage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify(accounts));
-  if (typeof globalThis.window?.dispatchEvent === 'function' && typeof globalThis.Event === 'function') {
-    globalThis.window.dispatchEvent(new Event(LOCAL_USERS_EVENT));
-  }
-};
-
 export const createAccount = async (email, password, profile) => {
-  const normalizedEmail = email.trim().toLowerCase();
-  const firstName = (profile?.firstName || '').trim();
-  const lastName = (profile?.lastName || '').trim();
+  try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const firstName = (profile?.firstName || '').trim();
+    const lastName = (profile?.lastName || '').trim();
 
-  let accounts = getStoredUsers().filter(u => u.id !== 'admin-master');
-  if (accounts.some(account => account.email.toLowerCase() === normalizedEmail)) {
-    throw new Error('An account with this email already exists.');
+    let allUsers = getStoredUsers();
+    let accounts = allUsers.filter(u => u.id !== 'admin-master');
+
+    if (accounts.some(account => account.email.toLowerCase() === normalizedEmail)) {
+      throw new Error('An account with this email already exists.');
+    }
+
+    const newAccount = {
+      id: `local-${Date.now()}`,
+      firstName: firstName || normalizedEmail.split('@')[0],
+      lastName: lastName || '',
+      name: `${firstName} ${lastName}`.trim() || normalizedEmail.split('@')[0],
+      email: normalizedEmail,
+      password,
+      createdAt: new Date().toISOString(),
+      balanceCents: 0
+    };
+
+    const adminEntry = {
+      id: 'admin-master',
+      email: ADMIN_EMAIL,
+      name: 'Dollar Craft Admin',
+      firstName: 'Dollar',
+      lastName: 'Craft',
+      createdAt: '2026-10-10T16:55:54.137Z',
+      balanceCents: 0
+    };
+
+    const updatedAccounts = [newAccount, ...accounts];
+    localStorage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify([adminEntry, ...updatedAccounts]));
+    localStorage.setItem(LOCAL_SESSION_KEY, newAccount.id);
+
+    console.log("Account created successfully and saved to localStorage:", newAccount);
+
+    return {
+      user: {
+        id: newAccount.id,
+        firstName: newAccount.firstName,
+        lastName: newAccount.lastName,
+        name: newAccount.name,
+        email: newAccount.email,
+        createdAt: newAccount.createdAt,
+        balanceCents: newAccount.balanceCents,
+        role: 'user'
+      },
+      isAdmin: false,
+      isLocal: true
+    };
+  } catch (err) {
+    console.error("Create account error:", err);
+    throw err;
   }
-
-  const newAccount = {
-    id: `local-${Date.now()}`,
-    firstName: firstName || normalizedEmail.split('@')[0],
-    lastName: lastName || '',
-    name: `${firstName} ${lastName}`.trim() || normalizedEmail.split('@')[0],
-    email: normalizedEmail,
-    password,
-    createdAt: new Date().toISOString(),
-    balanceCents: 0
-  };
-
-  const adminEntry = {
-    id: 'admin-master',
-    email: ADMIN_EMAIL,
-    name: 'Dollar Craft Admin',
-    firstName: 'Dollar',
-    lastName: 'Craft',
-    createdAt: '2026-10-10T16:55:54.137Z',
-    balanceCents: 0
-  };
-
-  const updatedAccounts = [newAccount, ...accounts];
-  saveLocalAccounts([adminEntry, ...updatedAccounts]);
-
-  const storage = getStorage();
-  if (storage) {
-    storage.setItem(LOCAL_SESSION_KEY, newAccount.id);
-  }
-
-  return {
-    user: {
-      id: newAccount.id,
-      firstName: newAccount.firstName,
-      lastName: newAccount.lastName,
-      name: newAccount.name,
-      email: newAccount.email,
-      createdAt: newAccount.createdAt,
-      balanceCents: newAccount.balanceCents,
-      role: 'user'
-    },
-    isAdmin: false,
-    isLocal: true
-  };
 };
 
 export const signInWithPassword = async (email, password) => {
@@ -114,10 +104,7 @@ export const signInWithPassword = async (email, password) => {
     throw new Error('Incorrect email or password.');
   }
 
-  const storage = getStorage();
-  if (storage) {
-    storage.setItem(LOCAL_SESSION_KEY, account.id);
-  }
+  localStorage.setItem(LOCAL_SESSION_KEY, account.id);
 
   return {
     user: {
@@ -136,15 +123,13 @@ export const signInWithPassword = async (email, password) => {
 };
 
 export const getCurrentSession = async () => {
-  const storage = getStorage();
-  if (!storage) return { user: null, isAdmin: false, isLocal: true };
-  const userId = storage.getItem(LOCAL_SESSION_KEY);
+  const userId = localStorage.getItem(LOCAL_SESSION_KEY);
   if (!userId) return { user: null, isAdmin: false, isLocal: true };
   
   const accounts = getStoredUsers();
   const account = accounts.find(item => item.id === userId);
   if (!account) {
-    storage.removeItem(LOCAL_SESSION_KEY);
+    localStorage.removeItem(LOCAL_SESSION_KEY);
     return { user: null, isAdmin: false, isLocal: true };
   }
   return {
@@ -155,8 +140,7 @@ export const getCurrentSession = async () => {
 };
 
 export const logOutUser = async () => {
-  const storage = getStorage();
-  storage?.removeItem(LOCAL_SESSION_KEY);
+  localStorage.removeItem(LOCAL_SESSION_KEY);
   return true;
 };
 
@@ -178,7 +162,7 @@ export const changeUserBalance = async (userId, changeInCents) => {
     createdAt: '2026-10-10T16:55:54.137Z',
     balanceCents: 0
   };
-  saveLocalAccounts([adminEntry, ...allAccounts]);
+  localStorage.setItem(LOCAL_ACCOUNTS_KEY, JSON.stringify([adminEntry, ...allAccounts]));
 
   return {
     id: updated.id,
