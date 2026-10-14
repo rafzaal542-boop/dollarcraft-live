@@ -60,49 +60,58 @@ export default function App() {
 
   const currentUser = usersList.find((u) => u.id === userUid || u.email?.toLowerCase() === userEmail?.toLowerCase());
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
+  
   const today = new Date();
   const todayRegisteredUsers = usersList.filter((u) => {
+    if (!u.createdAt) return false;
     const signupDate = new Date(u.createdAt);
-    return signupDate.getFullYear() === today.getFullYear() &&
+    return (
+      signupDate.getFullYear() === today.getFullYear() &&
       signupDate.getMonth() === today.getMonth() &&
-      signupDate.getDate() === today.getDate();
+      signupDate.getDate() === today.getDate()
+    );
   }).length;
 
-  // ⚡ BULLETPROOF USERS SYNC (Local Storage + Custom Events)
+  // ⚡ BULLETPROOF USERS SYNCHRONIZER
+  const loadAllUsers = () => {
+    try {
+      let raw = localStorage.getItem('dollarcraft_global_users');
+      let parsed = raw ? JSON.parse(raw) : [];
+      
+      // Ensure admin master account is always present in list history
+      const hasAdmin = parsed.some(u => u.email?.toLowerCase() === ADMIN_EMAIL);
+      if (!hasAdmin) {
+        parsed.unshift({
+          id: 'admin-master',
+          email: ADMIN_EMAIL,
+          name: 'Dollar Craft Admin',
+          firstName: 'Dollar',
+          lastName: 'Craft',
+          createdAt: '2026-10-10T16:55:54.137Z',
+          balanceCents: 0
+        });
+      }
+      setUsersList(parsed);
+    } catch (e) {
+      setUsersList([{
+        id: 'admin-master',
+        email: ADMIN_EMAIL,
+        name: 'Dollar Craft Admin',
+        firstName: 'Dollar',
+        lastName: 'Craft',
+        createdAt: '2026-10-10T16:55:54.137Z',
+        balanceCents: 0
+      }]);
+    }
+  };
+
   useEffect(() => {
-    const fetchUsers = () => {
-      try {
-        const stored = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
-        // Ensure admin is always visible in users list for testing & history
-        const adminExists = stored.some(u => u.email?.toLowerCase() === ADMIN_EMAIL);
-        let combined = stored;
-        if (!adminExists) {
-          const adminObj = {
-            id: 'admin-master',
-            email: ADMIN_EMAIL,
-            name: 'Dollar Craft Admin',
-            firstName: 'Dollar',
-            lastName: 'Craft',
-            createdAt: '2026-10-10T16:55:54.137Z',
-            balanceCents: 0
-          };
-          combined = [adminObj, ...stored];
-        }
-        setUsersList(combined);
-      } catch (e) {}
-    };
-
-    fetchUsers();
-
-    // Listen to storage changes across tabs/windows and custom triggers
-    window.addEventListener('storage', fetchUsers);
-    window.addEventListener('dollarcraft_user_registered', fetchUsers);
-    const interval = setInterval(fetchUsers, 1500); // Polling backup every 1.5s
-
+    loadAllUsers();
+    const syncInterval = setInterval(loadAllUsers, 1000); // Polling every 1s for instant sync
+    window.addEventListener('storage', loadAllUsers);
     return () => {
-      window.removeEventListener('storage', fetchUsers);
-      window.removeEventListener('dollarcraft_user_registered', fetchUsers);
-      clearInterval(interval);
+      clearInterval(syncInterval);
+      window.removeEventListener('storage', loadAllUsers);
     };
   }, []);
 
@@ -138,7 +147,7 @@ export default function App() {
     const finalPassword = passwordInput;
     const trimmedName = fullName.trim();
 
-    // 1. ADMIN CHECK
+    // 1. ADMIN LOGIN
     if (finalEmail === ADMIN_EMAIL) {
       if (finalPassword === ADMIN_PASSWORD) {
         setIsLoggedIn(true);
@@ -149,6 +158,7 @@ export default function App() {
         setAuthModalOpen(false);
         setEmailInput('');
         setPasswordInput('');
+        loadAllUsers();
         setActiveTab('admin');
         return;
       } else {
@@ -158,13 +168,15 @@ export default function App() {
     }
 
     let globalUsers = [];
-    try { 
-      globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]'); 
-    } catch (e) {}
+    try {
+      globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
+    } catch (e) {
+      globalUsers = [];
+    }
 
     const existingUser = globalUsers.find(u => u.email?.toLowerCase() === finalEmail);
 
-    // 2. SIGN IN MODE
+    // 2. SIGN IN (LOGIN) MODE
     if (authMode === 'login') {
       if (!existingUser) {
         setAuthError('Account not found. Please register your account first.');
@@ -213,10 +225,7 @@ export default function App() {
       const updatedUsers = [newUserObj, ...globalUsers];
       localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
       
-      // Trigger instant broadcast event so Admin panel updates instantly
-      window.dispatchEvent(new Event('dollarcraft_user_registered'));
-
-      setUsersList(updatedUsers);
+      loadAllUsers(); // Immediately refresh state list
 
       setIsLoggedIn(true);
       setIsAdmin(false);
@@ -239,17 +248,20 @@ export default function App() {
     const recipientEmail = internalTransferEmail.trim().toLowerCase();
     const amountCents = Math.round(Number(internalTransferAmount) * 100);
 
-    const recipient = usersList.find(u => u.email?.toLowerCase() === recipientEmail);
+    let globalUsers = [];
+    try { globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]'); } catch (e) {}
+
+    const recipient = globalUsers.find(u => u.email?.toLowerCase() === recipientEmail);
     if (!recipient) {
       setInternalTransferError('No registered user found with this email.');
       return;
     }
 
-    const updatedUsers = usersList.map(u => 
+    const updatedUsers = globalUsers.map(u => 
       u.email?.toLowerCase() === recipientEmail ? { ...u, balanceCents: (u.balanceCents || 0) + amountCents } : u
     );
     localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
-    setUsersList(updatedUsers);
+    loadAllUsers();
     setInternalTransferSuccess(`Successfully transferred $${(amountCents / 100).toFixed(2)} USD to ${recipientEmail}`);
     setInternalTransferCount(c => c + 1);
     setInternalTransferAmount('');
