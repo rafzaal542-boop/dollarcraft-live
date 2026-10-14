@@ -23,7 +23,7 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
         Experience seamless digital asset growth through our high-performance micro-yield distribution framework designed for modern investors.
       </p>
 
-      {/* 3 Modern Feature Cards (Unique Dollar Craft Wording) */}
+      {/* 3 Modern Feature Cards */}
       <div className="w-full max-w-xl space-y-3 mb-10 text-left">
         <div className="flex items-center gap-4 bg-[#0b1026]/90 border border-amber-500/20 rounded-2xl p-4 backdrop-blur-xl hover:border-amber-500/50 transition-all shadow-lg">
           <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
@@ -56,20 +56,13 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="w-full max-w-xl space-y-4">
+      {/* Action Button (Login button removed) */}
+      <div className="w-full max-w-xl">
         <button
           onClick={handleGetStartedClick}
           className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 hover:opacity-95 text-white font-extrabold text-base shadow-xl shadow-amber-500/20 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
         >
           Get Started Now <ArrowRight className="w-5 h-5" />
-        </button>
-
-        <button
-          onClick={handleGetStartedClick}
-          className="w-full py-3.5 rounded-2xl bg-[#0b1026] border border-white/10 hover:bg-slate-900 text-gray-300 hover:text-white font-bold text-sm transition-all"
-        >
-          Already have an account? Login
         </button>
       </div>
 
