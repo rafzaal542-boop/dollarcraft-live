@@ -45,13 +45,13 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [authMode, setAuthMode] = useState('register');
   const [authError, setAuthError] = useState('');
   const [usersList, setUsersList] = useState([]);
   const [userUid, setUserUid] = useState('');
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [fullName, setFullName] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -86,7 +86,11 @@ export default function App() {
 
   const handleGetStartedClick = () => {
     if (!isLoggedIn) {
+      setIsInitializing(true);
       setAuthModalOpen(true);
+      setTimeout(() => {
+        setIsInitializing(false);
+      }, 2000);
     } else {
       setActiveTab(canAccessAdmin ? 'admin' : 'dashboard');
     }
@@ -110,8 +114,10 @@ export default function App() {
     e.preventDefault();
     const finalEmail = emailInput.trim().toLowerCase();
     const finalPassword = passwordInput;
-    const trimmedFirstName = firstName.trim();
-    const trimmedLastName = lastName.trim();
+    const trimmedName = fullName.trim();
+    const nameParts = trimmedName.split(/\s+/);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
 
     if (finalEmail === ADMIN_EMAIL && finalPassword === ADMIN_PASSWORD) {
       const adminUser = {
@@ -140,9 +146,9 @@ export default function App() {
     const newUserObj = {
       id: 'usr-' + Date.now(),
       email: finalEmail,
-      name: `${trimmedFirstName} ${trimmedLastName}`.trim() || finalEmail.split('@')[0],
-      firstName: trimmedFirstName || finalEmail.split('@')[0],
-      lastName: trimmedLastName || '',
+      name: trimmedName || finalEmail.split('@')[0],
+      firstName: firstName || finalEmail.split('@')[0],
+      lastName: lastName || '',
       createdAt: new Date().toISOString(),
       balanceCents: 0
     };
@@ -203,7 +209,6 @@ export default function App() {
           <HomeView
             liveProtocolTotal={liveProtocolTotal}
             handleGetStartedClick={handleGetStartedClick}
-            globalHubs={globalHubs}
           />
         )}
 
@@ -240,10 +245,8 @@ export default function App() {
         setAuthModalOpen={setAuthModalOpen}
         authMode={authMode}
         setAuthMode={setAuthMode}
-        firstName={firstName}
-        setFirstName={setFirstName}
-        lastName={lastName}
-        setLastName={setLastName}
+        fullName={fullName}
+        setFullName={setFullName}
         emailInput={emailInput}
         setEmailInput={setEmailInput}
         passwordInput={passwordInput}
@@ -252,6 +255,7 @@ export default function App() {
         setShowPassword={setShowPassword}
         authError={authError}
         handleAuthSubmit={handleAuthSubmit}
+        isInitializing={isInitializing}
       />
 
       {logoutConfirmationOpen && (
