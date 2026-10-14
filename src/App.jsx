@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import HomeView from './components/HomeView';
 import AdminPanel from './components/AdminPanel';
 import AuthModal from './components/AuthModal';
 import DashboardView from './components/DashboardView';
+import FaqView from './components/FaqView';
 import { logOutUser } from './localStore';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
@@ -19,6 +21,16 @@ const formatSignupTimestamp = (createdAt) => {
   const date = typeof createdAt === 'string' || typeof createdAt === 'number' ? new Date(createdAt) : new Date();
   return date.toISOString();
 };
+
+const globalHubs = [
+  { name: 'USA', code: 'us' },
+  { name: 'Canada', code: 'ca' },
+  { name: 'Australia', code: 'au' },
+  { name: 'UK', code: 'gb' },
+  { name: 'UAE', code: 'ae' },
+  { name: 'Singapore', code: 'sg' },
+  { name: 'Europe', code: 'eu' }
+];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
@@ -188,13 +200,11 @@ export default function App() {
 
       <main className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {activeView === 'home' && (
-          <div className="text-center space-y-8 pt-8">
-            <h1 className="text-5xl font-black">Micro-Yields, Earn Real Daily Money</h1>
-            <div className="bg-slate-900/90 border border-violet-500/30 rounded-3xl p-8 max-w-2xl mx-auto">
-              <span className="text-xs text-violet-400 font-bold block mb-2">LIVE GLOBAL PROTOCOL TICKER</span>
-              <h2 className="text-4xl font-black text-cyan-400 font-mono">${liveProtocolTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</h2>
-            </div>
-          </div>
+          <HomeView
+            liveProtocolTotal={liveProtocolTotal}
+            handleGetStartedClick={handleGetStartedClick}
+            globalHubs={globalHubs}
+          />
         )}
 
         {activeView === 'dashboard' && isLoggedIn && (
@@ -205,6 +215,8 @@ export default function App() {
             setWithdrawalModalOpen={setWithdrawalModalOpen}
           />
         )}
+
+        {activeView === 'contact' && <FaqView />}
 
         {activeView === 'admin' && canAccessAdmin && (
           <AdminPanel
