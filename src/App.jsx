@@ -10,6 +10,8 @@ import { logOutUser } from './localStore';
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
 const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
+
+// Strict Admin Credentials
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 const ADMIN_PASSWORD = 'haseeb@craft@007';
 
@@ -22,16 +24,6 @@ const formatSignupTimestamp = (createdAt) => {
   return date.toISOString();
 };
 
-const globalHubs = [
-  { name: 'USA', code: 'us' },
-  { name: 'Canada', code: 'ca' },
-  { name: 'Australia', code: 'au' },
-  { name: 'UK', code: 'gb' },
-  { name: 'UAE', code: 'ae' },
-  { name: 'Singapore', code: 'sg' },
-  { name: 'Europe', code: 'eu' }
-];
-
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [withdrawalModalOpen, setWithdrawalModalOpen] = useState(false);
@@ -43,7 +35,7 @@ export default function App() {
   const [internalTransferCount, setInternalTransferCount] = useState(0);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // Only true if exact admin credentials are used
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [authMode, setAuthMode] = useState('register');
@@ -58,16 +50,17 @@ export default function App() {
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
   const [userFirstName, setUserFirstName] = useState('');
-  const [user, setUser] = useState(null);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
 
-  const currentUser = usersList.find((u) => u.id === userUid || u.email?.toLowerCase() === userEmail?.toLowerCase());
-  const isAdminUser = isLoggedIn && (isAdmin || user?.role === 'admin' || userEmail?.toLowerCase() === ADMIN_EMAIL);
+  // Strict check: Only logged in users with exact admin email AND verified admin flag can access admin
+  const isAdminUser = isLoggedIn && isAdmin && userEmail.toLowerCase() === ADMIN_EMAIL;
   const canAccessAdmin = isAdminUser;
+
   const activeView = isAdminUser
     ? activeTab === 'dashboard' ? 'admin' : activeTab
     : activeTab === 'admin' ? isLoggedIn ? 'dashboard' : 'home' : activeTab;
 
+  const currentUser = usersList.find((u) => u.id === userUid || u.email?.toLowerCase() === userEmail?.toLowerCase());
   const totalBalanceCents = currentUser?.balanceCents ?? 0;
   const today = new Date();
   const todayRegisteredUsers = usersList.filter((u) => {
@@ -100,7 +93,6 @@ export default function App() {
     try { await logOutUser(); } catch (e) {}
     setIsLoggedIn(false);
     setIsAdmin(false);
-    setUser(null);
     setUserUid('');
     setUserEmail('');
     setUserName('');
@@ -112,76 +104,88 @@ export default function App() {
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
+    setAuthError('');
     const finalEmail = emailInput.trim().toLowerCase();
     const finalPassword = passwordInput;
     const trimmedName = fullName.trim();
-    const nameParts = trimmedName.split(/\s+/);
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
 
-    if (finalEmail === ADMIN_EMAIL && finalPassword === ADMIN_PASSWORD) {
-      const adminUser = {
-        id: 'admin-007',
-        email: ADMIN_EMAIL,
-        name: 'dollar craft',
-        firstName: 'dollar',
-        lastName: 'craft',
-        role: 'admin',
-        createdAt: new Date().toISOString(),
-        balanceCents: 0
-      };
-      setIsLoggedIn(true);
-      setIsAdmin(true);
-      setUser(adminUser);
-      setUserEmail(ADMIN_EMAIL);
-      setUserName('dollar craft');
-      setAuthModalOpen(false);
-      setActiveTab('admin');
-      return;
+    // 1. Check if user is trying to login as ADMIN
+    if (finalEmail === ADMIN_EMAIL) {
+      if (finalPassword === ADMIN_PASSWORD) {
+        setIsLoggedIn(true);
+        setIsAdmin(true); // Strict admin grant
+        setUserEmail(ADMIN_EMAIL);
+        setUserName('Dollar Craft Admin');
+        setUserFirstName('Admin');
+        setAuthModalOpen(false);
+        setEmailInput('');
+        setPasswordInput('');
+        setActiveTab('admin'); // Direct jump to Admin Panel
+        return;
+      } else {
+        setAuthError('Invalid Admin credentials. Access denied.');
+        return;
+      }
     }
 
+    // 2. Regular User Flow (Non-Admin)
     let globalUsers = [];
     try { globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]'); } catch (e) {}
 
-    const newUserObj = {
-      id: 'usr-' + Date.now(),
-      email: finalEmail,
-      name: trimmedName || finalEmail.split('@')[0],
-      firstName: firstName || finalEmail.split('@')[0],
-      lastName: lastName || '',
-      createdAt: new Date().toISOString(),
-      balanceCents: 0
-    };
+    const nameParts = trimmedName.split(/\s+/);
+    const firstName = nameParts[0] || finalEmail.split('@')[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
 
-    const updated = [...globalUsers.filter(u => u.email?.toLowerCase() !== finalEmail), newUserObj];
-    localStorage.setItem('dollarcraft_global_users', JSON.stringify(updated));
-    setUsersList(updated);
+    const existingUser = globalUsers.find(u => u.email?.toLowerCase() === finalEmail);
+
+    let activeUser = existingUser;
+    if (!existingUser) {
+      activeUser = {
+        id: 'usr-' + Date.now(),
+        email: finalEmail,
+        name: trimmedName || finalEmail.split('@')[0],
+        firstName: firstName,
+        lastName: lastName,
+        createdAt: new Date().toISOString(),
+        balanceCents: 0
+      };
+      globalUsers.push(activeUser);
+      localStorage.setItem('dollarcraft_global_users', JSON.stringify(globalUsers));
+      setUsersList(globalUsers);
+    }
 
     setIsLoggedIn(true);
-    setUser(newUserObj);
-    setUserUid(newUserObj.id);
-    setUserEmail(newUserObj.email);
-    setUserName(newUserObj.name);
-    setUserFirstName(newUserObj.firstName);
+    setIsAdmin(false); // Ensure regular user NEVER gets admin privileges
+    setUserUid(activeUser.id);
+    setUserEmail(activeUser.email);
+    setUserName(activeUser.name);
+    setUserFirstName(activeUser.firstName);
     setAuthModalOpen(false);
+    setEmailInput('');
+    setPasswordInput('');
     setActiveTab('dashboard');
   };
 
   const handleInternalTransferSubmit = (e) => {
     e.preventDefault();
+    setInternalTransferError('');
+    setInternalTransferSuccess('');
+
     const recipientEmail = internalTransferEmail.trim().toLowerCase();
     const amountCents = Math.round(Number(internalTransferAmount) * 100);
 
     const recipient = usersList.find(u => u.email?.toLowerCase() === recipientEmail);
     if (!recipient) {
-      setInternalTransferError('No user found with this email');
+      setInternalTransferError('No registered user found with this email.');
       return;
     }
 
-    const updatedUsers = usersList.map(u => u.email?.toLowerCase() === recipientEmail ? { ...u, balanceCents: (u.balanceCents || 0) + amountCents } : u);
+    const updatedUsers = usersList.map(u => 
+      u.email?.toLowerCase() === recipientEmail ? { ...u, balanceCents: (u.balanceCents || 0) + amountCents } : u
+    );
     localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
     setUsersList(updatedUsers);
-    setInternalTransferSuccess(`$${(amountCents / 100).toFixed(2)} USD transferred successfully!`);
+    setInternalTransferSuccess(`Successfully transferred $${(amountCents / 100).toFixed(2)} USD to ${recipientEmail}`);
     setInternalTransferCount(c => c + 1);
     setInternalTransferAmount('');
   };
@@ -193,7 +197,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#090d23] via-[#050814] to-[#03050a] text-white font-sans selection:bg-violet-500 relative overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#090d23] via-[#050814] to-[#03050a] text-white font-sans selection:bg-amber-500 relative overflow-x-hidden">
       <Navbar
         activeView={activeView}
         setActiveTab={setActiveTab}
@@ -260,12 +264,12 @@ export default function App() {
 
       {logoutConfirmationOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-slate-900 border border-violet-500/30 rounded-3xl p-8 max-w-sm w-full text-center">
-            <h3 className="text-xl font-bold text-white mb-2">Confirm Logout</h3>
-            <p className="text-gray-300 text-xs mb-6">Are you sure you want to sign out?</p>
-            <div className="flex gap-4">
-              <button onClick={() => setLogoutConfirmationOpen(false)} className="flex-1 py-3 rounded-xl bg-white/5 text-gray-300 font-bold text-sm">Cancel</button>
-              <button onClick={handleLogout} className="flex-1 py-3 rounded-xl bg-rose-600 text-white font-bold text-sm">Logout</button>
+          <div className="bg-[#0b1026] border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-1">Confirm Logout</h3>
+            <p className="text-gray-300 text-xs mb-5">Are you sure you want to sign out of your session?</p>
+            <div className="flex gap-3">
+              <button onClick={() => setLogoutConfirmationOpen(false)} className="flex-1 py-2.5 rounded-xl bg-white/5 text-gray-300 font-bold text-xs border border-white/10 hover:bg-white/10">Cancel</button>
+              <button onClick={handleLogout} className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md">Logout</button>
             </div>
           </div>
         </div>

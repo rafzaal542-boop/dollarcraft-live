@@ -13,6 +13,7 @@ export default function Navbar({
     <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#090d23]/90 border-b border-amber-500/20 shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
+          {/* Brand Logo */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 flex items-center justify-center font-black text-base shadow-md text-white">
               DC
@@ -22,6 +23,7 @@ export default function Navbar({
             </span>
           </div>
 
+          {/* Nav Links */}
           <div className="hidden md:flex items-center space-x-8 text-sm font-semibold text-gray-300">
             <button onClick={() => setActiveTab('home')} className={`transition-colors py-1 ${activeView === 'home' ? 'text-amber-400 font-bold border-b-2 border-amber-400' : 'hover:text-amber-300'}`}>Home</button>
             {isLoggedIn && (
@@ -34,11 +36,22 @@ export default function Navbar({
             )}
             <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeView === 'contact' ? 'text-amber-400 font-bold border-b-2 border-amber-400' : 'hover:text-amber-300'}`}>FAQ</button>
             
+            {/* STRICT ADMIN CHECK: Sirf Admin User ke login hone par hi yeh Admin Panel button show hoga */}
             {isAdminUser && (
-              <button onClick={() => setActiveTab('admin')} className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${activeView === 'admin' ? 'bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 text-white shadow-lg' : 'bg-white/5 border border-white/10 text-amber-300 hover:bg-white/10'}`}>Admin Panel</button>
+              <button 
+                onClick={() => setActiveTab('admin')} 
+                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
+                  activeView === 'admin' 
+                    ? 'bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 text-white shadow-lg' 
+                    : 'bg-white/5 border border-white/10 text-amber-300 hover:bg-white/10'
+                }`}
+              >
+                Admin Panel
+              </button>
             )}
           </div>
 
+          {/* Right Action Buttons */}
           <div className="hidden md:flex items-center space-x-3">
             {isLoggedIn ? (
               <>
