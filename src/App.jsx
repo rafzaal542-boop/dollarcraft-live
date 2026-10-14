@@ -72,16 +72,16 @@ export default function App() {
     );
   }).length;
 
-  // ⚡ BULLETPROOF USERS SYNCHRONIZER
-  const loadAllUsers = () => {
+  // ⚡ FOOLPROOF REAL-TIME MASTER SYNC
+  const fetchGlobalRegistry = () => {
     try {
-      let raw = localStorage.getItem('dollarcraft_global_users');
-      let parsed = raw ? JSON.parse(raw) : [];
-      
-      // Ensure admin master account is always present in list history
-      const hasAdmin = parsed.some(u => u.email?.toLowerCase() === ADMIN_EMAIL);
-      if (!hasAdmin) {
-        parsed.unshift({
+      const raw = localStorage.getItem('dollarcraft_global_users');
+      let registry = raw ? JSON.parse(raw) : [];
+
+      // Ensure Admin master is always in the list
+      const adminExists = registry.some(u => u.email?.toLowerCase() === ADMIN_EMAIL);
+      if (!adminExists) {
+        registry.unshift({
           id: 'admin-master',
           email: ADMIN_EMAIL,
           name: 'Dollar Craft Admin',
@@ -91,7 +91,7 @@ export default function App() {
           balanceCents: 0
         });
       }
-      setUsersList(parsed);
+      setUsersList(registry);
     } catch (e) {
       setUsersList([{
         id: 'admin-master',
@@ -106,12 +106,23 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadAllUsers();
-    const syncInterval = setInterval(loadAllUsers, 1000); // Polling every 1s for instant sync
-    window.addEventListener('storage', loadAllUsers);
+    fetchGlobalRegistry();
+
+    // Event listeners to catch updates instantly from any tab or action
+    const handleStorageChange = (e) => {
+      if (!e || e.key === 'dollarcraft_global_users' || !e.key) {
+        fetchGlobalRegistry();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('focus', fetchGlobalRegistry);
+    const pollingTimer = setInterval(fetchGlobalRegistry, 1000); // 1s sync loop
+
     return () => {
-      clearInterval(syncInterval);
-      window.removeEventListener('storage', loadAllUsers);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('focus', fetchGlobalRegistry);
+      clearInterval(pollingTimer);
     };
   }, []);
 
@@ -158,7 +169,7 @@ export default function App() {
         setAuthModalOpen(false);
         setEmailInput('');
         setPasswordInput('');
-        loadAllUsers();
+        fetchGlobalRegistry();
         setActiveTab('admin');
         return;
       } else {
@@ -167,9 +178,11 @@ export default function App() {
       }
     }
 
+    // Fetch latest storage list safely
     let globalUsers = [];
     try {
-      globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]');
+      const raw = localStorage.getItem('dollarcraft_global_users');
+      globalUsers = raw ? JSON.parse(raw) : [];
     } catch (e) {
       globalUsers = [];
     }
@@ -225,7 +238,7 @@ export default function App() {
       const updatedUsers = [newUserObj, ...globalUsers];
       localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
       
-      loadAllUsers(); // Immediately refresh state list
+      fetchGlobalRegistry(); // Force immediate state reload
 
       setIsLoggedIn(true);
       setIsAdmin(false);
@@ -249,7 +262,10 @@ export default function App() {
     const amountCents = Math.round(Number(internalTransferAmount) * 100);
 
     let globalUsers = [];
-    try { globalUsers = JSON.parse(localStorage.getItem('dollarcraft_global_users') || '[]'); } catch (e) {}
+    try { 
+      const raw = localStorage.getItem('dollarcraft_global_users');
+      globalUsers = raw ? JSON.parse(raw) : []; 
+    } catch (e) {}
 
     const recipient = globalUsers.find(u => u.email?.toLowerCase() === recipientEmail);
     if (!recipient) {
@@ -261,7 +277,7 @@ export default function App() {
       u.email?.toLowerCase() === recipientEmail ? { ...u, balanceCents: (u.balanceCents || 0) + amountCents } : u
     );
     localStorage.setItem('dollarcraft_global_users', JSON.stringify(updatedUsers));
-    loadAllUsers();
+    fetchGlobalRegistry();
     setInternalTransferSuccess(`Successfully transferred $${(amountCents / 100).toFixed(2)} USD to ${recipientEmail}`);
     setInternalTransferCount(c => c + 1);
     setInternalTransferAmount('');
