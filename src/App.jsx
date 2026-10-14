@@ -5,7 +5,7 @@ import AdminPanel from './components/AdminPanel';
 import AuthModal from './components/AuthModal';
 import DashboardView from './components/DashboardView';
 import FaqView from './components/FaqView';
-import { getLocalAccounts, createAccount, signInWithPassword, logOutUser, changeUserBalance } from './localStore';
+import { getStoredUsers, createAccount, signInWithPassword, logOutUser, changeUserBalance } from './localStore';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
 const GLOBAL_ACCRUAL_STARTED_AT = Date.parse('2026-10-08T06:39:27.411Z');
@@ -59,7 +59,7 @@ export default function App() {
   
   const today = new Date();
   const todayRegisteredUsers = usersList.filter((u) => {
-    if (!u.createdAt) return false;
+    if (!u.createdAt || u.id === 'admin-master') return false;
     const signupDate = new Date(u.createdAt);
     return (
       signupDate.getFullYear() === today.getFullYear() &&
@@ -70,17 +70,8 @@ export default function App() {
 
   const syncUsersList = () => {
     try {
-      const localAccs = getLocalAccounts();
-      const adminEntry = {
-        id: 'admin-master',
-        email: ADMIN_EMAIL,
-        name: 'Dollar Craft Admin',
-        firstName: 'Dollar',
-        lastName: 'Craft',
-        createdAt: '2026-10-10T16:55:54.137Z',
-        balanceCents: 0
-      };
-      setUsersList([adminEntry, ...localAccs]);
+      const stored = getStoredUsers();
+      setUsersList(stored);
     } catch (e) {
       setUsersList([]);
     }
@@ -91,7 +82,7 @@ export default function App() {
     const handleStorageChange = () => syncUsersList();
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('dollarcraft:local-users-changed', handleStorageChange);
-    const interval = setInterval(syncUsersList, 1500);
+    const interval = setInterval(syncUsersList, 1000); // 1s live sync loop
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -142,6 +133,7 @@ export default function App() {
         setAuthModalOpen(false);
         setEmailInput('');
         setPasswordInput('');
+        syncUsersList();
         setActiveTab('admin');
         return;
       } else {
