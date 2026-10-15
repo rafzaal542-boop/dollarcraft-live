@@ -132,7 +132,7 @@ export default function AdminPanel({
               <tbody className="divide-y divide-white/5">
                 {filteredUsers.length > 0 ? (
                   filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-white/5 transition-colors">
+                    <tr key={u.id || u._id} className="hover:bg-white/5 transition-colors">
                       <td className="py-3.5 px-3 font-semibold text-white">{u.firstName || u.name?.split(' ')[0] || 'N/A'}</td>
                       <td className="py-3.5 px-3 text-gray-300">{u.lastName || u.name?.split(' ').slice(1).join(' ') || '—'}</td>
                       <td className="py-3.5 px-3 font-mono text-cyan-400">{u.email}</td>

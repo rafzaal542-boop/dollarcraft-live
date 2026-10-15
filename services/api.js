@@ -10,14 +10,19 @@ export const apiCall = async (endpoint, options = {}) => {
       },
       ...options,
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP Error: ${response.status}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('API Request Error:', error);
     throw error;
   }
+};
+
+// Users History fetch karne ka function:
+export const fetchUsersHistory = async () => {
+  return await apiCall('/users');
 };
