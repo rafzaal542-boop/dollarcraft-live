@@ -1,13 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function DepositModal({ isOpen, onClose, currentUserEmail }) {
   const [copiedField, setCopiedField] = useState(null);
+  const [userEmailInput, setUserEmailInput] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [senderNote, setSenderNote] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
+  useEffect(() => {
+    if (currentUserEmail) {
+      setUserEmailInput(currentUserEmail);
+    }
+  }, [currentUserEmail]);
+
   if (!isOpen) return null;
+
+  const isGuest = !currentUserEmail || currentUserEmail === "Guest Investor" || currentUserEmail === "LoggedIn User";
 
   const bankDetails = {
     bankName: "Digitt Bank (Digitt+ EMI)",
@@ -35,12 +44,14 @@ export default function DepositModal({ isOpen, onClose, currentUserEmail }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!filePreview) return;
+    if (!filePreview || isGuest) return;
+
+    const finalEmail = userEmailInput.trim() || currentUserEmail;
 
     // Save submitted slip for Admin Panel
     const newSubmission = {
       id: "slip-" + Date.now(),
-      userEmail: currentUserEmail || "Guest Investor",
+      userEmail: finalEmail,
       slipImageData: filePreview,
       note: senderNote,
       submittedAt: new Date().toISOString(),
@@ -162,19 +173,49 @@ export default function DepositModal({ isOpen, onClose, currentUserEmail }) {
           </div>
         </div>
 
-        {/* Deposit Submission Form with Slip Upload */}
-        {submitted ? (
+        {/* Security Check: If Guest / Not Signed In */}
+        {isGuest ? (
+          <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center space-y-2">
+            <svg className="w-10 h-10 text-amber-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h4 className="text-base font-black text-white">Authentication Required</h4>
+            <p className="text-xs text-gray-300 max-w-md mx-auto">
+              You must be signed in or registered to your account to upload and submit deposit proofs. Please login first.
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 rounded-xl bg-amber-500 text-slate-950 font-black text-xs hover:bg-amber-400 shadow-md mt-2"
+            >
+              Close & Login / Register
+            </button>
+          </div>
+        ) : submitted ? (
           <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center">
             <svg className="w-10 h-10 text-emerald-400 mx-auto mb-1.5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
             </svg>
             <h4 className="text-base font-bold text-white mb-0.5">Bank Slip Uploaded Successfully!</h4>
             <p className="text-xs text-gray-300">
-              Your transaction proof has been sent directly to the Admin Panel. Verification will be completed shortly.
+              Your transaction proof along with your email ({userEmailInput}) has been sent directly to the Admin Panel.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            
+            {/* Registered User Email Field */}
+            <div>
+              <label className="block text-xs font-bold text-gray-300 mb-1.5">
+                Registered User Email (Auto-filled)
+              </label>
+              <input
+                type="email"
+                value={userEmailInput}
+                disabled
+                className="w-full px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700 text-emerald-400 font-bold text-sm cursor-not-allowed shadow-inner"
+              />
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-gray-300 mb-1.5">
                 Upload Bank Transfer Receipt / Slip Screenshot
@@ -218,7 +259,7 @@ export default function DepositModal({ isOpen, onClose, currentUserEmail }) {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Sent via EasyPaisa/Bank App by Irtaza"
+                placeholder="e.g. Sent via Digitt App by Irtaza"
                 value={senderNote}
                 onChange={(e) => setSenderNote(e.target.value)}
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400 text-sm font-semibold"
