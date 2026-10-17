@@ -4,8 +4,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
   const countries = [
     {
       name: "United States",
+      code: "USA",
       svg: (
-        <svg className="w-7 h-5 rounded border border-slate-700/80 shadow-sm flex-shrink-0" viewBox="0 0 640 480">
+        <svg className="w-9 h-6 sm:w-10 sm:h-7 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#bd3d44" d="M0 0h640v480H0z"/>
           <path stroke="#fff" strokeWidth="37" d="M0 55.4h640M0 129.2h640M0 203h640M0 276.9h640M0 350.8h640M0 424.6h640"/>
           <path fill="#192f5d" d="M0 0h288v258.5H0z"/>
@@ -14,8 +15,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "United Kingdom",
+      code: "UK",
       svg: (
-        <svg className="w-7 h-5 rounded border border-slate-700/80 shadow-sm flex-shrink-0" viewBox="0 0 640 480">
+        <svg className="w-9 h-6 sm:w-10 sm:h-7 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#012169" d="M0 0h640v480H0z"/>
           <path stroke="#fff" strokeWidth="60" d="m0 0 640 480M640 0 0 480"/>
           <path stroke="#C8102E" strokeWidth="40" d="m0 0 640 480M640 0 0 480"/>
@@ -26,8 +28,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Canada",
+      code: "CAN",
       svg: (
-        <svg className="w-7 h-5 rounded border border-slate-700/80 shadow-sm flex-shrink-0" viewBox="0 0 640 480">
+        <svg className="w-9 h-6 sm:w-10 sm:h-7 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#d80a1d" d="M0 0h640v480H0z"/>
           <path fill="#fff" d="M160 0h320v480H160z"/>
           <path fill="#d80a1d" d="M320 72l20 54 52-22-18 52 56 12-42 36 32 46-54-10-6 56-30-44-30 44-6-56-54 10 32-46-42-36 56-12-18-52 52 22z"/>
@@ -36,8 +39,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Australia",
+      code: "AUS",
       svg: (
-        <svg className="w-7 h-5 rounded border border-slate-700/80 shadow-sm flex-shrink-0" viewBox="0 0 640 480">
+        <svg className="w-9 h-6 sm:w-10 sm:h-7 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#00008b" d="M0 0h640v480H0z"/>
           <path fill="#fff" d="m160 360 12 26 28-6-18 22 22 18-28 2 2 28-22-18-18 22 2-28-28-2 22-18-18-22 28 6z"/>
           <path stroke="#fff" strokeWidth="30" d="m0 0 320 240M320 0 0 240"/>
@@ -49,8 +53,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Germany",
+      code: "GER",
       svg: (
-        <svg className="w-7 h-5 rounded border border-slate-700/80 shadow-sm flex-shrink-0" viewBox="0 0 640 480">
+        <svg className="w-9 h-6 sm:w-10 sm:h-7 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#000" d="M0 0h640v160H0z"/>
           <path fill="#dd0000" d="M0 160h640v160H0z"/>
           <path fill="#ffce00" d="M0 320h640v160H0z"/>
@@ -59,8 +64,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Japan",
+      code: "JPN",
       svg: (
-        <svg className="w-7 h-5 rounded border border-slate-700/80 shadow-sm flex-shrink-0" viewBox="0 0 640 480">
+        <svg className="w-9 h-6 sm:w-10 sm:h-7 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#fff" d="M0 0h640v480H0z"/>
           <circle cx="320" cy="240" r="140" fill="#bc002d"/>
         </svg>
@@ -68,8 +74,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "UAE",
+      code: "UAE",
       svg: (
-        <svg className="w-7 h-5 rounded border border-slate-700/80 shadow-sm flex-shrink-0" viewBox="0 0 640 480">
+        <svg className="w-9 h-6 sm:w-10 sm:h-7 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#007a3d" d="M0 0h640v160H0z"/>
           <path fill="#fff" d="M0 160h640v160H0z"/>
           <path fill="#000" d="M0 320h640v160H0z"/>
@@ -149,16 +156,16 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
         </div>
       </div>
 
-      {/* 7 Countries Grid - Wider & Single Line */}
+      {/* 7 Countries Vertical Tall Cards - Fit in 1 Row */}
       <div className="w-full max-w-6xl">
-        <div className="grid grid-cols-7 gap-2.5">
+        <div className="grid grid-cols-7 gap-2 sm:gap-3">
           {countries.map((c, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-center gap-2 px-2 py-3 rounded-xl bg-[#080c1d]/90 border border-slate-800/90 shadow-md backdrop-blur-md hover:border-amber-500/50 transition-all duration-200"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-2xl bg-[#080c1d]/90 border border-slate-800/90 shadow-xl backdrop-blur-md hover:border-amber-500/50 hover:scale-105 transition-all duration-200 min-h-[100px] sm:min-h-[110px]"
             >
-              {c.svg}
-              <span className="text-xs font-extrabold text-gray-100 tracking-tight text-left">
+              <div className="flex-shrink-0 mb-2">{c.svg}</div>
+              <span className="text-[11px] sm:text-xs font-bold text-gray-200 tracking-tight text-center leading-tight">
                 {c.name}
               </span>
             </div>
