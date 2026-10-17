@@ -34,7 +34,6 @@ export default function DepositModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md">
-      {/* Expanded Container Width (max-w-2xl) to eliminate vertical scrollbars */}
       <div className="relative w-full max-w-2xl rounded-3xl bg-[#070b19] border border-slate-800 p-5 sm:p-7 shadow-2xl text-white overflow-hidden my-auto">
         
         {/* Close Button */}
@@ -66,13 +65,13 @@ export default function DepositModal({ isOpen, onClose }) {
           {/* Card Top Row: Exact Digitt Lightning Logo & Microchip */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              {/* Exact Lightning Bolt Logo Container */}
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white p-1.5 shadow-md flex items-center justify-center flex-shrink-0">
-                <svg className="w-full h-full" viewBox="0 0 500 500" fill="none">
-                  {/* Top Black Lightning Segment */}
-                  <path d="M160 50 L350 50 L270 200 L330 190 L160 50 Z" fill="#1e1e1e" />
-                  {/* Bottom Emerald Lightning Segment */}
-                  <path d="M160 270 L220 260 L150 450 L330 200 L250 210 L160 270 Z" fill="#00695c" />
+              {/* 100% Exact Digitt Lightning Bolt Vector Logo */}
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white p-2 shadow-md flex items-center justify-center flex-shrink-0">
+                <svg className="w-full h-full" viewBox="0 0 1000 1000" fill="none">
+                  {/* Top Black Lightning Polygon */}
+                  <path d="M700 62.5 L468.75 112.5 L320 543.75 L662.5 362.5 L537.5 381.25 Z" fill="#1E1E1E" />
+                  {/* Bottom Dark-Teal Lightning Polygon */}
+                  <path d="M328.125 562.5 L662.5 387.5 L443.75 425 L300 937.5 L450 543.75 Z" fill="#00695C" />
                 </svg>
               </div>
 
