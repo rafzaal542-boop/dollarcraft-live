@@ -2,14 +2,92 @@ import React from "react";
 
 export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
   const countries = [
-    { name: "United States", code: "US", flagUrl: "https://flagcdn.com/w40/us.png" },
-    { name: "United Kingdom", code: "GB", flagUrl: "https://flagcdn.com/w40/gb.png" },
-    { name: "Canada", code: "CA", flagUrl: "https://flagcdn.com/w40/ca.png" },
-    { name: "Australia", code: "AU", flagUrl: "https://flagcdn.com/w40/au.png" },
-    { name: "Germany", code: "DE", flagUrl: "https://flagcdn.com/w40/de.png" },
-    { name: "Japan", code: "JP", flagUrl: "https://flagcdn.com/w40/jp.png" },
-    { name: "Singapore", code: "SG", flagUrl: "https://flagcdn.com/w40/sg.png" },
-    { name: "United Arab Emirates", code: "AE", flagUrl: "https://flagcdn.com/w40/ae.png" },
+    {
+      name: "United States",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#bd3d44" d="M0 0h640v480H0z"/>
+          <path stroke="#fff" strokeWidth="37" d="M0 55.4h640M0 129.2h640M0 203h640M0 276.9h640M0 350.8h640M0 424.6h640"/>
+          <path fill="#192f5d" d="M0 0h288v258.5H0z"/>
+        </svg>
+      ),
+    },
+    {
+      name: "United Kingdom",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#012169" d="M0 0h640v480H0z"/>
+          <path stroke="#fff" strokeWidth="60" d="m0 0 640 480M640 0 0 480"/>
+          <path stroke="#C8102E" strokeWidth="40" d="m0 0 640 480M640 0 0 480"/>
+          <path stroke="#fff" strokeWidth="100" d="M320 0v480M0 240h640"/>
+          <path stroke="#C8102E" strokeWidth="60" d="M320 0v480M0 240h640"/>
+        </svg>
+      ),
+    },
+    {
+      name: "Canada",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#d80a1d" d="M0 0h640v480H0z"/>
+          <path fill="#fff" d="M160 0h320v480H160z"/>
+          <path fill="#d80a1d" d="M320 72l20 54 52-22-18 52 56 12-42 36 32 46-54-10-6 56-30-44-30 44-6-56-54 10 32-46-42-36 56-12-18-52 52 22z"/>
+        </svg>
+      ),
+    },
+    {
+      name: "Australia",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#00008b" d="M0 0h640v480H0z"/>
+          <path fill="#fff" d="m160 360 12 26 28-6-18 22 22 18-28 2 2 28-22-18-18 22 2-28-28-2 22-18-18-22 28 6z"/>
+          <path stroke="#fff" strokeWidth="30" d="m0 0 320 240M320 0 0 240"/>
+          <path stroke="#dc143c" strokeWidth="20" d="m0 0 320 240M320 0 0 240"/>
+          <path stroke="#fff" strokeWidth="50" d="M160 0v240M0 120h320"/>
+          <path stroke="#dc143c" strokeWidth="30" d="M160 0v240M0 120h320"/>
+        </svg>
+      ),
+    },
+    {
+      name: "Germany",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#000" d="M0 0h640v160H0z"/>
+          <path fill="#dd0000" d="M0 160h640v160H0z"/>
+          <path fill="#ffce00" d="M0 320h640v160H0z"/>
+        </svg>
+      ),
+    },
+    {
+      name: "Japan",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#fff" d="M0 0h640v480H0z"/>
+          <circle cx="320" cy="240" r="140" fill="#bc002d"/>
+        </svg>
+      ),
+    },
+    {
+      name: "Singapore",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#ef3340" d="M0 0h640v240H0z"/>
+          <path fill="#fff" d="M0 240h640v240H0z"/>
+          <circle cx="120" cy="120" r="70" fill="#fff"/>
+          <circle cx="145" cy="120" r="65" fill="#ef3340"/>
+        </svg>
+      ),
+    },
+    {
+      name: "United Arab Emirates",
+      svg: (
+        <svg className="w-7 h-5 rounded shadow-sm" viewBox="0 0 640 480">
+          <path fill="#007a3d" d="M0 0h640v160H0z"/>
+          <path fill="#fff" d="M0 160h640v160H0z"/>
+          <path fill="#000" d="M0 320h640v160H0z"/>
+          <path fill="#ff0000" d="M0 0h180v480H0z"/>
+        </svg>
+      ),
+    },
   ];
 
   return (
@@ -52,7 +130,7 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
         </div>
       </div>
 
-      {/* Active Global Investment Hubs with Real Flags */}
+      {/* Active Global Investment Hubs */}
       <div className="w-full max-w-5xl mt-2">
         <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6">
           Active Global Investment Hubs
@@ -63,11 +141,7 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
               key={idx}
               className="flex items-center gap-3.5 p-3.5 rounded-xl bg-[#080c1d]/70 border border-slate-800/80 shadow-lg backdrop-blur-md hover:border-amber-500/40 transition-all duration-200"
             >
-              <img
-                src={c.flagUrl}
-                alt={`${c.name} flag`}
-                className="w-7 h-5 object-cover rounded shadow-sm border border-slate-700"
-              />
+              <div className="flex-shrink-0">{c.svg}</div>
               <span className="text-sm font-bold text-gray-200 tracking-wide text-left">
                 {c.name}
               </span>
