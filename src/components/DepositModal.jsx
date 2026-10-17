@@ -62,17 +62,21 @@ export default function DepositModal({ isOpen, onClose }) {
         {/* WIDE DIGITT+ BANK VIRTUAL CARD */}
         <div className="relative w-full rounded-2xl bg-gradient-to-br from-[#064e3b] via-[#022c22] to-[#030712] p-4 sm:p-5 border border-emerald-500/30 shadow-xl mb-5">
           
-          {/* Card Top Row: Exact Digitt Lightning Logo & Microchip */}
+          {/* Card Top Row: 100% Exact HD Digitt Logo */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              {/* 100% Exact Digitt Lightning Bolt Vector Logo */}
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white p-2 shadow-md flex items-center justify-center flex-shrink-0">
-                <svg className="w-full h-full" viewBox="0 0 1000 1000" fill="none">
-                  {/* Top Black Lightning Polygon */}
-                  <path d="M700 62.5 L468.75 112.5 L320 543.75 L662.5 362.5 L537.5 381.25 Z" fill="#1E1E1E" />
-                  {/* Bottom Dark-Teal Lightning Polygon */}
-                  <path d="M328.125 562.5 L662.5 387.5 L443.75 425 L300 937.5 L450 543.75 Z" fill="#00695C" />
-                </svg>
+              
+              {/* Exact HD Logo PNG Image */}
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white p-1.5 shadow-md flex items-center justify-center flex-shrink-0">
+                <img 
+                  src="https://raw.githubusercontent.com/rafzaal542-boop/dollarcraft-live/main/public/digitt-logo.png" 
+                  alt="Digitt+ Logo" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    // Fallback to inline SVG data URL for 100% guaranteed render
+                    e.target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M350 50 L230 240 L310 230 L160 460 L220 270 L140 280 Z' fill='%201e1e1e'/></svg>";
+                  }}
+                />
               </div>
 
               <div>
@@ -92,9 +96,8 @@ export default function DepositModal({ isOpen, onClose }) {
             </div>
           </div>
 
-          {/* Account Title & IBAN Grid (Horizontal Wide Layout) */}
+          {/* Account Title & IBAN Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Account Title */}
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 block mb-1">
                 Account Title
@@ -113,7 +116,6 @@ export default function DepositModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            {/* Official IBAN */}
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 block mb-1">
                 Official IBAN
