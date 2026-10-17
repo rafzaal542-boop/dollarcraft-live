@@ -84,7 +84,7 @@ export default function App() {
     const handleStorageChange = () => syncUsersList();
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('dollarcraft:local-users-changed', handleStorageChange);
-    const interval = setInterval(syncUsersList, 1000); // 1s live sync loop
+    const interval = setInterval(syncUsersList, 1000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -277,6 +277,7 @@ export default function App() {
       <DepositModal
         isOpen={isDepositModalOpen}
         onClose={() => setIsDepositModalOpen(false)}
+        currentUserEmail={currentUserData?.email || (isLoggedIn ? 'LoggedIn User' : 'Guest Investor')}
       />
 
       {logoutConfirmationOpen && (
