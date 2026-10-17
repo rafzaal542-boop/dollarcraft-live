@@ -4,8 +4,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
   const countries = [
     {
       name: "United States",
+      code: "USA",
       svg: (
-        <svg className="w-10 h-7 rounded shadow-md border border-slate-700/80" viewBox="0 0 640 480">
+        <svg className="w-8 h-6 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#bd3d44" d="M0 0h640v480H0z"/>
           <path stroke="#fff" strokeWidth="37" d="M0 55.4h640M0 129.2h640M0 203h640M0 276.9h640M0 350.8h640M0 424.6h640"/>
           <path fill="#192f5d" d="M0 0h288v258.5H0z"/>
@@ -14,8 +15,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "United Kingdom",
+      code: "UK",
       svg: (
-        <svg className="w-10 h-7 rounded shadow-md border border-slate-700/80" viewBox="0 0 640 480">
+        <svg className="w-8 h-6 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#012169" d="M0 0h640v480H0z"/>
           <path stroke="#fff" strokeWidth="60" d="m0 0 640 480M640 0 0 480"/>
           <path stroke="#C8102E" strokeWidth="40" d="m0 0 640 480M640 0 0 480"/>
@@ -26,8 +28,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Canada",
+      code: "CAN",
       svg: (
-        <svg className="w-10 h-7 rounded shadow-md border border-slate-700/80" viewBox="0 0 640 480">
+        <svg className="w-8 h-6 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#d80a1d" d="M0 0h640v480H0z"/>
           <path fill="#fff" d="M160 0h320v480H160z"/>
           <path fill="#d80a1d" d="M320 72l20 54 52-22-18 52 56 12-42 36 32 46-54-10-6 56-30-44-30 44-6-56-54 10 32-46-42-36 56-12-18-52 52 22z"/>
@@ -36,8 +39,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Australia",
+      code: "AUS",
       svg: (
-        <svg className="w-10 h-7 rounded shadow-md border border-slate-700/80" viewBox="0 0 640 480">
+        <svg className="w-8 h-6 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#00008b" d="M0 0h640v480H0z"/>
           <path fill="#fff" d="m160 360 12 26 28-6-18 22 22 18-28 2 2 28-22-18-18 22 2-28-28-2 22-18-18-22 28 6z"/>
           <path stroke="#fff" strokeWidth="30" d="m0 0 320 240M320 0 0 240"/>
@@ -49,8 +53,9 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Germany",
+      code: "GER",
       svg: (
-        <svg className="w-10 h-7 rounded shadow-md border border-slate-700/80" viewBox="0 0 640 480">
+        <svg className="w-8 h-6 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#000" d="M0 0h640v160H0z"/>
           <path fill="#dd0000" d="M0 160h640v160H0z"/>
           <path fill="#ffce00" d="M0 320h640v160H0z"/>
@@ -59,17 +64,19 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
     },
     {
       name: "Japan",
+      code: "JPN",
       svg: (
-        <svg className="w-10 h-7 rounded shadow-md border border-slate-700/80" viewBox="0 0 640 480">
+        <svg className="w-8 h-6 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#fff" d="M0 0h640v480H0z"/>
           <circle cx="320" cy="240" r="140" fill="#bc002d"/>
         </svg>
       ),
     },
     {
-      name: "United Arab Emirates",
+      name: "UAE",
+      code: "UAE",
       svg: (
-        <svg className="w-10 h-7 rounded shadow-md border border-slate-700/80" viewBox="0 0 640 480">
+        <svg className="w-8 h-6 rounded border border-slate-700/80 shadow" viewBox="0 0 640 480">
           <path fill="#007a3d" d="M0 0h640v160H0z"/>
           <path fill="#fff" d="M0 160h640v160H0z"/>
           <path fill="#000" d="M0 320h640v160H0z"/>
@@ -109,7 +116,7 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
       </button>
 
       {/* Live Global Protocol Accrual Box */}
-      <div className="w-full max-w-xl p-6 rounded-2xl bg-[#080c1d]/80 border border-slate-800/80 shadow-2xl backdrop-blur-xl mb-12">
+      <div className="w-full max-w-xl p-6 rounded-2xl bg-[#080c1d]/80 border border-slate-800/80 shadow-2xl backdrop-blur-xl mb-10">
         <div className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-widest mb-3">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
           LIVE GLOBAL PROTOCOL ACCRUAL
@@ -119,36 +126,46 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
         </div>
       </div>
 
-      {/* Trust Header with Right-Side Official White Badge */}
-      <div className="w-full max-w-6xl mt-2 mb-6 px-2 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* Section Header with Gol Official Bank Thappa Badge */}
+      <div className="w-full max-w-5xl mt-2 mb-6 px-2 flex flex-row items-center justify-between gap-4">
         <div className="text-left">
           <p className="text-xs font-bold uppercase tracking-widest text-amber-400 mb-1">
             Global Compliance & Licensing
           </p>
-          <h2 className="text-lg sm:text-xl font-extrabold text-white">
-            Registered & Operating Across 7 Recognized Global Jurisdictions
+          <h2 className="text-base sm:text-xl font-extrabold text-white">
+            Registered & Operating Across 7 Global Jurisdictions
           </h2>
         </div>
 
-        {/* White Verification Badge */}
-        <div className="flex-shrink-0 flex items-center gap-2.5 px-4 py-2 rounded-xl bg-white text-slate-950 font-black text-xs shadow-xl border border-slate-200 uppercase tracking-wider">
-          <svg className="w-5 h-5 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-          <span>Official Regulatory Approval</span>
+        {/* Gol Official Bank/UK Government Stamp (Thappa) */}
+        <div className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-dashed border-emerald-500 bg-white text-slate-950 flex flex-col items-center justify-center p-1 shadow-2xl shadow-emerald-500/20 transform rotate-[-6deg] hover:rotate-0 transition-transform duration-300">
+          <div className="w-full h-full rounded-full border border-emerald-600 border-double p-0.5 flex flex-col items-center justify-center text-center">
+            <svg className="w-4 h-4 text-emerald-600 mb-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span className="text-[7px] sm:text-[8px] font-black leading-tight uppercase text-emerald-900 tracking-tighter">
+              REGISTERED
+            </span>
+            <span className="text-[8px] sm:text-[9px] font-black leading-none uppercase text-emerald-600">
+              IN UK
+            </span>
+            <span className="text-[5px] font-extrabold uppercase text-gray-500 tracking-tighter mt-0.5">
+              OFFICIAL SEAL
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* 7 Countries Single Line Display */}
-      <div className="w-full max-w-6xl overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800">
-        <div className="flex items-center justify-between gap-4 min-w-[900px]">
+      {/* 7 Countries Grid - Fixed 7 Columns in 1 Row (No Scrollbar) */}
+      <div className="w-full max-w-5xl">
+        <div className="grid grid-cols-7 gap-2 sm:gap-3">
           {countries.map((c, idx) => (
             <div
               key={idx}
-              className="flex-1 flex items-center gap-3 p-4 rounded-xl bg-[#080c1d]/90 border border-slate-800/90 shadow-lg backdrop-blur-md hover:border-amber-500/50 transition-all duration-200"
+              className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-xl bg-[#080c1d]/90 border border-slate-800/90 shadow-md backdrop-blur-md hover:border-amber-500/50 transition-all duration-200"
             >
               <div className="flex-shrink-0">{c.svg}</div>
-              <span className="text-sm font-bold text-gray-100 whitespace-nowrap">
+              <span className="text-xs font-bold text-gray-200 tracking-tight truncate">
                 {c.name}
               </span>
             </div>
