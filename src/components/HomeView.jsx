@@ -2,14 +2,14 @@ import React from "react";
 
 export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
   const countries = [
-    { name: "United States", flag: "🇺🇸" },
-    { name: "United Kingdom", flag: "🇬🇧" },
-    { name: "Canada", flag: "🇨🇦" },
-    { name: "Australia", flag: "🇦🇺" },
-    { name: "Germany", flag: "🇩🇪" },
-    { name: "Japan", flag: "🇯🇵" },
-    { name: "Singapore", flag: "🇸🇬" },
-    { name: "United Arab Emirates", flag: "🇦🇪" },
+    { name: "United States", code: "US", flagUrl: "https://flagcdn.com/w40/us.png" },
+    { name: "United Kingdom", code: "GB", flagUrl: "https://flagcdn.com/w40/gb.png" },
+    { name: "Canada", code: "CA", flagUrl: "https://flagcdn.com/w40/ca.png" },
+    { name: "Australia", code: "AU", flagUrl: "https://flagcdn.com/w40/au.png" },
+    { name: "Germany", code: "DE", flagUrl: "https://flagcdn.com/w40/de.png" },
+    { name: "Japan", code: "JP", flagUrl: "https://flagcdn.com/w40/jp.png" },
+    { name: "Singapore", code: "SG", flagUrl: "https://flagcdn.com/w40/sg.png" },
+    { name: "United Arab Emirates", code: "AE", flagUrl: "https://flagcdn.com/w40/ae.png" },
   ];
 
   return (
@@ -52,7 +52,7 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
         </div>
       </div>
 
-      {/* Countries & Flags Section */}
+      {/* Active Global Investment Hubs with Real Flags */}
       <div className="w-full max-w-5xl mt-2">
         <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-6">
           Active Global Investment Hubs
@@ -61,10 +61,16 @@ export default function HomeView({ liveProtocolTotal, handleGetStartedClick }) {
           {countries.map((c, idx) => (
             <div
               key={idx}
-              className="flex items-center gap-3 p-3.5 rounded-xl bg-[#080c1d]/60 border border-slate-800/60 shadow-md backdrop-blur-md hover:border-amber-500/40 transition-colors"
+              className="flex items-center gap-3.5 p-3.5 rounded-xl bg-[#080c1d]/70 border border-slate-800/80 shadow-lg backdrop-blur-md hover:border-amber-500/40 transition-all duration-200"
             >
-              <span className="text-2xl">{c.flag}</span>
-              <span className="text-sm font-bold text-gray-200">{c.name}</span>
+              <img
+                src={c.flagUrl}
+                alt={`${c.name} flag`}
+                className="w-7 h-5 object-cover rounded shadow-sm border border-slate-700"
+              />
+              <span className="text-sm font-bold text-gray-200 tracking-wide text-left">
+                {c.name}
+              </span>
             </div>
           ))}
         </div>
