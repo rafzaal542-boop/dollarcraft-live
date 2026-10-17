@@ -5,6 +5,7 @@ import AdminPanel from './components/AdminPanel';
 import AuthModal from './components/AuthModal';
 import DashboardView from './components/DashboardView';
 import FaqView from './components/FaqView';
+import DepositModal from './components/DepositModal';
 import { getStoredUsers, createAccount, signInWithPassword, logOutUser, changeUserBalance } from './localStore';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
@@ -26,6 +27,7 @@ const formatSignupTimestamp = (createdAt) => {
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [withdrawalModalOpen, setWithdrawalModalOpen] = useState(false);
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
 
   const [internalTransferEmail, setInternalTransferEmail] = useState('');
   const [internalTransferAmount, setInternalTransferAmount] = useState('');
@@ -207,12 +209,14 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#090d23] via-[#050814] to-[#03050a] text-white font-sans selection:bg-amber-500 relative overflow-x-hidden">
       <Navbar
-        activeView={activeView}
+        activeTab={activeTab}
         setActiveTab={setActiveTab}
+        activeView={activeView}
         isLoggedIn={isLoggedIn}
         isAdminUser={isAdminUser}
         canAccessAdmin={canAccessAdmin}
         handleGetStartedClick={handleGetStartedClick}
+        onOpenDepositModal={() => setIsDepositModalOpen(true)}
         requestLogout={() => setLogoutConfirmationOpen(true)}
       />
 
@@ -233,7 +237,7 @@ export default function App() {
           />
         )}
 
-        {activeView === 'contact' && <FaqView />}
+        {activeView === 'faq' && <FaqView />}
 
         {activeView === 'admin' && canAccessAdmin && (
           <AdminPanel
@@ -268,6 +272,11 @@ export default function App() {
         authError={authError}
         handleAuthSubmit={handleAuthSubmit}
         isInitializing={isInitializing}
+      />
+
+      <DepositModal
+        isOpen={isDepositModalOpen}
+        onClose={() => setIsDepositModalOpen(false)}
       />
 
       {logoutConfirmationOpen && (

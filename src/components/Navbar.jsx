@@ -1,74 +1,75 @@
-import React from 'react';
+import React from "react";
 
-export default function Navbar({
-  activeView,
-  setActiveTab,
-  isLoggedIn,
-  isAdminUser,
-  canAccessAdmin,
-  handleGetStartedClick,
-  requestLogout
-}) {
+export default function Navbar({ activeTab, setActiveTab, onOpenDepositModal }) {
   return (
-    <nav className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#090d23]/90 border-b border-amber-500/20 shadow-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          {/* Brand Logo */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 flex items-center justify-center font-black text-base shadow-md text-white">
+    <nav className="w-full bg-[#050814]/90 border-b border-slate-800/80 sticky top-0 z-50 backdrop-blur-xl px-4 py-3 sm:px-8">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        
+        {/* Brand Logo */}
+        <div 
+          onClick={() => setActiveTab("home")} 
+          className="flex items-center gap-3 cursor-pointer group"
+        >
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 via-orange-500 to-cyan-400 p-0.5 shadow-lg shadow-amber-500/20 group-hover:scale-105 transition-transform">
+            <div className="w-full h-full bg-[#080c1d] rounded-[10px] flex items-center justify-center font-black text-white text-lg tracking-wider">
               DC
             </div>
-            <span className="text-lg sm:text-xl font-extrabold tracking-wider bg-gradient-to-r from-white via-amber-200 to-cyan-400 bg-clip-text text-transparent">
-              Dollar Craft
-            </span>
           </div>
-
-          {/* Nav Links */}
-          <div className="hidden md:flex items-center space-x-8 text-sm font-semibold text-gray-300">
-            <button onClick={() => setActiveTab('home')} className={`transition-colors py-1 ${activeView === 'home' ? 'text-amber-400 font-bold border-b-2 border-amber-400' : 'hover:text-amber-300'}`}>Home</button>
-            {isLoggedIn && (
-              <>
-                {!canAccessAdmin && (
-                  <button onClick={() => setActiveTab('dashboard')} className={`transition-colors py-1 ${activeView === 'dashboard' ? 'text-amber-400 font-bold border-b-2 border-amber-400' : 'hover:text-amber-300'}`}>Dashboard</button>
-                )}
-                <button onClick={() => setActiveTab('plans')} className={`transition-colors py-1 ${activeView === 'plans' ? 'text-amber-400 font-bold border-b-2 border-amber-400' : 'hover:text-amber-300'}`}>Invest</button>
-              </>
-            )}
-            <button onClick={() => setActiveTab('contact')} className={`transition-colors py-1 ${activeView === 'contact' ? 'text-amber-400 font-bold border-b-2 border-amber-400' : 'hover:text-amber-300'}`}>FAQ</button>
-            
-            {/* STRICT ADMIN CHECK: Sirf Admin User ke login hone par hi yeh Admin Panel button show hoga */}
-            {isAdminUser && (
-              <button 
-                onClick={() => setActiveTab('admin')} 
-                className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all ${
-                  activeView === 'admin' 
-                    ? 'bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 text-white shadow-lg' 
-                    : 'bg-white/5 border border-white/10 text-amber-300 hover:bg-white/10'
-                }`}
-              >
-                Admin Panel
-              </button>
-            )}
-          </div>
-
-          {/* Right Action Buttons */}
-          <div className="hidden md:flex items-center space-x-3">
-            {isLoggedIn ? (
-              <>
-                <button onClick={handleGetStartedClick} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 hover:opacity-95 text-white font-extrabold text-sm shadow-lg shadow-amber-500/20 transition-all">
-                  My Dashboard
-                </button>
-                <button onClick={requestLogout} className="px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-200 border border-rose-400/30 font-bold text-sm transition-all">
-                  Logout
-                </button>
-              </>
-            ) : (
-              <button onClick={handleGetStartedClick} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-violet-600 to-cyan-500 hover:opacity-95 text-white font-extrabold text-sm shadow-lg shadow-amber-500/20 transition-all">
-                Get Started
-              </button>
-            )}
-          </div>
+          <span className="text-xl font-black text-white tracking-tight group-hover:text-amber-400 transition-colors">
+            Dollar Craft
+          </span>
         </div>
+
+        {/* Navigation Links & Deposit Button */}
+        <div className="flex items-center gap-2 sm:gap-6">
+          <button
+            onClick={() => setActiveTab("home")}
+            className={`text-xs sm:text-sm font-bold transition-colors ${
+              activeTab === "home" ? "text-amber-400" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Home
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`text-xs sm:text-sm font-bold transition-colors ${
+              activeTab === "dashboard" ? "text-amber-400" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Dashboard
+          </button>
+
+          <button
+            onClick={() => setActiveTab("invest")}
+            className={`text-xs sm:text-sm font-bold transition-colors ${
+              activeTab === "invest" ? "text-amber-400" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Invest
+          </button>
+
+          {/* Deposit Button (Highlight Button next to Invest) */}
+          <button
+            onClick={onOpenDepositModal}
+            className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+          >
+            <svg className="w-4 h-4 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+            </svg>
+            Deposit
+          </button>
+
+          <button
+            onClick={() => setActiveTab("faq")}
+            className={`text-xs sm:text-sm font-bold transition-colors ${
+              activeTab === "faq" ? "text-amber-400" : "text-gray-400 hover:text-white"
+            }`}
+          >
+            FAQ
+          </button>
+        </div>
+
       </div>
     </nav>
   );
