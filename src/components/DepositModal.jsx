@@ -4,7 +4,6 @@ export default function DepositModal({ isOpen, onClose }) {
   const [copiedField, setCopiedField] = useState('');
   const [selectedSlip, setSelectedSlip] = useState(null);
   const [slipPreview, setSlipPreview] = useState(null);
-  const [depositAmount, setDepositAmount] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -43,14 +42,14 @@ export default function DepositModal({ isOpen, onClose }) {
       setSubmitted(false);
       setSelectedSlip(null);
       setSlipPreview(null);
-      setDepositAmount('');
       onClose();
     }, 2500);
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-      <div className="bg-[#070c1e] border border-emerald-500/30 rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center shadow-2xl relative overflow-hidden">
+      {/* Width increased to max-w-xl so IBAN is fully visible */}
+      <div className="bg-[#070c1e] border border-emerald-500/30 rounded-3xl p-6 sm:p-8 max-w-xl w-full text-center shadow-2xl relative overflow-hidden">
         
         {/* Close Button */}
         <button
@@ -75,21 +74,29 @@ export default function DepositModal({ isOpen, onClose }) {
         <div className="bg-gradient-to-br from-emerald-950/40 via-[#0a1510] to-[#08121a] border border-emerald-500/40 rounded-2xl p-5 mb-6 text-left shadow-inner">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-emerald-500/20">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center font-black text-black text-lg">
-                ⚡
+              {/* Exact Digitt Logo SVG */}
+              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-md p-1.5">
+                <svg viewBox="0 0 512 512" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  {/* Top Black Part */}
+                  <path d="M280 28L164 210H272L220 324L348 136H240L280 28Z" fill="#1e1e1e" />
+                  {/* Bottom Dark Teal Part */}
+                  <path d="M220 324L336 142H228L280 28L152 216H260L220 324Z" fill="#003b36" />
+                  <path d="M164 210L272 376L228 276H336L164 210Z" fill="#004d40" />
+                </svg>
               </div>
               <div>
                 <h4 className="font-extrabold text-white text-sm">DIGITT+</h4>
                 <p className="text-[10px] text-emerald-400 font-semibold">SBP LICENSED EMI BANK</p>
               </div>
             </div>
-            <div className="px-2 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
+            <div className="px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold tracking-wider">
               OFFICIAL
             </div>
           </div>
 
+          {/* Grid layout with full width for IBAN */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="bg-black/50 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+            <div className="bg-black/50 p-3.5 rounded-xl border border-white/5 flex items-center justify-between">
               <div>
                 <span className="text-[10px] text-gray-400 block font-medium">ACCOUNT TITLE</span>
                 <span className="font-bold text-white text-xs">Irtaza communication</span>
@@ -97,23 +104,24 @@ export default function DepositModal({ isOpen, onClose }) {
               <button
                 type="button"
                 onClick={() => handleCopy('Irtaza communication', 'title')}
-                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors ml-2"
               >
                 {copiedField === 'title' ? 'Copied!' : 'Copy'}
               </button>
             </div>
 
-            <div className="bg-black/50 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-              <div className="truncate mr-2">
+            <div className="bg-black/50 p-3.5 rounded-xl border border-white/5 flex items-center justify-between">
+              <div className="overflow-hidden mr-2">
                 <span className="text-[10px] text-gray-400 block font-medium">OFFICIAL IBAN</span>
-                <span className="font-bold text-white text-xs truncate block max-w-[130px]">
+                {/* Full IBAN visible without truncation */}
+                <span className="font-bold text-white text-xs tracking-tight block">
                   PK54DGTT00000910000020
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => handleCopy('PK54DGTT00000910000020', 'iban')}
-                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors shrink-0"
               >
                 {copiedField === 'iban' ? 'Copied!' : 'Copy'}
               </button>
