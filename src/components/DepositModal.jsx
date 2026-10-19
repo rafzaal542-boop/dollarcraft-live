@@ -1,193 +1,182 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from 'react';
 
 export default function DepositModal({ isOpen, onClose }) {
-  const [copiedField, setCopiedField] = useState(null);
-  const [amount, setAmount] = useState("");
-  const [trxId, setTrxId] = useState("");
+  const [copiedField, setCopiedField] = useState('');
+  const [selectedSlip, setSelectedSlip] = useState(null);
+  const [slipPreview, setSlipPreview] = useState(null);
+  const [depositAmount, setDepositAmount] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
 
-  const bankDetails = {
-    bankName: "Digitt Bank (Digitt+ EMI)",
-    accountTitle: "Irtaza communication",
-    iban: "PK54DGTT0000091000002022",
+  const handleCopy = (text, fieldName) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(''), 2000);
   };
 
-  const handleCopy = (text, field) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 2000);
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        alert("Please select a file smaller than 10MB.");
+        return;
+      }
+      setSelectedSlip(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSlipPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!amount || !trxId) return;
+    if (!selectedSlip) {
+      alert("Please upload your payment bank slip first.");
+      return;
+    }
     setSubmitted(true);
     setTimeout(() => {
       setSubmitted(false);
-      setAmount("");
-      setTrxId("");
+      setSelectedSlip(null);
+      setSlipPreview(null);
+      setDepositAmount('');
       onClose();
     }, 2500);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/85 backdrop-blur-md">
-      <div className="relative w-full max-w-2xl rounded-3xl bg-[#070b19] border border-slate-800 p-5 sm:p-7 shadow-2xl text-white overflow-hidden my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+      <div className="bg-[#070c1e] border border-emerald-500/30 rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center shadow-2xl relative overflow-hidden">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-full p-2 transition-colors z-10"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 flex items-center justify-center transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          ✕
         </button>
 
-        {/* Modal Header */}
-        <div className="text-center mb-5">
-          <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider mb-1.5">
-            INSTANT BANK DEPOSIT
+        {/* Header */}
+        <div className="mb-6">
+          <span className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold text-[10px] tracking-wider uppercase mb-2">
+            Instant Bank Deposit
           </span>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Deposit Funds via Digitt Bank
-          </h2>
-          <p className="text-xs text-gray-400 mt-1">
-            Transfer funds to the verified account below to activate your deposit.
+          <h3 className="text-2xl font-black text-white">Deposit Funds via Digitt Bank</h3>
+          <p className="text-gray-400 text-xs mt-1">
+            Transfer funds to the verified account below and upload your bank receipt slip.
           </p>
         </div>
 
-        {/* WIDE DIGITT+ BANK VIRTUAL CARD */}
-        <div className="relative w-full rounded-2xl bg-gradient-to-br from-[#064e3b] via-[#022c22] to-[#030712] p-4 sm:p-5 border border-emerald-500/30 shadow-xl mb-5">
-          
-          {/* Card Top Row: 100% Exact HD Digitt Logo */}
-          <div className="flex items-center justify-between mb-4">
+        {/* Bank Details Card */}
+        <div className="bg-gradient-to-br from-emerald-950/40 via-[#0a1510] to-[#08121a] border border-emerald-500/40 rounded-2xl p-5 mb-6 text-left shadow-inner">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-emerald-500/20">
             <div className="flex items-center gap-3">
-              
-              {/* Exact HD Logo PNG Image */}
-              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-white p-1.5 shadow-md flex items-center justify-center flex-shrink-0">
-                <img 
-                  src="https://raw.githubusercontent.com/rafzaal542-boop/dollarcraft-live/main/public/digitt-logo.png" 
-                  alt="Digitt+ Logo" 
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    // Fallback to inline SVG data URL for 100% guaranteed render
-                    e.target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path d='M350 50 L230 240 L310 230 L160 460 L220 270 L140 280 Z' fill='%201e1e1e'/></svg>";
-                  }}
-                />
+              <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center font-black text-black text-lg">
+                ⚡
               </div>
-
               <div>
-                <h3 className="font-black text-white text-lg leading-none tracking-wide">DIGITT+</h3>
-                <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest mt-0.5 block">
-                  SBP LICENSED EMI BANK
-                </span>
+                <h4 className="font-extrabold text-white text-sm">DIGITT+</h4>
+                <p className="text-[10px] text-emerald-400 font-semibold">SBP LICENSED EMI BANK</p>
               </div>
             </div>
-
-            {/* Microchip Graphic */}
-            <div className="w-10 h-7 rounded-md bg-gradient-to-br from-amber-300 to-amber-500 border border-amber-200/60 flex items-center justify-center shadow-inner">
-              <div className="w-6 h-4 border border-amber-800/50 rounded-xs grid grid-cols-2 gap-0.5 p-0.5">
-                <div className="bg-amber-700/40 rounded-xs"></div>
-                <div className="bg-amber-700/40 rounded-xs"></div>
-              </div>
+            <div className="px-2 py-1 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[10px] font-bold">
+              OFFICIAL
             </div>
           </div>
 
-          {/* Account Title & IBAN Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 block mb-1">
-                Account Title
-              </span>
-              <div className="flex items-center justify-between bg-black/40 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-emerald-500/25">
-                <span className="font-extrabold text-white text-sm tracking-wide truncate">
-                  {bankDetails.accountTitle}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(bankDetails.accountTitle, "title")}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold ml-2 underline flex-shrink-0"
-                >
-                  {copiedField === "title" ? "Copied!" : "Copy"}
-                </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="bg-black/50 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-gray-400 block font-medium">ACCOUNT TITLE</span>
+                <span className="font-bold text-white text-xs">Irtaza communication</span>
               </div>
+              <button
+                type="button"
+                onClick={() => handleCopy('Irtaza communication', 'title')}
+                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                {copiedField === 'title' ? 'Copied!' : 'Copy'}
+              </button>
             </div>
 
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300/80 block mb-1">
-                Official IBAN
-              </span>
-              <div className="flex items-center justify-between bg-black/40 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-emerald-500/25">
-                <span className="font-mono font-bold text-amber-300 text-xs sm:text-sm tracking-tight truncate">
-                  {bankDetails.iban}
+            <div className="bg-black/50 p-3 rounded-xl border border-white/5 flex items-center justify-between">
+              <div className="truncate mr-2">
+                <span className="text-[10px] text-gray-400 block font-medium">OFFICIAL IBAN</span>
+                <span className="font-bold text-white text-xs truncate block max-w-[130px]">
+                  PK54DGTT00000910000020
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(bankDetails.iban, "iban")}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 font-bold ml-2 underline flex-shrink-0"
-                >
-                  {copiedField === "iban" ? "Copied!" : "Copy"}
-                </button>
               </div>
+              <button
+                type="button"
+                onClick={() => handleCopy('PK54DGTT00000910000020', 'iban')}
+                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 transition-colors"
+              >
+                {copiedField === 'iban' ? 'Copied!' : 'Copy'}
+              </button>
             </div>
           </div>
-
         </div>
 
-        {/* Deposit Confirmation Form */}
-        {submitted ? (
-          <div className="p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-center">
-            <svg className="w-10 h-10 text-emerald-400 mx-auto mb-1.5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-            </svg>
-            <h4 className="text-base font-bold text-white mb-0.5">Deposit Request Submitted!</h4>
-            <p className="text-xs text-gray-300">
-              Your transaction ID has been logged. Admin will verify and credit your balance shortly.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1">
-                  Deposit Amount ($ USD or PKR equivalent)
-                </label>
-                <input
-                  type="number"
-                  placeholder="Enter amount (e.g. 100)"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400 text-sm font-semibold"
-                />
-              </div>
+        {/* Upload Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/*,.pdf"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1">
-                  Transaction Reference / TRX ID
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter 12-digit Digitt Bank TRX ID"
-                  value={trxId}
-                  onChange={(e) => setTrxId(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400 text-sm font-semibold"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 text-slate-950 font-black text-sm shadow-xl shadow-emerald-500/20 hover:scale-[1.01] active:scale-98 transition-all mt-1"
+          <div>
+            <label className="block text-left text-xs font-semibold text-gray-300 mb-1.5">
+              Upload Payment Bank Slip (Screenshot / Receipt)
+            </label>
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-full p-4 rounded-2xl border-2 border-dashed cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                selectedSlip
+                  ? 'bg-emerald-950/20 border-emerald-500/80 text-emerald-300'
+                  : 'bg-black/40 border-white/15 hover:border-emerald-500/50 text-gray-400'
+              }`}
             >
-              Submit Deposit Proof →
-            </button>
-          </form>
-        )}
+              {slipPreview ? (
+                <div className="flex items-center gap-3 w-full">
+                  <img src={slipPreview} alt="Slip preview" className="w-12 h-12 rounded-lg object-cover border border-emerald-500/50" />
+                  <div className="text-left truncate flex-1">
+                    <p className="text-xs font-bold text-emerald-300 truncate">{selectedSlip?.name}</p>
+                    <p className="text-[10px] text-gray-400">Click to change file</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <svg className="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                  </svg>
+                  <span className="text-xs font-medium">Click here to upload payment slip image</span>
+                  <span className="text-[10px] text-gray-500">(PNG, JPG, JPEG or PDF - Max 10MB)</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitted}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:opacity-95 text-black font-black text-sm shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+          >
+            {submitted ? 'Submitting Deposit Slip...' : 'Submit Deposit Proof →'}
+          </button>
+
+          {submitted && (
+            <p className="text-xs text-emerald-400 font-bold animate-pulse mt-2">
+              ✓ Deposit slip submitted successfully! Verification in progress.
+            </p>
+          )}
+        </form>
 
       </div>
     </div>
