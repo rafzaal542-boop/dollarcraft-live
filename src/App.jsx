@@ -6,6 +6,7 @@ import AuthModal from './components/AuthModal';
 import DashboardView from './components/DashboardView';
 import FaqView from './components/FaqView';
 import DepositModal from './components/DepositModal';
+import InvestView from './components/InvestView';
 import { getStoredUsers, createAccount, signInWithPassword, logOutUser, changeUserBalance } from './localStore';
 
 const GLOBAL_ACCRUAL_BASE = 1_068_566_700;
@@ -253,6 +254,14 @@ export default function App() {
             setWithdrawalModalOpen={setWithdrawalModalOpen}
             currentUserData={currentUserData}
             onImageUpload={handleCustomImageUpload}
+          />
+        )}
+
+        {activeView === 'invest' && (
+          <InvestView
+            onOpenDepositModal={() => setIsDepositModalOpen(true)}
+            isLoggedIn={isLoggedIn}
+            handleGetStartedClick={handleGetStartedClick}
           />
         )}
 
