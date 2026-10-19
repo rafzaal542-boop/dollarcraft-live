@@ -15,15 +15,6 @@ const GLOBAL_ACCRUAL_PER_SECOND = 2000 / 3600;
 const ADMIN_EMAIL = 'dollarcraft3@gmail.com';
 const ADMIN_PASSWORD = 'haseeb@craft@007';
 
-// Preset Profile Avatars
-const AVATAR_OPTIONS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-];
-
 const getGlobalAccrualTotal = (now = Date.now()) =>
   GLOBAL_ACCRUAL_BASE +
   (Math.max(0, now - GLOBAL_ACCRUAL_STARTED_AT) / 1000) * GLOBAL_ACCRUAL_PER_SECOND;
@@ -58,7 +49,6 @@ export default function App() {
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const isAdminUser = isLoggedIn && isAdmin;
   const canAccessAdmin = isAdminUser;
@@ -94,7 +84,7 @@ export default function App() {
     const handleStorageChange = () => syncUsersList();
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('dollarcraft:local-users-changed', handleStorageChange);
-    const interval = setInterval(syncUsersList, 1000); // 1s live sync loop
+    const interval = setInterval(syncUsersList, 1000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
@@ -123,20 +113,19 @@ export default function App() {
     setLogoutConfirmationOpen(false);
   };
 
-  const handleUpdateAvatar = (avatarUrl) => {
+  const handleCustomImageUpload = (imageDataUrl) => {
     if (currentUserData) {
-      const updated = { ...currentUserData, profilePic: avatarUrl };
+      const updated = { ...currentUserData, profilePic: imageDataUrl };
       setCurrentUserData(updated);
       try {
         const stored = getStoredUsers();
         const idx = stored.findIndex(u => u.id === currentUserData.id);
         if (idx !== -1) {
-          stored[idx].profilePic = avatarUrl;
+          stored[idx].profilePic = imageDataUrl;
           localStorage.setItem('dollarcraft_users', JSON.stringify(stored));
         }
       } catch (err) {}
     }
-    setProfileModalOpen(false);
   };
 
   const handleAuthSubmit = async (e) => {
@@ -157,7 +146,7 @@ export default function App() {
           firstName: 'Admin',
           lastName: '',
           balanceCents: 0,
-          profilePic: AVATAR_OPTIONS[0]
+          profilePic: null
         });
         setAuthModalOpen(false);
         setEmailInput('');
@@ -246,7 +235,6 @@ export default function App() {
         onOpenDepositModal={() => setIsDepositModalOpen(true)}
         requestLogout={() => setLogoutConfirmationOpen(true)}
         currentUserData={currentUserData}
-        onOpenProfileModal={() => setProfileModalOpen(true)}
       />
 
       <main className="py-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -264,7 +252,7 @@ export default function App() {
             totalBalanceCents={totalBalanceCents}
             setWithdrawalModalOpen={setWithdrawalModalOpen}
             currentUserData={currentUserData}
-            onOpenProfileModal={() => setProfileModalOpen(true)}
+            onImageUpload={handleCustomImageUpload}
           />
         )}
 
@@ -310,7 +298,6 @@ export default function App() {
         onClose={() => setIsDepositModalOpen(false)}
       />
 
-      {/* Logout Confirmation Modal */}
       {logoutConfirmationOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
           <div className="bg-[#0b1026] border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl">
@@ -320,35 +307,6 @@ export default function App() {
               <button onClick={() => setLogoutConfirmationOpen(false)} className="flex-1 py-2.5 rounded-xl bg-white/5 text-gray-300 font-bold text-xs border border-white/10 hover:bg-white/10">Cancel</button>
               <button onClick={handleLogout} className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md">Logout</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Picture Selector Modal */}
-      {profileModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-          <div className="bg-[#0b1026] border border-amber-500/30 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-2">Choose Profile Picture</h3>
-            <p className="text-gray-300 text-xs mb-5">Select an avatar for your profile</p>
-            <div className="flex justify-center gap-3 mb-6 flex-wrap">
-              {AVATAR_OPTIONS.map((avatar, idx) => (
-                <img
-                  key={idx}
-                  src={avatar}
-                  alt="avatar"
-                  onClick={() => handleUpdateAvatar(avatar)}
-                  className={`w-14 h-14 rounded-full object-cover cursor-pointer border-2 hover:scale-105 transition-transform ${
-                    currentUserData?.profilePic === avatar ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-white/20'
-                  }`}
-                />
-              ))}
-            </div>
-            <button
-              onClick={() => setProfileModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-white/5 text-gray-300 font-bold text-xs border border-white/10 hover:bg-white/10"
-            >
-              Close
-            </button>
           </div>
         </div>
       )}
